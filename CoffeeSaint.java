@@ -20,6 +20,7 @@ public class CoffeeSaint extends JFrame
 	static Image img = null;
 	static int imgWidth = -1, imgHeight = -1;
 	static java.util.List<Pattern> prioPatterns = new ArrayList<Pattern>();
+	static boolean always_notify = false, also_acknowledged = false;
 
 	public CoffeeSaint()
 	{
@@ -60,7 +61,7 @@ public class CoffeeSaint extends JFrame
 			String msg = null;
 			String state = null;
 
-			if (javNag.shouldIShowHost(currentHost, false, false))
+			if (javNag.shouldIShowHost(currentHost, always_notify, also_acknowledged))
 			{
 				msg = currentHost.getHostName();
 				state = currentHost.getParameter("current_state");
@@ -70,7 +71,7 @@ public class CoffeeSaint extends JFrame
 				for(Service currentService : currentHost.getServices())
 				{
 					assert currentService != null;
-					if (javNag.shouldIShowService(currentService, false, false))
+					if (javNag.shouldIShowService(currentService, always_notify, also_acknowledged))
 					{
 						msg = currentHost.getHostName() + ": " + currentService.getServiceName();
 						state = currentService.getParameter("current_state");
@@ -154,7 +155,10 @@ public class CoffeeSaint extends JFrame
 			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
 
 			/* load data from nagios server */
+			long startLoadTs = System.currentTimeMillis();
 			JavNag javNag = new JavNag(host, port, nagiosVersion);
+			long endLoadTs = System.currentTimeMillis();
+			System.out.println("Took " + ((double)(endLoadTs - startLoadTs) / 1000.0) + "s to load status data");
 
 			/* clear frame */
 			g.setColor(Color.GRAY);
@@ -225,6 +229,8 @@ public class CoffeeSaint extends JFrame
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL.");
 		System.out.println("--font x      Font to use. Default is 'Courier'.");
 		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others).");
+		System.out.println("--also-acknowledged Display acknowledged problems as well.");
+		System.out.println("--always-notify	Also display problems for which notifications are disabled.");
 	}
 
 	public static void main(String[] arg)
@@ -280,6 +286,14 @@ public class CoffeeSaint extends JFrame
 			else if (arg[loop].compareTo("--prefer") == 0)
 			{
 				loadPrefers(arg[++loop]);
+			}
+			else if (arg[loop].compareTo("--always-notify") == 0)
+			{
+				always_notify = true;
+			}
+			else if (arg[loop].compareTo("--also-acknowledged") == 0)
+			{
+				also_acknowledged = true;
 			}
 			else if (arg[loop].compareTo("--font") == 0)
 			{
