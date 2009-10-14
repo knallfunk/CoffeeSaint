@@ -160,20 +160,35 @@ public class CoffeeSaint extends JFrame
 			long endLoadTs = System.currentTimeMillis();
 			System.out.println("Took " + ((double)(endLoadTs - startLoadTs) / 1000.0) + "s to load status data");
 
+			collectProblems(javNag, problems);
+			Color bgColor = (problems.size() == 0) ? Color.GREEN : Color.GRAY;
+
 			/* clear frame */
-			g.setColor(Color.GRAY);
+			g.setColor(bgColor);
 			g.fillRect(0, 0, windowWidth, windowHeight);
 
 			if (img != null)
-				g.drawImage(img, 0, 0, windowWidth, windowHeight, null);
+			{
+				int rowHeight = (windowHeight / nRows);
+				int curWindowHeight = rowHeight * (nRows - 1);
+				double wMul = (double)windowWidth / (double)imgWidth;
+				double hMul = (double)curWindowHeight / (double)imgHeight;
+				int newWidth = windowWidth, newHeight = curWindowHeight;
+				if (wMul > hMul)
+					newWidth = (int)((double)imgHeight * wMul);
+				else
+					newHeight  = (int)((double)imgWidth  * hMul);
+				int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
+				int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + rowHeight;
+
+				g.drawImage(img, putX, putY, newWidth, newHeight, null);
+			}
 
 			Totals totals = javNag.calculateStatistics();
 			Calendar rightNow = Calendar.getInstance();
 			String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
 			int curNRows = 1;
-			drawRow(g, nRows, msg, 0, "255", windowWidth, windowHeight);
-
-			collectProblems(javNag, problems);
+			drawRow(g, nRows, msg, 0, (bgColor == Color.GREEN) ? "0" : "255", windowWidth, windowHeight);
 
 			for(Problem currentProblem : problems)
 			{
