@@ -84,8 +84,16 @@ public class CoffeeSaint extends JFrame
 			{
 				String msg = currentHost.getHostName();
 				String state = currentHost.getParameter("current_state");
+				String useState = null;
 
-				addProblem(problems, lessImportant, msg, state);
+				if (state.equals("0")) /* UP = OK */
+					useState = "0";
+				else if (state.equals("1") || state.equals("2")) /* DOWN & UNREACHABLE = CRITICAL */
+					useState = "2";
+				else /* all other states (including 'pending' ("3")) are WARNING */
+					useState = "1";
+
+				addProblem(problems, lessImportant, msg, useState);
 			}
 			else
 			{
