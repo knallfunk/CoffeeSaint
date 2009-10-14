@@ -51,6 +51,27 @@ public class CoffeeSaint extends JFrame
 			System.exit(0);
 	}
 
+	void addProblem(java.util.List<Problem> problems, java.util.List<Problem> lessImportant, String msg, String state)
+	{
+		boolean important = false;
+
+		for(Pattern currentPattern : prioPatterns)
+		{
+			// System.out.println("Checking " + msg + " against " + currentPattern.pattern());
+			if (currentPattern.matcher(msg).matches())
+			{
+				important = true;
+				System.out.println("important: " + msg);
+				break;
+			}
+		}
+
+		if (important)
+			problems.add(new Problem(msg, state));
+		else
+			lessImportant.add(new Problem(msg, state));
+	}
+
 	void collectProblems(JavNag javNag, java.util.List<Problem> problems)
 	{
 		java.util.List<Problem> lessImportant = new ArrayList<Problem>();
@@ -58,13 +79,13 @@ public class CoffeeSaint extends JFrame
 		for(Host currentHost: javNag.getListOfHosts())
 		{
 			assert currentHost != null;
-			String msg = null;
-			String state = null;
 
 			if (javNag.shouldIShowHost(currentHost, always_notify, also_acknowledged))
 			{
-				msg = currentHost.getHostName();
-				state = currentHost.getParameter("current_state");
+				String msg = currentHost.getHostName();
+				String state = currentHost.getParameter("current_state");
+
+				addProblem(problems, lessImportant, msg, state);
 			}
 			else
 			{
@@ -73,31 +94,12 @@ public class CoffeeSaint extends JFrame
 					assert currentService != null;
 					if (javNag.shouldIShowService(currentService, always_notify, also_acknowledged))
 					{
-						msg = currentHost.getHostName() + ": " + currentService.getServiceName();
-						state = currentService.getParameter("current_state");
+						String msg = currentHost.getHostName() + ": " + currentService.getServiceName();
+						String state = currentService.getParameter("current_state");
+
+						addProblem(problems, lessImportant, msg, state);
 					}
 				}
-			}
-
-			if (msg != null)
-			{
-				boolean important = false;
-
-				for(Pattern currentPattern : prioPatterns)
-				{
-					// System.out.println("Checking " + msg + " against " + currentPattern.pattern());
-					if (currentPattern.matcher(msg).matches())
-					{
-						important = true;
-						System.out.println("important: " + msg);
-						break;
-					}
-				}
-
-				if (important)
-					problems.add(new Problem(msg, state));
-				else
-					lessImportant.add(new Problem(msg, state));
 			}
 		}
 
@@ -187,8 +189,8 @@ public class CoffeeSaint extends JFrame
 			Totals totals = javNag.calculateStatistics();
 			Calendar rightNow = Calendar.getInstance();
 			String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
-			int curNRows = 1;
-			drawRow(g, nRows, msg, 0, (bgColor == Color.GREEN) ? "0" : "255", windowWidth, windowHeight);
+			int curNRows = 0;
+			drawRow(g, nRows, msg, curNRows++, (bgColor == Color.GREEN) ? "0" : "255", windowWidth, windowHeight);
 
 			for(Problem currentProblem : problems)
 			{
