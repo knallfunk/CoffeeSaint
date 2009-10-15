@@ -21,6 +21,7 @@ public class CoffeeSaint extends JFrame
 	static int imgWidth = -1, imgHeight = -1;
 	static java.util.List<Pattern> prioPatterns = new ArrayList<Pattern>();
 	static boolean always_notify = false, also_acknowledged = false;
+	static Color defaultBackgroundColor = Color.GRAY;
 
 	public CoffeeSaint()
 	{
@@ -133,7 +134,7 @@ public class CoffeeSaint extends JFrame
 		else if (state.equals("2") == true)
 			g.setColor(Color.RED);
 		else
-			g.setColor(Color.GRAY);
+			g.setColor(defaultBackgroundColor);
 
 		int rowHeight = windowHeight / totalNRows;
 		int y = rowHeight * row;
@@ -171,7 +172,7 @@ public class CoffeeSaint extends JFrame
 			System.out.println("Took " + ((double)(endLoadTs - startLoadTs) / 1000.0) + "s to load status data");
 
 			collectProblems(javNag, problems);
-			Color bgColor = (problems.size() == 0) ? Color.GREEN : Color.GRAY;
+			Color bgColor = (problems.size() == 0) ? Color.GREEN : defaultBackgroundColor;
 
 			/* clear frame */
 			g.setColor(bgColor);
@@ -244,6 +245,41 @@ public class CoffeeSaint extends JFrame
 		}
 	}
 
+	public static void initColors(java.util.List<ColorPair> colorPairs)
+	{
+		colorPairs.add(new ColorPair("black", Color.BLACK));
+		colorPairs.add(new ColorPair("blue", Color.BLUE));
+		colorPairs.add(new ColorPair("cyan", Color.CYAN));
+		colorPairs.add(new ColorPair("dark_gray", Color.DARK_GRAY));
+		colorPairs.add(new ColorPair("gray", Color.GRAY));
+		colorPairs.add(new ColorPair("green", Color.GREEN));
+		colorPairs.add(new ColorPair("light_gray", Color.LIGHT_GRAY));
+		colorPairs.add(new ColorPair("magenta", Color.MAGENTA));
+		colorPairs.add(new ColorPair("orange", Color.ORANGE));
+		colorPairs.add(new ColorPair("pink", Color.PINK));
+		colorPairs.add(new ColorPair("red", Color.RED));
+		colorPairs.add(new ColorPair("white", Color.WHITE));
+		colorPairs.add(new ColorPair("yellow", Color.YELLOW));
+	}
+
+	public static void listColors(java.util.List<ColorPair> colorPairs)
+	{
+		System.out.println("Known colors: ");
+		for(ColorPair currentColor : colorPairs)
+			System.out.println("    " + currentColor.getName());
+	}
+
+	public static Color selectColor(java.util.List<ColorPair> colorPairs, String name)
+	{
+		for(ColorPair currentColor : colorPairs)
+		{
+			if (currentColor.equals(name))
+				return currentColor.getColor();
+		}
+
+		return null;
+	}
+
 	public static void showHelp()
 	{
 		System.out.println("--host x      Nagios host to connect to");
@@ -256,12 +292,17 @@ public class CoffeeSaint extends JFrame
 		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others).");
 		System.out.println("--also-acknowledged Display acknowledged problems as well.");
 		System.out.println("--always-notify	Also display problems for which notifications are disabled.");
+		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray.");
+		System.out.println("--list-bgcolors     Show a list of available colors.");
 	}
 
 	public static void main(String[] arg)
 	{
 		java.util.List<String> imageFiles = new ArrayList<String>();
 		int currentImageFile = 0;
+		java.util.List<ColorPair> colorPairs = new ArrayList<ColorPair>();
+
+		initColors(colorPairs);
 
 		System.out.println("CoffeeSaint v0.2, (C) 2009 by folkert@vanheusden.com");
 
@@ -269,6 +310,20 @@ public class CoffeeSaint extends JFrame
 		{
 			if (arg[loop].compareTo("--host") == 0)
 				host = arg[++loop];
+			else if (arg[loop].compareTo("--list-bgcolors") == 0)
+			{
+				listColors(colorPairs);
+				System.exit(0);
+			}
+			else if (arg[loop].compareTo("--bgcolor") == 0)
+			{
+				defaultBackgroundColor = selectColor(colorPairs, arg[++loop]);
+				if (defaultBackgroundColor == null)
+				{
+					System.err.println("Color " + arg[loop] + " is not known.");
+					System.exit(127);
+				}
+			}
 			else if (arg[loop].compareTo("--port") == 0)
 				port = Integer.valueOf(arg[++loop]);
 			else if (arg[loop].compareTo("--nrows") == 0)
