@@ -8,6 +8,7 @@ import java.awt.event.WindowEvent;
 import java.util.regex.Pattern;
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint extends JFrame
 {
@@ -25,6 +26,11 @@ public class CoffeeSaint extends JFrame
 	static Color fontColor = Color.BLACK;
 	static String problemSound = null;
 	static boolean lastState = false;	// false: no problems
+	static boolean counter = false;
+	static int currentCounter = 0;
+	static Semaphore drawingProblems = new Semaphore(1, true);
+	static java.util.List<String> imageFiles = new ArrayList<String>();
+	static int currentImageFile = 0;
 
 	public CoffeeSaint()
 	{
@@ -128,7 +134,7 @@ public class CoffeeSaint extends JFrame
 		return newStr.substring(newStr.length() - 2);
 	}
 
-	void drawRow(Graphics g, int totalNRows, String msg, int row, String state, int windowWidth, int windowHeight)
+	void drawRow(Graphics g, int totalNRows, String msg, int row, String state, int windowWidth, int windowHeight, int rowHeight)
 	{
 		if (state.equals("0") == true)
 			g.setColor(Color.GREEN);
@@ -139,7 +145,6 @@ public class CoffeeSaint extends JFrame
 		else
 			g.setColor(backgroundColor);
 
-		int rowHeight = windowHeight / totalNRows;
 		int y = rowHeight * row;
 
 		g.fillRect(0, y, windowWidth, rowHeight);
@@ -149,17 +154,41 @@ public class CoffeeSaint extends JFrame
 		g.drawString(msg, 0, y + rowHeight);
 	}
 
-	public void paint(Graphics g)
+	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
 	{
-		System.out.println("*** paint");
+		/* counter upto the next reload */
+		final Font f = new Font(fontName, Font.PLAIN, characterSize);
+		g.setFont(f);
+		g.setColor(backgroundColor);
+		int startX = windowWidth - characterSize;
+		g.fillRect(startX, 0, rowHeight, rowHeight);
+		g.setColor(fontColor);
+		g.drawString("" + currentCounter, startX, rowHeight);
+	}
 
-		final int windowWidth  = getSize().width;
-		final int windowHeight = getSize().height;
-		final int characterSize = windowHeight / nRows;
-
+	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
+	{
 		try
 		{
 			java.util.List<Problem> problems = new ArrayList<Problem>();
+
+			if (imageFiles.size() > 0)
+			{
+				System.out.println("Load image " + imageFiles.get(currentImageFile));
+				if (imageFiles.get(currentImageFile).substring(0, 7).equals("http://"))
+					img = Toolkit.getDefaultToolkit().createImage(new URL(imageFiles.get(currentImageFile)));
+				else
+					img = Toolkit.getDefaultToolkit().createImage(imageFiles.get(currentImageFile));
+				new ImageIcon(img); //loads the image
+				Toolkit.getDefaultToolkit().sync();
+				imgWidth = img.getWidth(null);
+				imgHeight = img.getHeight(null);
+
+				currentImageFile++;
+				if (currentImageFile == imageFiles.size())
+					currentImageFile = 0;
+			}
+
 
 			final Font f = new Font(fontName, Font.PLAIN, characterSize - 1);
 			g.setFont(f);
@@ -183,7 +212,6 @@ public class CoffeeSaint extends JFrame
 
 			if (img != null)
 			{
-				int rowHeight = (windowHeight / nRows);
 				int curWindowHeight = rowHeight * (nRows - 1);
 				double wMul = (double)windowWidth / (double)imgWidth;
 				double hMul = (double)curWindowHeight / (double)imgHeight;
@@ -202,12 +230,12 @@ public class CoffeeSaint extends JFrame
 			Calendar rightNow = Calendar.getInstance();
 			String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
 			int curNRows = 0;
-			drawRow(g, nRows, msg, curNRows++, (bgColor == Color.GREEN) ? "0" : "255", windowWidth, windowHeight);
+			drawRow(g, nRows, msg, curNRows++, (bgColor == Color.GREEN) ? "0" : "255", windowWidth, windowHeight, rowHeight);
 
 			for(Problem currentProblem : problems)
 			{
 				System.out.println(currentProblem.getCurrent_state() + ": " + currentProblem.getMessage());
-				drawRow(g, nRows, currentProblem.getMessage(), curNRows, currentProblem.getCurrent_state(), windowWidth, windowHeight);
+				drawRow(g, nRows, currentProblem.getMessage(), curNRows, currentProblem.getCurrent_state(), windowWidth, windowHeight, rowHeight);
 				curNRows++;
 
 				if (curNRows == nRows)
@@ -228,7 +256,7 @@ public class CoffeeSaint extends JFrame
 			{
 				lastState = false;
 			}
-			
+
 		}
 		catch(Exception e)
 		{
@@ -238,6 +266,30 @@ public class CoffeeSaint extends JFrame
 			g.setColor(Color.RED);
 			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
 		}
+	}
+
+	public void paint(Graphics g)
+	{
+		final int windowWidth  = getSize().width;
+		final int windowHeight = getSize().height;
+		final int rowHeight = windowHeight / nRows;
+		final int characterSize = rowHeight - 1;
+
+		if (currentCounter == 0)
+		{
+			System.out.println("*** paint PROBLEMS");
+			drawProblems(g, windowWidth, windowHeight, rowHeight, characterSize);
+			currentCounter = sleepTime;
+		}
+		else if (counter)
+		{
+			System.out.println("*** paint COUNTER");
+			drawCounter(g, windowWidth, windowHeight, rowHeight, characterSize);
+		}
+
+		currentCounter--;
+
+		drawingProblems.release();
 	}
 
 	private static void loadPrefers(String fileName)
@@ -315,12 +367,11 @@ public class CoffeeSaint extends JFrame
 		System.out.println("--list-bgcolors     Show a list of available colors.");
 		System.out.println("--textcolor   Text color.");
 		System.out.println("--sound x     Play sound when a warning/error state starts.");
+		System.out.println("--counter     Show counter decreasing upto the point that a refresh will happen.");
 	}
 
 	public static void main(String[] arg)
 	{
-		java.util.List<String> imageFiles = new ArrayList<String>();
-		int currentImageFile = 0;
 		java.util.List<ColorPair> colorPairs = new ArrayList<ColorPair>();
 
 		initColors(colorPairs);
@@ -331,6 +382,8 @@ public class CoffeeSaint extends JFrame
 		{
 			if (arg[loop].compareTo("--host") == 0)
 				host = arg[++loop];
+			else if (arg[loop].compareTo("--counter") == 0)
+				counter = true;
 			else if (arg[loop].compareTo("--sound") == 0)
 				problemSound = arg[++loop];
 			else if (arg[loop].compareTo("--list-bgcolors") == 0)
@@ -436,29 +489,15 @@ public class CoffeeSaint extends JFrame
 			/* create frame to draw in */
 			CoffeeSaint frame = new CoffeeSaint();
 			frame.setSize(r.width, r.height);
+			System.out.println("Initial paint");
 
 			for(;;)
 			{
-				if (imageFiles.size() > 0)
-				{
-					if (imageFiles.get(currentImageFile).substring(0, 7).equals("http://"))
-						img = Toolkit.getDefaultToolkit().createImage(new URL(imageFiles.get(currentImageFile)));
-					else
-						img = Toolkit.getDefaultToolkit().createImage(imageFiles.get(currentImageFile));
-					new ImageIcon(img); //loads the image
-					Toolkit.getDefaultToolkit().sync();
-					imgWidth = img.getWidth(null);
-					imgHeight = img.getHeight(null);
-
-					currentImageFile++;
-					if (currentImageFile == imageFiles.size())
-						currentImageFile = 0;
-				}
-
+				System.out.println("Invoke paint");
 				frame.repaint();
 				frame.setVisible(true);
-
-				Thread.sleep(sleepTime * 1000);
+				drawingProblems.acquire();
+				Thread.sleep(1000);
 			}
 		}
 		catch(Exception e)
