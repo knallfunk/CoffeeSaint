@@ -21,7 +21,8 @@ public class CoffeeSaint extends JFrame
 	static int imgWidth = -1, imgHeight = -1;
 	static java.util.List<Pattern> prioPatterns = new ArrayList<Pattern>();
 	static boolean always_notify = false, also_acknowledged = false;
-	static Color defaultBackgroundColor = Color.GRAY;
+	static Color backgroundColor = Color.GRAY;
+	static Color fontColor = Color.BLACK;
 
 	public CoffeeSaint()
 	{
@@ -134,14 +135,14 @@ public class CoffeeSaint extends JFrame
 		else if (state.equals("2") == true)
 			g.setColor(Color.RED);
 		else
-			g.setColor(defaultBackgroundColor);
+			g.setColor(backgroundColor);
 
 		int rowHeight = windowHeight / totalNRows;
 		int y = rowHeight * row;
 
 		g.fillRect(0, y, windowWidth, rowHeight);
 
-		g.setColor(Color.BLACK);
+		g.setColor(fontColor);
 
 		g.drawString(msg, 0, y + rowHeight);
 	}
@@ -172,7 +173,7 @@ public class CoffeeSaint extends JFrame
 			System.out.println("Took " + ((double)(endLoadTs - startLoadTs) / 1000.0) + "s to load status data");
 
 			collectProblems(javNag, problems);
-			Color bgColor = (problems.size() == 0) ? Color.GREEN : defaultBackgroundColor;
+			Color bgColor = (problems.size() == 0) ? Color.GREEN : backgroundColor;
 
 			/* clear frame */
 			g.setColor(bgColor);
@@ -294,6 +295,7 @@ public class CoffeeSaint extends JFrame
 		System.out.println("--always-notify	Also display problems for which notifications are disabled.");
 		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray.");
 		System.out.println("--list-bgcolors     Show a list of available colors.");
+		System.out.println("--textcolor   Text color.");
 	}
 
 	public static void main(String[] arg)
@@ -317,8 +319,17 @@ public class CoffeeSaint extends JFrame
 			}
 			else if (arg[loop].compareTo("--bgcolor") == 0)
 			{
-				defaultBackgroundColor = selectColor(colorPairs, arg[++loop]);
-				if (defaultBackgroundColor == null)
+				backgroundColor = selectColor(colorPairs, arg[++loop]);
+				if (backgroundColor == null)
+				{
+					System.err.println("Color " + arg[loop] + " is not known.");
+					System.exit(127);
+				}
+			}
+			else if (arg[loop].compareTo("--textcolor") == 0)
+			{
+				fontColor = selectColor(colorPairs, arg[++loop]);
+				if (fontColor == null)
 				{
 					System.err.println("Color " + arg[loop] + " is not known.");
 					System.exit(127);
