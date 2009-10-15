@@ -251,7 +251,7 @@ public class CoffeeSaint extends JFrame
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--version x   Set Nagios version of statusdata. Must be either 1, 2 or 3.");
-		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL.");
+		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin.");
 		System.out.println("--font x      Font to use. Default is 'Courier'.");
 		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others).");
 		System.out.println("--also-acknowledged Display acknowledged problems as well.");
@@ -260,9 +260,10 @@ public class CoffeeSaint extends JFrame
 
 	public static void main(String[] arg)
 	{
-		String imageFile = null;
+		java.util.List<String> imageFiles = new ArrayList<String>();
+		int currentImageFile = 0;
 
-		System.out.println("CoffeeSaint v0.1, (C) 2009 by folkert@vanheusden.com");
+		System.out.println("CoffeeSaint v0.2, (C) 2009 by folkert@vanheusden.com");
 
 		for(int loop=0; loop<arg.length; loop++)
 		{
@@ -306,7 +307,7 @@ public class CoffeeSaint extends JFrame
 			}
 			else if (arg[loop].compareTo("--image") == 0)
 			{
-				imageFile = arg[++loop];
+				imageFiles.add(arg[++loop]);
 			}
 			else if (arg[loop].compareTo("--prefer") == 0)
 			{
@@ -351,16 +352,20 @@ public class CoffeeSaint extends JFrame
 
 			for(;;)
 			{
-				if (imageFile != null)
+				if (imageFiles.size() > 0)
 				{
-					if (imageFile.substring(0, 7).equals("http://"))
-						img = Toolkit.getDefaultToolkit().createImage(new URL(imageFile));
+					if (imageFiles.get(currentImageFile).substring(0, 7).equals("http://"))
+						img = Toolkit.getDefaultToolkit().createImage(new URL(imageFiles.get(currentImageFile)));
 					else
-						img = Toolkit.getDefaultToolkit().createImage(imageFile);
+						img = Toolkit.getDefaultToolkit().createImage(imageFiles.get(currentImageFile));
 					new ImageIcon(img); //loads the image
 					Toolkit.getDefaultToolkit().sync();
 					imgWidth = img.getWidth(null);
 					imgHeight = img.getHeight(null);
+
+					currentImageFile++;
+					if (currentImageFile == imageFiles.size())
+						currentImageFile = 0;
 				}
 
 				frame.repaint();
