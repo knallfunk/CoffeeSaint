@@ -9,6 +9,8 @@ import java.util.regex.Pattern;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.concurrent.Semaphore;
+import java.awt.geom.Rectangle2D;
+import java.awt.font.FontRenderContext;
 
 public class CoffeeSaint extends JFrame
 {
@@ -158,12 +160,14 @@ public class CoffeeSaint extends JFrame
 	{
 		/* counter upto the next reload */
 		final Font f = new Font(fontName, Font.PLAIN, characterSize);
+		String str = "" + sleepTime;
+		Rectangle2D boundingRectangle = f.getStringBounds(str, 0, str.length(), new FontRenderContext(null, false, false));
 		g.setFont(f);
 		g.setColor(backgroundColor);
-		int startX = windowWidth - characterSize;
-		g.fillRect(startX, 0, rowHeight, rowHeight);
+		int startX = windowWidth - (int)boundingRectangle.getWidth();
+		g.fillRect(startX, 0, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
 		g.setColor(fontColor);
-		g.drawString("" + currentCounter, startX, rowHeight);
+		g.drawString("" + currentCounter, startX, (int)boundingRectangle.getHeight());
 	}
 
 	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
