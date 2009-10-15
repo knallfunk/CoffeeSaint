@@ -23,6 +23,8 @@ public class CoffeeSaint extends JFrame
 	static boolean always_notify = false, also_acknowledged = false;
 	static Color backgroundColor = Color.GRAY;
 	static Color fontColor = Color.BLACK;
+	static String problemSound = null;
+	static boolean lastState = false;	// false: no problems
 
 	public CoffeeSaint()
 	{
@@ -211,6 +213,22 @@ public class CoffeeSaint extends JFrame
 				if (curNRows == nRows)
 					break;
 			}
+
+			if (problems.size() > 0)
+			{
+				if (problemSound != null && lastState == false)
+				{
+					System.out.println("Playing sound " + problemSound);
+					new PlayWav(problemSound);
+				}
+
+				lastState = true;
+			}
+			else
+			{
+				lastState = false;
+			}
+			
 		}
 		catch(Exception e)
 		{
@@ -296,6 +314,7 @@ public class CoffeeSaint extends JFrame
 		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray.");
 		System.out.println("--list-bgcolors     Show a list of available colors.");
 		System.out.println("--textcolor   Text color.");
+		System.out.println("--sound x     Play sound when a warning/error state starts.");
 	}
 
 	public static void main(String[] arg)
@@ -312,6 +331,8 @@ public class CoffeeSaint extends JFrame
 		{
 			if (arg[loop].compareTo("--host") == 0)
 				host = arg[++loop];
+			else if (arg[loop].compareTo("--sound") == 0)
+				problemSound = arg[++loop];
 			else if (arg[loop].compareTo("--list-bgcolors") == 0)
 			{
 				listColors(colorPairs);
