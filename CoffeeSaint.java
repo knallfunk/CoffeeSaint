@@ -14,7 +14,7 @@ import java.awt.font.FontRenderContext;
 
 public class CoffeeSaint extends JFrame
 {
-	static String host = "keetweej.vanheusden.com";
+	static String host = null, file = null;
 	static int port = 33333;
 	static int nRows = 10;
 	static int sleepTime = 30;
@@ -30,9 +30,11 @@ public class CoffeeSaint extends JFrame
 	static boolean lastState = false;	// false: no problems
 	static boolean counter = false;
 	static int currentCounter = 0;
-	static Semaphore drawingProblems = new Semaphore(1, true);
+	static Semaphore drawingProblems = new Semaphore(0, true);
+	static Semaphore myRedrawSemaphore = new Semaphore(1, true);
 	static java.util.List<String> imageFiles = new ArrayList<String>();
 	static int currentImageFile = 0;
+	static boolean myRedraw = false;
 
 	public CoffeeSaint()
 	{
@@ -41,12 +43,12 @@ public class CoffeeSaint extends JFrame
 
 	private static void showException(Exception e)
 	{
-		System.out.println("Exception: " + e);
-		System.out.println("Details: " + e.getMessage());
-		System.out.println("Stack-trace:");
+		System.err.println("Exception: " + e);
+		System.err.println("Details: " + e.getMessage());
+		System.err.println("Stack-trace:");
 		for(StackTraceElement ste: e.getStackTrace())
 		{
-			System.out.println(" " + ste.getClassName() + ", "
+			System.err.println(" " + ste.getClassName() + ", "
 					+ ste.getFileName() + ", "
 					+ ste.getLineNumber() + ", "
 					+ ste.getMethodName() + ", "
@@ -147,11 +149,15 @@ public class CoffeeSaint extends JFrame
 		else
 			g.setColor(backgroundColor);
 
-		int y = rowHeight * row;
+		final int y = rowHeight * row;
 
 		g.fillRect(0, y, windowWidth, rowHeight);
 
 		g.setColor(fontColor);
+
+		Font f = new Font(fontName, Font.PLAIN, rowHeight - 1);
+		Rectangle2D boundingRectangle = f.getStringBounds(msg, 0, msg.length(), new FontRenderContext(null, false, false));
+		f = new Font(fontName, Font.PLAIN, (int)((double)rowHeight * ((double)rowHeight / boundingRectangle.getHeight())));
 
 		g.drawString(msg, 0, y + rowHeight);
 	}
@@ -194,7 +200,7 @@ public class CoffeeSaint extends JFrame
 			}
 
 
-			final Font f = new Font(fontName, Font.PLAIN, characterSize - 1);
+			final Font f = new Font(fontName, Font.PLAIN, characterSize);
 			g.setFont(f);
 
 			/* block in upper right to inform about load */
@@ -203,7 +209,11 @@ public class CoffeeSaint extends JFrame
 
 			/* load data from nagios server */
 			long startLoadTs = System.currentTimeMillis();
-			JavNag javNag = new JavNag(host, port, nagiosVersion);
+			JavNag javNag;
+			if (host != null)
+				javNag = new JavNag(host, port, nagiosVersion);
+			else
+				javNag = new JavNag(file, nagiosVersion);
 			long endLoadTs = System.currentTimeMillis();
 			System.out.println("Took " + ((double)(endLoadTs - startLoadTs) / 1000.0) + "s to load status data");
 
@@ -278,8 +288,23 @@ public class CoffeeSaint extends JFrame
 		final int windowHeight = getSize().height;
 		final int rowHeight = windowHeight / nRows;
 		final int characterSize = rowHeight - 1;
+		boolean myRedrawFlag = true;
 
-		if (currentCounter == 0)
+		try
+		{
+			myRedrawSemaphore.acquire();
+			myRedrawFlag = myRedraw;
+			myRedrawSemaphore.release();
+		}
+		catch(Exception e)
+		{
+			System.err.println("Exception during myRedrawSemaphore.acquire(), forcing redraw");
+			myRedrawFlag = false;
+		}
+
+		System.out.println("redrawflag: " + myRedrawFlag);
+
+		if (currentCounter == 0 || myRedrawFlag == false)
 		{
 			System.out.println("*** paint PROBLEMS");
 			drawProblems(g, windowWidth, windowHeight, rowHeight, characterSize);
@@ -293,7 +318,10 @@ public class CoffeeSaint extends JFrame
 
 		currentCounter--;
 
-		drawingProblems.release();
+		if (myRedrawFlag == true)
+			drawingProblems.release();
+
+		System.out.println("released");
 	}
 
 	private static void loadPrefers(String fileName)
@@ -358,7 +386,10 @@ public class CoffeeSaint extends JFrame
 	public static void showHelp()
 	{
 		System.out.println("--host x      Nagios host to connect to");
-		System.out.println("--port x      Port via which to retrieve the Nagios status");
+		System.out.println("--port x      Port via which to retrieve the Nagios status (default: " + port + ")");
+		System.out.println("  OR");
+		System.out.println("--file x      File to load status from");
+		System.out.println("");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--version x   Set Nagios version of statusdata. Must be either 1, 2 or 3.");
@@ -380,12 +411,14 @@ public class CoffeeSaint extends JFrame
 
 		initColors(colorPairs);
 
-		System.out.println("CoffeeSaint v0.2, (C) 2009 by folkert@vanheusden.com");
+		System.out.println("CoffeeSaint v0.3, (C) 2009 by folkert@vanheusden.com");
 
 		for(int loop=0; loop<arg.length; loop++)
 		{
 			if (arg[loop].compareTo("--host") == 0)
 				host = arg[++loop];
+			else if (arg[loop].compareTo("--file") == 0)
+				file = arg[++loop];
 			else if (arg[loop].compareTo("--counter") == 0)
 				counter = true;
 			else if (arg[loop].compareTo("--sound") == 0)
@@ -482,6 +515,17 @@ public class CoffeeSaint extends JFrame
 			}
 		}
 
+		if (host == null && file == null)
+		{
+			System.err.println("You need to select a host with either --host (& --port) or --file.");
+			System.exit(127);
+		}
+		else if (host != null && file != null)
+		{
+			System.err.println("--host and --file are mutual exclusive.");
+			System.exit(127);
+		}
+
 		try
 		{
 			/* retrieve max window size */
@@ -498,9 +542,21 @@ public class CoffeeSaint extends JFrame
 			for(;;)
 			{
 				System.out.println("Invoke paint");
+
+				myRedrawSemaphore.acquire();
+				myRedraw = true;
+				myRedrawSemaphore.release();
+
 				frame.repaint();
 				frame.setVisible(true);
+
 				drawingProblems.acquire();
+				System.out.println("got semaphore");
+
+				myRedrawSemaphore.acquire();
+				myRedraw = false;
+				myRedrawSemaphore.release();
+
 				Thread.sleep(1000);
 			}
 		}
