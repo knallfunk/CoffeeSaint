@@ -12,7 +12,7 @@ import java.util.concurrent.Semaphore;
 import java.awt.geom.Rectangle2D;
 import java.awt.font.FontRenderContext;
 
-public class CoffeeSaint extends JFrame
+public class CoffeeSaint extends Frame
 {
 	static String host = null, file = null;
 	static int port = 33333;
@@ -30,11 +30,8 @@ public class CoffeeSaint extends JFrame
 	static boolean lastState = false;	// false: no problems
 	static boolean counter = false;
 	static int currentCounter = 0;
-	static Semaphore drawingProblems = new Semaphore(0, true);
-	static Semaphore myRedrawSemaphore = new Semaphore(1, true);
 	static java.util.List<String> imageFiles = new ArrayList<String>();
 	static int currentImageFile = 0;
-	static boolean myRedraw = false;
 
 	public CoffeeSaint()
 	{
@@ -157,15 +154,18 @@ public class CoffeeSaint extends JFrame
 
 		Font f = new Font(fontName, Font.PLAIN, rowHeight - 1);
 		Rectangle2D boundingRectangle = f.getStringBounds(msg, 0, msg.length(), new FontRenderContext(null, false, false));
-		f = new Font(fontName, Font.PLAIN, (int)((double)rowHeight * ((double)rowHeight / boundingRectangle.getHeight())));
+		int newHeight = (int)((double)rowHeight * ((double)rowHeight / boundingRectangle.getHeight()));
+		// System.out.println("" + rowHeight + "  " + newHeight + " | " + boundingRectangle.getX() + " " + boundingRectangle.getY());
+		f = new Font(fontName, Font.PLAIN, newHeight);
+		g.setFont(f);
 
-		g.drawString(msg, 0, y + rowHeight);
+		g.drawString(msg, 0, y + newHeight);
 	}
 
 	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
 	{
 		/* counter upto the next reload */
-		final Font f = new Font(fontName, Font.PLAIN, characterSize);
+		Font f = new Font(fontName, Font.PLAIN, characterSize);
 		String str = "" + sleepTime;
 		Rectangle2D boundingRectangle = f.getStringBounds(str, 0, str.length(), new FontRenderContext(null, false, false));
 		g.setFont(f);
@@ -173,7 +173,10 @@ public class CoffeeSaint extends JFrame
 		int startX = windowWidth - (int)boundingRectangle.getWidth();
 		g.fillRect(startX, 0, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
 		g.setColor(fontColor);
-		g.drawString("" + currentCounter, startX, (int)boundingRectangle.getHeight());
+		int newHeight = (int)((double)rowHeight * ((double)rowHeight / boundingRectangle.getHeight()));
+		f = new Font(fontName, Font.PLAIN, newHeight);
+		g.setFont(f);
+		g.drawString("" + currentCounter, startX, rowHeight);
 	}
 
 	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
@@ -288,40 +291,32 @@ public class CoffeeSaint extends JFrame
 		final int windowHeight = getSize().height;
 		final int rowHeight = windowHeight / nRows;
 		final int characterSize = rowHeight - 1;
-		boolean myRedrawFlag = true;
 
-		try
-		{
-			myRedrawSemaphore.acquire();
-			myRedrawFlag = myRedraw;
-			myRedrawSemaphore.release();
-		}
-		catch(Exception e)
-		{
-			System.err.println("Exception during myRedrawSemaphore.acquire(), forcing redraw");
-			myRedrawFlag = false;
-		}
+		System.out.println("*** Paint PROBLEMS " + currentCounter);
+		drawProblems(g, windowWidth, windowHeight, rowHeight, characterSize);
+		currentCounter = sleepTime;
+	}
 
-		System.out.println("redrawflag: " + myRedrawFlag);
+	public void update(Graphics g)
+	{
+		final int windowWidth  = getSize().width;
+		final int windowHeight = getSize().height;
+		final int rowHeight = windowHeight / nRows;
+		final int characterSize = rowHeight - 1;
 
-		if (currentCounter == 0 || myRedrawFlag == false)
+		if (currentCounter == 0)
 		{
-			System.out.println("*** paint PROBLEMS");
+			System.out.println("*** Update PROBLEMS " + currentCounter);
 			drawProblems(g, windowWidth, windowHeight, rowHeight, characterSize);
 			currentCounter = sleepTime;
 		}
 		else if (counter)
 		{
-			System.out.println("*** paint COUNTER");
+			System.out.println("*** update COUNTER " + currentCounter);
 			drawCounter(g, windowWidth, windowHeight, rowHeight, characterSize);
 		}
 
 		currentCounter--;
-
-		if (myRedrawFlag == true)
-			drawingProblems.release();
-
-		System.out.println("released");
 	}
 
 	private static void loadPrefers(String fileName)
@@ -539,23 +534,15 @@ public class CoffeeSaint extends JFrame
 			frame.setSize(r.width, r.height);
 			System.out.println("Initial paint");
 
+			frame.setVisible(true);
+
 			for(;;)
 			{
 				System.out.println("Invoke paint");
 
-				myRedrawSemaphore.acquire();
-				myRedraw = true;
-				myRedrawSemaphore.release();
-
 				frame.repaint();
-				frame.setVisible(true);
 
-				drawingProblems.acquire();
-				System.out.println("got semaphore");
-
-				myRedrawSemaphore.acquire();
-				myRedraw = false;
-				myRedrawSemaphore.release();
+				System.out.println("Sleep");
 
 				Thread.sleep(1000);
 			}
