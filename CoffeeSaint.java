@@ -135,6 +135,18 @@ public class CoffeeSaint extends Frame
 		return newStr.substring(newStr.length() - 2);
 	}
 
+	int setFont(Graphics g, int rowHeight)
+	{
+		Font f = new Font(fontName, Font.PLAIN, rowHeight);
+		g.setFont(f);
+		int fullHeight = g.getFontMetrics().getHeight();
+		int newHeight = (int)((double)rowHeight * ((double)rowHeight / fullHeight));
+		f = new Font(fontName, Font.PLAIN, newHeight);
+		g.setFont(f);
+
+		return newHeight;
+	}
+
 	void drawRow(Graphics g, int totalNRows, String msg, int row, String state, int windowWidth, int windowHeight, int rowHeight)
 	{
 		if (state.equals("0") == true)
@@ -152,12 +164,7 @@ public class CoffeeSaint extends Frame
 
 		g.setColor(fontColor);
 
-		Font f = new Font(fontName, Font.PLAIN, rowHeight - 1);
-		Rectangle2D boundingRectangle = f.getStringBounds(msg, 0, msg.length(), new FontRenderContext(null, false, false));
-		int newHeight = (int)((double)rowHeight * ((double)rowHeight / boundingRectangle.getHeight()));
-		// System.out.println("" + rowHeight + "  " + newHeight + " | " + boundingRectangle.getX() + " " + boundingRectangle.getY());
-		f = new Font(fontName, Font.PLAIN, newHeight);
-		g.setFont(f);
+		int newHeight = setFont(g, rowHeight);
 
 		g.drawString(msg, 0, y + newHeight);
 	}
@@ -165,7 +172,8 @@ public class CoffeeSaint extends Frame
 	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
 	{
 		/* counter upto the next reload */
-		Font f = new Font(fontName, Font.PLAIN, characterSize);
+		int newHeight = setFont(g, rowHeight);
+		Font f = new Font(fontName, Font.PLAIN, newHeight);
 		String str = "" + sleepTime;
 		Rectangle2D boundingRectangle = f.getStringBounds(str, 0, str.length(), new FontRenderContext(null, false, false));
 		g.setFont(f);
@@ -173,10 +181,9 @@ public class CoffeeSaint extends Frame
 		int startX = windowWidth - (int)boundingRectangle.getWidth();
 		g.fillRect(startX, 0, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
 		g.setColor(fontColor);
-		int newHeight = (int)((double)rowHeight * ((double)rowHeight / boundingRectangle.getHeight()));
 		f = new Font(fontName, Font.PLAIN, newHeight);
 		g.setFont(f);
-		g.drawString("" + currentCounter, startX, rowHeight);
+		g.drawString("" + currentCounter, startX, newHeight);
 	}
 
 	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
