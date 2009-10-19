@@ -32,6 +32,7 @@ public class CoffeeSaint extends Frame
 	static int currentCounter = 0;
 	static java.util.List<String> imageFiles = new ArrayList<String>();
 	static int currentImageFile = 0;
+	static boolean adapterImgSize = false;
 
 	public CoffeeSaint()
 	{
@@ -183,7 +184,7 @@ public class CoffeeSaint extends Frame
 		g.setColor(fontColor);
 		f = new Font(fontName, Font.PLAIN, newHeight);
 		g.setFont(f);
-		g.drawString("" + currentCounter, startX, newHeight);
+		g.drawString("" + currentCounter, startX, rowHeight);
 	}
 
 	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
@@ -236,18 +237,30 @@ public class CoffeeSaint extends Frame
 
 			if (img != null)
 			{
-				int curWindowHeight = rowHeight * (nRows - 1);
-				double wMul = (double)windowWidth / (double)imgWidth;
-				double hMul = (double)curWindowHeight / (double)imgHeight;
-				int newWidth = windowWidth, newHeight = curWindowHeight;
-				if (wMul > hMul)
-					newWidth = (int)((double)imgHeight * wMul);
-				else
-					newHeight  = (int)((double)imgWidth  * hMul);
-				int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
-				int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + rowHeight;
+				int curWindowHeight, offsetY;
 
-				g.drawImage(img, putX, putY, newWidth, newHeight, null);
+				if (adapterImgSize)
+				{
+					curWindowHeight = rowHeight * (nRows - (1 + problems.size()));
+					offsetY = (1 + problems.size()) * rowHeight;
+				}
+				else
+				{
+					curWindowHeight = rowHeight * (nRows - 1);
+					offsetY = rowHeight;
+				}
+				if (curWindowHeight > 0)
+				{
+					double wMul = (double)windowWidth / (double)imgWidth;
+					double hMul = (double)curWindowHeight / (double)imgHeight;
+					double multiplier = Math.min(wMul, hMul);
+					int newWidth  = (int)((double)imgWidth  * multiplier);
+					int newHeight = (int)((double)imgHeight * multiplier);
+					int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
+					int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + offsetY;
+
+					g.drawImage(img, putX, putY, newWidth, newHeight, null);
+				}
 			}
 
 			Totals totals = javNag.calculateStatistics();
@@ -396,6 +409,7 @@ public class CoffeeSaint extends Frame
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--version x   Set Nagios version of statusdata. Must be either 1, 2 or 3.");
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin.");
+		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems.");
 		System.out.println("--font x      Font to use. Default is 'Courier'.");
 		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others).");
 		System.out.println("--also-acknowledged Display acknowledged problems as well.");
@@ -413,12 +427,14 @@ public class CoffeeSaint extends Frame
 
 		initColors(colorPairs);
 
-		System.out.println("CoffeeSaint v0.3, (C) 2009 by folkert@vanheusden.com");
+		System.out.println("CoffeeSaint v0.4, (C) 2009 by folkert@vanheusden.com");
 
 		for(int loop=0; loop<arg.length; loop++)
 		{
 			if (arg[loop].compareTo("--host") == 0)
 				host = arg[++loop];
+			else if (arg[loop].compareTo("--adapt-img") == 0)
+				adapterImgSize = true;
 			else if (arg[loop].compareTo("--file") == 0)
 				file = arg[++loop];
 			else if (arg[loop].compareTo("--counter") == 0)
