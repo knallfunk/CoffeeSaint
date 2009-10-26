@@ -5,19 +5,27 @@ import java.io.FileWriter;
 
 class Predictor
 {
-	int elementCount, interval;
-	int [] nagiosErrorCount;
-	int [] necPredictedOk;
-	boolean [] canUse;
+	final String brainDumpVersion = "0.002";
+	int interval;
+	double [] nagiosErrorCountWeek;
+	double [] nagiosErrorCountDay;
 
 	Predictor(int measureInterval)
 	{
 		interval = measureInterval;
-		elementCount = (86400 * 7) / interval;
 
-		nagiosErrorCount = new int[elementCount];
-		necPredictedOk = new int[elementCount];
-		canUse = new boolean[elementCount];
+		nagiosErrorCountWeek = new double[getElementCountWeek()];
+		nagiosErrorCountDay  = new double[getElementCountDay ()];
+	}
+
+	public int getElementCountWeek()
+	{
+		return (86400 * 7) / interval;
+	}
+
+	public int getElementCountDay()
+	{
+		return 86400 / interval;
 	}
 
 	public void restoreBrainFromFile(String fileName) throws Exception
@@ -25,29 +33,29 @@ class Predictor
                 BufferedReader in = new BufferedReader(new FileReader(fileName));
 
 		String line = in.readLine();
-		if (line.equals("1.0") == false)
+		if (line.equals(brainDumpVersion) == false)
 		{
-			System.err.println("Predictor brain dump of unsupported version (expected: 1.0, got: " + line + ")");
+			System.err.println("Predictor brain dump of unsupported version (expected: " + brainDumpVersion + ", got: " + line + ")");
 			return;
 		}
 
 		line = in.readLine();
-		if (line.equals("" + elementCount) == false)
+		if (line.equals("" + interval) == false)
 		{
-			System.err.println("Expected element count of " + elementCount + " but the file has got " + line + " of them.");
+			System.err.println("Expected interval " + interval + " but the file has " + line + ".");
 			return;
 		}
 
-		for(int index=0; index<elementCount; index++)
+		for(int index=0; index<getElementCountWeek(); index++)
 		{
-			String valid = in.readLine();
-			String value = in.readLine();
+			String necw = in.readLine();
+			nagiosErrorCountWeek[index] = Double.valueOf(necw);
+		}
 
-			if (valid.equals("1"))
-			{
-				nagiosErrorCount[index] = Integer.valueOf(value);
-				canUse[index] = true;
-			}
+		for(int index=0; index<getElementCountDay(); index++)
+		{
+			String necd = in.readLine();
+			nagiosErrorCountDay [index] = Double.valueOf(necd);
 		}
 
                 in.close();
@@ -64,61 +72,47 @@ class Predictor
 	{
 		BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
 
-		writeLine(out, "1.0");
-		writeLine(out, "" + elementCount);
+		writeLine(out, brainDumpVersion);
+		writeLine(out, "" + interval);
 
-		for(int index=0; index<elementCount; index++)
-		{
-			if (canUse[index])
-				writeLine(out, "1");
-			else
-				writeLine(out, "0");
+		for(int index=0; index<getElementCountWeek(); index++)
+			writeLine(out, "" + nagiosErrorCountWeek[index]);
 
-			writeLine(out, "" + nagiosErrorCount[index]);
-		}
+		for(int index=0; index<getElementCountDay(); index++)
+			writeLine(out, "" + nagiosErrorCountDay [index]);
 
 		out.close();
 	}
 
+	public int dateToIntervalWeek(int day, int second)
+	{
+		return (day * 86400 + second) / interval;
+	}
+
+	public int dateToIntervalDay(int second)
+	{
+		return second / interval;
+	}
+
 	public void learn(int day, int second, int errorCount)
 	{
-		int intervalNr = (day * 86400 + second) / interval;
+		int intervalNr;
 
-		if (canUse[intervalNr])
-		{
-			if (necPredictedOk[intervalNr] == errorCount) // misschien de afwijking erbij optellen ipv count
-				necPredictedOk[intervalNr]++;
-			else
-				necPredictedOk[intervalNr]--;
-		}
+		intervalNr = dateToIntervalWeek(day, second);
+		nagiosErrorCountWeek[intervalNr] = (nagiosErrorCountWeek[intervalNr] * 3.0 + (double)errorCount) / 4.0;
 
-		if (nagiosErrorCount[intervalNr] != errorCount)
-			necPredictedOk[intervalNr] = 0;
-		nagiosErrorCount[intervalNr] = errorCount;
-		canUse[intervalNr] = true;
+		intervalNr = dateToIntervalDay(second);
+		nagiosErrorCountDay [intervalNr] = (nagiosErrorCountDay [intervalNr] * 3.0 + (double)errorCount) / 4.0;
 	}
 
 	public Double predict(int day, int second)
 	{
-		int newValue = 0;
-		int divider = 0;
-		int intervalNr = (day * 86400 + second) / interval;
+		double value;
+		int intervalNrWeek = dateToIntervalWeek(day, second);
+		int intervalNrDay  = dateToIntervalDay (     second);
 
-		for(int index=0; index<elementCount; index++)
-		{
-			if (index == intervalNr)
-				continue;
+		value = (nagiosErrorCountWeek[intervalNrWeek] * 2.0 + nagiosErrorCountDay[intervalNrDay]) / 3.0;
 
-			if (canUse[index] == false)
-				continue;
-
-			divider += necPredictedOk[index];
-			newValue += necPredictedOk[index] * nagiosErrorCount[index];
-		}
-
-		if (divider != 0)
-			return (double)newValue / (double)divider;
-
-		return null;
+		return value;
 	}
 }
