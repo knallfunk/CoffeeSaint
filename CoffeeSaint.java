@@ -20,8 +20,6 @@ public class CoffeeSaint extends Frame
 	static int sleepTime = 30;
 	static NagiosVersion nagiosVersion = NagiosVersion.V3;
 	static String fontName = "Courier";
-	static Image img = null;
-	static int imgWidth = -1, imgHeight = -1;
 	static java.util.List<Pattern> prioPatterns = new ArrayList<Pattern>();
 	static boolean always_notify = false, also_acknowledged = false;
 	static Color backgroundColor = Color.GRAY;
@@ -152,7 +150,7 @@ public class CoffeeSaint extends Frame
 		return newHeight;
 	}
 
-	void drawRow(Graphics g, int totalNRows, String msg, int row, String state, int windowWidth, int windowHeight, int rowHeight)
+	void drawRow(Graphics g, int totalNRows, String msg, int row, String state, int windowWidth, int windowHeight, int rowHeight, Color bgColor)
 	{
 		if (state.equals("0") == true)
 			g.setColor(Color.GREEN);
@@ -160,8 +158,10 @@ public class CoffeeSaint extends Frame
 			g.setColor(Color.YELLOW);
 		else if (state.equals("2") == true)
 			g.setColor(Color.RED);
+		else if (state.equals("255") == true)
+			g.setColor(bgColor);
 		else
-			g.setColor(backgroundColor);
+			g.setColor(Color.MAGENTA);
 
 		final int y = rowHeight * row;
 
@@ -196,14 +196,18 @@ public class CoffeeSaint extends Frame
 		try
 		{
 			java.util.List<Problem> problems = new ArrayList<Problem>();
+			Image img = null;
+			int imgWidth = -1, imgHeight = -1;
+			String loadImage = null;
 
 			if (imageFiles.size() > 0)
 			{
-				System.out.println("Load image " + imageFiles.get(currentImageFile));
+				loadImage = imageFiles.get(currentImageFile);
+				System.out.println("Load image " + loadImage);
 				if (imageFiles.get(currentImageFile).substring(0, 7).equals("http://"))
-					img = Toolkit.getDefaultToolkit().createImage(new URL(imageFiles.get(currentImageFile)));
+					img = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
 				else
-					img = Toolkit.getDefaultToolkit().createImage(imageFiles.get(currentImageFile));
+					img = Toolkit.getDefaultToolkit().createImage(loadImage);
 				new ImageIcon(img); //loads the image
 				Toolkit.getDefaultToolkit().sync();
 				imgWidth = img.getWidth(null);
@@ -244,10 +248,10 @@ public class CoffeeSaint extends Frame
 				if (predictor != null)
 				{
 					int dummy = (currentDay * 86400) + currentSecond + sleepTime;
-					if (dummy >= (7 * 86400))
-						dummy = 0;
+					while(dummy >= (7 * 86400))
+						dummy -= (7 * 86400);
 					Double value = predictor.predict(dummy / 86400, dummy % 86400);
-					if (value != null)
+					if (value != null && value != 0.0)
 					{
 						System.out.println("Expecting " + value + " problems after next interval");
 						int red = 15 + (int)(value * 5.0);
@@ -259,6 +263,7 @@ public class CoffeeSaint extends Frame
 					}
 				}
 			}
+			System.out.println("bgcolor: " + bgColor);
 			if (predictor != null)
 			{
 				predictor.learn(currentDay, currentSecond, problems.size());
@@ -290,29 +295,40 @@ public class CoffeeSaint extends Frame
 					curWindowHeight = rowHeight * (nRows - 1);
 					offsetY = rowHeight;
 				}
-				if (curWindowHeight > 0)
-				{
-					double wMul = (double)windowWidth / (double)imgWidth;
-					double hMul = (double)curWindowHeight / (double)imgHeight;
-					double multiplier = Math.min(wMul, hMul);
-					int newWidth  = (int)((double)imgWidth  * multiplier);
-					int newHeight = (int)((double)imgHeight * multiplier);
-					int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
-					int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + offsetY;
 
-					g.drawImage(img, putX, putY, newWidth, newHeight, null);
+				if (imgWidth == -1 || imgHeight == -1)
+				{
+					g.setColor(Color.RED);
+					String msg = "Could not load image " + loadImage;
+					System.out.println(msg);
+					g.drawString(msg, 0, windowHeight - rowHeight);
+				}
+				else
+				{
+					if (curWindowHeight > 0)
+					{
+						double wMul = (double)windowWidth / (double)imgWidth;
+						double hMul = (double)curWindowHeight / (double)imgHeight;
+						double multiplier = Math.min(wMul, hMul);
+						int newWidth  = (int)((double)imgWidth  * multiplier);
+						int newHeight = (int)((double)imgHeight * multiplier);
+						int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
+						int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + offsetY;
+
+						g.drawImage(img, putX, putY, newWidth, newHeight, null);
+					}
 				}
 			}
 
 			Totals totals = javNag.calculateStatistics();
 			String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
 			int curNRows = 0;
-			drawRow(g, nRows, msg, curNRows++, (bgColor == Color.GREEN) ? "0" : "255", windowWidth, windowHeight, rowHeight);
+			drawRow(g, nRows, msg, curNRows++, "255", windowWidth, windowHeight, rowHeight, bgColor);
 
 			for(Problem currentProblem : problems)
 			{
 				System.out.println(currentProblem.getCurrent_state() + ": " + currentProblem.getMessage());
-				drawRow(g, nRows, currentProblem.getMessage(), curNRows, currentProblem.getCurrent_state(), windowWidth, windowHeight, rowHeight);
+				drawRow(g, nRows, currentProblem.getMessage(), curNRows, currentProblem.getCurrent_state(), windowWidth, windowHeight, rowHeight, bgColor);
 				curNRows++;
 
 				if (curNRows == nRows)
@@ -478,7 +494,7 @@ public class CoffeeSaint extends Frame
 
 		initColors(colorPairs);
 
-		System.out.println("CoffeeSaint v0.4, (C) 2009 by folkert@vanheusden.com");
+		System.out.println("CoffeeSaint v0.5-beta0.1, (C) 2009 by folkert@vanheusden.com");
 
 		for(int loop=0; loop<arg.length; loop++)
 		{
@@ -607,6 +623,7 @@ public class CoffeeSaint extends Frame
 
 				try
 				{
+					System.out.println("Loading brain from " + predictorBrainFileName);
 					predictor.restoreBrainFromFile(predictorBrainFileName);
 				}
 				catch(FileNotFoundException e)
