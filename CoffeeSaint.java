@@ -41,7 +41,7 @@ public class CoffeeSaint extends Frame
 		super();
 	}
 
-	private static void showException(Exception e)
+	public static void showException(Exception e)
 	{
 		System.err.println("Exception: " + e);
 		System.err.println("Details: " + e.getMessage());
@@ -55,14 +55,6 @@ public class CoffeeSaint extends Frame
 					+ (ste.isNativeMethod() ?
 						"is native method" : "NOT a native method"));
 		}
-	}
-
-	protected void processWindowEvent(WindowEvent e)
-	{
-		System.out.println("processWindowEvent: " + e);
-
-		if (e.getNewState() == WindowEvent.WINDOW_CLOSED)
-			System.exit(0);
 	}
 
 	void addProblem(java.util.List<Problem> problems, java.util.List<Problem> lessImportant, String msg, String state)
@@ -237,9 +229,6 @@ public class CoffeeSaint extends Frame
 			System.out.println("Took " + ((double)(endLoadTs - startLoadTs) / 1000.0) + "s to load status data");
 
 			collectProblems(javNag, problems);
-			Calendar rightNow = Calendar.getInstance();
-			int currentDay = rightNow.get(Calendar.DAY_OF_WEEK);
-			int currentSecond = (rightNow.get(Calendar.HOUR_OF_DAY) * 3600) + (rightNow.get(Calendar.MINUTE) * 60) + rightNow.get(Calendar.SECOND);
 			Color bgColor = backgroundColor;
 			if (problems.size() == 0)
 			{
@@ -247,10 +236,12 @@ public class CoffeeSaint extends Frame
 
 				if (predictor != null)
 				{
-					int dummy = (currentDay * 86400) + currentSecond + sleepTime;
-					while(dummy >= (7 * 86400))
-						dummy -= (7 * 86400);
-					Double value = predictor.predict(dummy / 86400, dummy % 86400);
+					Calendar rightNow = Calendar.getInstance();
+					rightNow.add(Calendar.SECOND, sleepTime);
+					int currentDOM = rightNow.get(Calendar.DAY_OF_MONTH);
+					int currentDay = rightNow.get(Calendar.DAY_OF_WEEK);
+					int currentSecond = (rightNow.get(Calendar.HOUR_OF_DAY) * 3600) + (rightNow.get(Calendar.MINUTE) * 60) + rightNow.get(Calendar.SECOND);
+					Double value = predictor.predict(currentDOM, currentDay, currentSecond);
 					if (value != null && value != 0.0)
 					{
 						System.out.println("Expecting " + value + " problems after next interval");
@@ -263,10 +254,13 @@ public class CoffeeSaint extends Frame
 					}
 				}
 			}
-			System.out.println("bgcolor: " + bgColor);
 			if (predictor != null)
 			{
-				predictor.learn(currentDay, currentSecond, problems.size());
+				Calendar rightNow = Calendar.getInstance();
+				int currentDOM = rightNow.get(Calendar.DAY_OF_MONTH);
+				int currentDay = rightNow.get(Calendar.DAY_OF_WEEK);
+				int currentSecond = (rightNow.get(Calendar.HOUR_OF_DAY) * 3600) + (rightNow.get(Calendar.MINUTE) * 60) + rightNow.get(Calendar.SECOND);
+				predictor.learn(currentDOM, currentDay, currentSecond, problems.size());
 				if ((System.currentTimeMillis() - lastPredictorDump)  > 1800000)
 				{
 					System.out.println("Dumping brain to " + predictorBrainFileName);
@@ -321,6 +315,7 @@ public class CoffeeSaint extends Frame
 			}
 
 			Totals totals = javNag.calculateStatistics();
+			Calendar rightNow = Calendar.getInstance();
 			String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
 			int curNRows = 0;
 			drawRow(g, nRows, msg, curNRows++, "255", windowWidth, windowHeight, rowHeight, bgColor);
@@ -359,6 +354,7 @@ public class CoffeeSaint extends Frame
 				lastState = false;
 			}
 
+			System.out.println("Memory usage: " + ((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024)) + "MB");
 		}
 		catch(Exception e)
 		{
@@ -644,6 +640,8 @@ public class CoffeeSaint extends Frame
 			System.out.println("Initial paint");
 
 			frame.setVisible(true);
+
+			frame.addWindowListener(new FrameListener());
 
 			for(;;)
 			{
