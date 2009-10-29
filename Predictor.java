@@ -5,17 +5,24 @@ import java.io.FileWriter;
 
 class Predictor
 {
-	final String brainDumpVersion = "0.002";
+	final String brainDumpVersion = "0.003";
 	int interval;
 	double [] nagiosErrorCountWeek;
 	double [] nagiosErrorCountDay;
+	double [] nagiosErrorCountMonth;
 
 	Predictor(int measureInterval)
 	{
 		interval = measureInterval;
 
-		nagiosErrorCountWeek = new double[getElementCountWeek()];
-		nagiosErrorCountDay  = new double[getElementCountDay ()];
+		nagiosErrorCountMonth = new double[getElementCountMonth()];
+		nagiosErrorCountWeek  = new double[getElementCountWeek()];
+		nagiosErrorCountDay   = new double[getElementCountDay ()];
+	}
+
+	public int getElementCountMonth()
+	{
+		return (86400 * 31) / interval;
 	}
 
 	public int getElementCountWeek()
@@ -84,6 +91,11 @@ class Predictor
 		out.close();
 	}
 
+	public int dateToIntervalMonth(int dayOfMonth, int second)
+	{
+		return ((dayOfMonth - 1) * 86400 + second) / interval;
+	}
+
 	public int dateToIntervalWeek(int day, int second)
 	{
 		return (day * 86400 + second) / interval;
@@ -94,9 +106,12 @@ class Predictor
 		return second / interval;
 	}
 
-	public void learn(int day, int second, int errorCount)
+	public void learn(int dayOfMonth, int day, int second, int errorCount)
 	{
 		int intervalNr;
+
+		intervalNr = dateToIntervalMonth(dayOfMonth, second);
+		nagiosErrorCountMonth[intervalNr] = (nagiosErrorCountMonth[intervalNr] * 3.0 + (double)errorCount) / 4.0;
 
 		intervalNr = dateToIntervalWeek(day, second);
 		nagiosErrorCountWeek[intervalNr] = (nagiosErrorCountWeek[intervalNr] * 3.0 + (double)errorCount) / 4.0;
@@ -105,13 +120,14 @@ class Predictor
 		nagiosErrorCountDay [intervalNr] = (nagiosErrorCountDay [intervalNr] * 3.0 + (double)errorCount) / 4.0;
 	}
 
-	public Double predict(int day, int second)
+	public Double predict(int dayOfMonth, int day, int second)
 	{
 		double value;
-		int intervalNrWeek = dateToIntervalWeek(day, second);
-		int intervalNrDay  = dateToIntervalDay (     second);
+		int intervalNrMonth = dateToIntervalMonth(dayOfMonth, second);
+		int intervalNrWeek  = dateToIntervalWeek (day,        second);
+		int intervalNrDay   = dateToIntervalDay  (            second);
 
-		value = (nagiosErrorCountWeek[intervalNrWeek] * 2.0 + nagiosErrorCountDay[intervalNrDay]) / 3.0;
+		value = (nagiosErrorCountMonth[intervalNrMonth] * 2.0 + nagiosErrorCountWeek[intervalNrWeek] * 2.0 + nagiosErrorCountDay[intervalNrDay]) / 5.0;
 
 		return value;
 	}
