@@ -5,7 +5,7 @@ import java.io.FileWriter;
 
 class Predictor
 {
-	final String brainDumpVersion = "0.003";
+	final String brainDumpVersion = "0.004";
 	int interval;
 	double [] nagiosErrorCountWeek;
 	double [] nagiosErrorCountDay;
@@ -53,6 +53,12 @@ class Predictor
 			return;
 		}
 
+		for(int index=0; index<getElementCountMonth(); index++)
+		{
+			String necm = in.readLine();
+			nagiosErrorCountMonth[index] = Double.valueOf(necm);
+		}
+
 		for(int index=0; index<getElementCountWeek(); index++)
 		{
 			String necw = in.readLine();
@@ -81,6 +87,9 @@ class Predictor
 
 		writeLine(out, brainDumpVersion);
 		writeLine(out, "" + interval);
+
+		for(int index=0; index<getElementCountMonth(); index++)
+			writeLine(out, "" + nagiosErrorCountMonth[index]);
 
 		for(int index=0; index<getElementCountWeek(); index++)
 			writeLine(out, "" + nagiosErrorCountWeek[index]);
