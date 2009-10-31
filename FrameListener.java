@@ -17,7 +17,9 @@ class FrameListener extends WindowAdapter
 		{
 			CoffeeSaint.showException(exception);
 		}
-
-		System.exit(0);
+		finally
+		{
+			System.exit(0);
+		}
 	}
 }
