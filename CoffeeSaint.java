@@ -230,18 +230,18 @@ public class CoffeeSaint extends Frame
 
 			collectProblems(javNag, problems);
 			Color bgColor = backgroundColor;
+			Calendar rightNow = Calendar.getInstance();
+
 			if (problems.size() == 0)
 			{
 				bgColor = Color.GREEN;
 
 				if (predictor != null)
 				{
-					Calendar rightNow = Calendar.getInstance();
-					rightNow.add(Calendar.SECOND, sleepTime);
-					int currentDOM = rightNow.get(Calendar.DAY_OF_MONTH);
-					int currentDay = rightNow.get(Calendar.DAY_OF_WEEK);
-					int currentSecond = (rightNow.get(Calendar.HOUR_OF_DAY) * 3600) + (rightNow.get(Calendar.MINUTE) * 60) + rightNow.get(Calendar.SECOND);
-					Double value = predictor.predict(currentDOM, currentDay, currentSecond);
+					Calendar future = Calendar.getInstance();
+					future.add(Calendar.SECOND, sleepTime);
+
+					Double value = predictor.predict(rightNow, future);
 					if (value != null && value != 0.0)
 					{
 						System.out.println("Expecting " + value + " problems after next interval");
@@ -256,11 +256,8 @@ public class CoffeeSaint extends Frame
 			}
 			if (predictor != null)
 			{
-				Calendar rightNow = Calendar.getInstance();
-				int currentDOM = rightNow.get(Calendar.DAY_OF_MONTH);
-				int currentDay = rightNow.get(Calendar.DAY_OF_WEEK);
-				int currentSecond = (rightNow.get(Calendar.HOUR_OF_DAY) * 3600) + (rightNow.get(Calendar.MINUTE) * 60) + rightNow.get(Calendar.SECOND);
-				predictor.learn(currentDOM, currentDay, currentSecond, problems.size());
+				predictor.learn(rightNow, problems.size());
+
 				if ((System.currentTimeMillis() - lastPredictorDump)  > 1800000)
 				{
 					System.out.println("Dumping brain to " + predictorBrainFileName);
@@ -315,7 +312,6 @@ public class CoffeeSaint extends Frame
 			}
 
 			Totals totals = javNag.calculateStatistics();
-			Calendar rightNow = Calendar.getInstance();
 			String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
 			int curNRows = 0;
 			drawRow(g, nRows, msg, curNRows++, "255", windowWidth, windowHeight, rowHeight, bgColor);
@@ -363,6 +359,16 @@ public class CoffeeSaint extends Frame
 			/* block in upper right to inform about error */
 			g.setColor(Color.RED);
 			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
+
+			final String msg = "Error: " + e;
+			final int characterSizeError = Math.max(10, windowWidth / msg.length());
+			final Font f = new Font(fontName, Font.PLAIN, characterSizeError);
+			g.setFont(f);
+			final int y = rowHeight * (nRows - 1);
+			g.setColor(Color.RED);
+			g.fillRect(0, y, windowWidth, rowHeight);
+			g.setColor(Color.MAGENTA);
+			g.drawString(msg, 0, y + characterSizeError);
 		}
 	}
 
