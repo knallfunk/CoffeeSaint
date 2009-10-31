@@ -15,6 +15,7 @@ import java.io.FileNotFoundException;
 public class CoffeeSaint extends Frame
 {
 	static String host = null, file = null;
+	static URL url = null;
 	static int port = 33333;
 	static int nRows = 10;
 	static int sleepTime = 30;
@@ -223,6 +224,8 @@ public class CoffeeSaint extends Frame
 			JavNag javNag;
 			if (host != null)
 				javNag = new JavNag(host, port, nagiosVersion);
+			else if (url != null)
+				javNag = new JavNag(url, nagiosVersion);
 			else
 				javNag = new JavNag(file, nagiosVersion);
 			long endLoadTs = System.currentTimeMillis();
@@ -492,133 +495,139 @@ public class CoffeeSaint extends Frame
 
 	public static void main(String[] arg)
 	{
-		java.util.List<ColorPair> colorPairs = new ArrayList<ColorPair>();
-
-		initColors(colorPairs);
-
-		System.out.println("CoffeeSaint v0.5-beta0.1, (C) 2009 by folkert@vanheusden.com");
-
-		for(int loop=0; loop<arg.length; loop++)
-		{
-			if (arg[loop].compareTo("--host") == 0)
-				host = arg[++loop];
-			else if (arg[loop].compareTo("--predict") == 0)
-				predictorBrainFileName = arg[++loop];
-			else if (arg[loop].compareTo("--exec") == 0)
-				execCmd = arg[++loop];
-			else if (arg[loop].compareTo("--adapt-img") == 0)
-				adapterImgSize = true;
-			else if (arg[loop].compareTo("--file") == 0)
-				file = arg[++loop];
-			else if (arg[loop].compareTo("--counter") == 0)
-				counter = true;
-			else if (arg[loop].compareTo("--sound") == 0)
-				problemSound = arg[++loop];
-			else if (arg[loop].compareTo("--list-bgcolors") == 0)
-			{
-				listColors(colorPairs);
-				System.exit(0);
-			}
-			else if (arg[loop].compareTo("--bgcolor") == 0)
-			{
-				backgroundColor = selectColor(colorPairs, arg[++loop]);
-				if (backgroundColor == null)
-				{
-					System.err.println("Color " + arg[loop] + " is not known.");
-					System.exit(127);
-				}
-			}
-			else if (arg[loop].compareTo("--textcolor") == 0)
-			{
-				fontColor = selectColor(colorPairs, arg[++loop]);
-				if (fontColor == null)
-				{
-					System.err.println("Color " + arg[loop] + " is not known.");
-					System.exit(127);
-				}
-			}
-			else if (arg[loop].compareTo("--port") == 0)
-				port = Integer.valueOf(arg[++loop]);
-			else if (arg[loop].compareTo("--nrows") == 0)
-			{
-				nRows = Integer.valueOf(arg[++loop]);
-				if (nRows < 2)
-				{
-					System.err.println("--nrows expects a value of 2 or higher");
-					System.exit(127);
-				}
-			}
-			else if (arg[loop].compareTo("--interval") == 0)
-			{
-				sleepTime = Integer.valueOf(arg[++loop]);
-				if (sleepTime < 1)
-				{
-					System.err.println("--interval requires a value of 1 or higher");
-					System.exit(127);
-				}
-			}
-			else if (arg[loop].compareTo("--version") == 0)
-			{
-				String version = arg[++loop];
-
-				if (version.equals("1"))
-					nagiosVersion = NagiosVersion.V1;
-				else if (version.equals("2"))
-					nagiosVersion = NagiosVersion.V2;
-				else if (version.equals("3"))
-					nagiosVersion = NagiosVersion.V3;
-				else
-				{
-					System.err.println("Invalid nagios version selected.");
-					System.exit(127);
-				}
-			}
-			else if (arg[loop].compareTo("--image") == 0)
-			{
-				imageFiles.add(arg[++loop]);
-			}
-			else if (arg[loop].compareTo("--prefer") == 0)
-			{
-				loadPrefers(arg[++loop]);
-			}
-			else if (arg[loop].compareTo("--always-notify") == 0)
-			{
-				always_notify = true;
-			}
-			else if (arg[loop].compareTo("--also-acknowledged") == 0)
-			{
-				also_acknowledged = true;
-			}
-			else if (arg[loop].compareTo("--font") == 0)
-			{
-				fontName = arg[++loop];
-			}
-			else if (arg[loop].compareTo("--help") == 0 || arg[loop].compareTo("--h") == 0 )
-			{
-				showHelp();
-				System.exit(0);
-			}
-			else
-			{
-				System.err.println("Parameter " + arg[loop] + " not understood.");
-				showHelp();
-				System.exit(127);
-			}
-		}
-
-		if (host == null && file == null)
-		{
-			System.err.println("You need to select a host with either --host (& --port) or --file.");
-			System.exit(127);
-		}
-		else if (host != null && file != null)
-		{
-			System.err.println("--host and --file are mutual exclusive.");
-			System.exit(127);
-		}
-
 		try
 		{
+			java.util.List<ColorPair> colorPairs = new ArrayList<ColorPair>();
+
+			initColors(colorPairs);
+
+			System.out.println("CoffeeSaint v0.6, (C) 2009 by folkert@vanheusden.com");
+
+			for(int loop=0; loop<arg.length; loop++)
+			{
+				if (arg[loop].compareTo("--host") == 0)
+					host = arg[++loop];
+				else if (arg[loop].compareTo("--predict") == 0)
+					predictorBrainFileName = arg[++loop];
+				else if (arg[loop].compareTo("--exec") == 0)
+					execCmd = arg[++loop];
+				else if (arg[loop].compareTo("--adapt-img") == 0)
+					adapterImgSize = true;
+				else if (arg[loop].compareTo("--file") == 0)
+					file = arg[++loop];
+				else if (arg[loop].compareTo("--url") == 0)
+					url = new URL(arg[++loop]);
+				else if (arg[loop].compareTo("--counter") == 0)
+					counter = true;
+				else if (arg[loop].compareTo("--sound") == 0)
+					problemSound = arg[++loop];
+				else if (arg[loop].compareTo("--list-bgcolors") == 0)
+				{
+					listColors(colorPairs);
+					System.exit(0);
+				}
+				else if (arg[loop].compareTo("--bgcolor") == 0)
+				{
+					backgroundColor = selectColor(colorPairs, arg[++loop]);
+					if (backgroundColor == null)
+					{
+						System.err.println("Color " + arg[loop] + " is not known.");
+						System.exit(127);
+					}
+				}
+				else if (arg[loop].compareTo("--textcolor") == 0)
+				{
+					fontColor = selectColor(colorPairs, arg[++loop]);
+					if (fontColor == null)
+					{
+						System.err.println("Color " + arg[loop] + " is not known.");
+						System.exit(127);
+					}
+				}
+				else if (arg[loop].compareTo("--port") == 0)
+					port = Integer.valueOf(arg[++loop]);
+				else if (arg[loop].compareTo("--nrows") == 0)
+				{
+					nRows = Integer.valueOf(arg[++loop]);
+					if (nRows < 2)
+					{
+						System.err.println("--nrows expects a value of 2 or higher");
+						System.exit(127);
+					}
+				}
+				else if (arg[loop].compareTo("--interval") == 0)
+				{
+					sleepTime = Integer.valueOf(arg[++loop]);
+					if (sleepTime < 1)
+					{
+						System.err.println("--interval requires a value of 1 or higher");
+						System.exit(127);
+					}
+				}
+				else if (arg[loop].compareTo("--version") == 0)
+				{
+					String version = arg[++loop];
+
+					if (version.equals("1"))
+						nagiosVersion = NagiosVersion.V1;
+					else if (version.equals("2"))
+						nagiosVersion = NagiosVersion.V2;
+					else if (version.equals("3"))
+						nagiosVersion = NagiosVersion.V3;
+					else
+					{
+						System.err.println("Invalid nagios version selected.");
+						System.exit(127);
+					}
+				}
+				else if (arg[loop].compareTo("--image") == 0)
+				{
+					imageFiles.add(arg[++loop]);
+				}
+				else if (arg[loop].compareTo("--prefer") == 0)
+				{
+					loadPrefers(arg[++loop]);
+				}
+				else if (arg[loop].compareTo("--always-notify") == 0)
+				{
+					always_notify = true;
+				}
+				else if (arg[loop].compareTo("--also-acknowledged") == 0)
+				{
+					also_acknowledged = true;
+				}
+				else if (arg[loop].compareTo("--font") == 0)
+				{
+					fontName = arg[++loop];
+				}
+				else if (arg[loop].compareTo("--help") == 0 || arg[loop].compareTo("--h") == 0 )
+				{
+					showHelp();
+					System.exit(0);
+				}
+				else
+				{
+					System.err.println("Parameter " + arg[loop] + " not understood.");
+					showHelp();
+					System.exit(127);
+				}
+			}
+
+			int nSet = 0;
+			nSet += (host != null ? 1 : 0);
+			nSet += (file != null ? 1 : 0);
+			nSet += (url  != null ? 1 : 0);
+			if (nSet == 0)
+			{
+				System.err.println("You need to select a host with either --host (& --port), a file with --file or an URL with --url.");
+				System.exit(127);
+			}
+			else if (nSet > 1)
+			{
+				System.err.println("--host, --file and --url are mutual exclusive.");
+				System.exit(127);
+			}
+
 			if (predictorBrainFileName != null)
 			{
 				predictor = new Predictor(sleepTime);
