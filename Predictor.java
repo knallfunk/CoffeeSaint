@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.util.Calendar;
 
 class Predictor
 {
@@ -115,28 +116,87 @@ class Predictor
 		return second / interval;
 	}
 
-	public void learn(int dayOfMonth, int day, int second, int errorCount)
+	public void learn(Calendar now, int errorCount)
 	{
 		int intervalNr;
 
-		intervalNr = dateToIntervalMonth(dayOfMonth, second);
+		int nowDOM = now.get(Calendar.DAY_OF_MONTH);
+		int nowDay = now.get(Calendar.DAY_OF_WEEK) - 1; // SUNDAY=1, SATURDAY=7
+		int nowSecond = (now.get(Calendar.HOUR_OF_DAY) * 3600) + (now.get(Calendar.MINUTE) * 60) + now.get(Calendar.SECOND);
+
+		intervalNr = dateToIntervalMonth(nowDOM, nowSecond);
 		nagiosErrorCountMonth[intervalNr] = (nagiosErrorCountMonth[intervalNr] * 3.0 + (double)errorCount) / 4.0;
 
-		intervalNr = dateToIntervalWeek(day, second);
+		intervalNr = dateToIntervalWeek(nowDay, nowSecond);
 		nagiosErrorCountWeek[intervalNr] = (nagiosErrorCountWeek[intervalNr] * 3.0 + (double)errorCount) / 4.0;
 
-		intervalNr = dateToIntervalDay(second);
+		intervalNr = dateToIntervalDay(nowSecond);
 		nagiosErrorCountDay [intervalNr] = (nagiosErrorCountDay [intervalNr] * 3.0 + (double)errorCount) / 4.0;
 	}
 
-	public Double predict(int dayOfMonth, int day, int second)
+	int fixIndex(int nr, int nElements)
+	{
+		while (nr < 0)
+			nr += nElements;
+
+		while (nr >= nElements)
+			nr -= nElements;
+
+		return nr;
+	}
+
+	public double averageDifference(int intervalNrNow, double [] values, int nElements)
+	{
+		double prev = values[fixIndex(intervalNrNow + 1, nElements)];
+		double diff = 0.0;
+		for(int index=2; index<nElements; index++)
+		{
+			double cur = values[fixIndex(intervalNrNow + index, nElements)];
+			diff += cur - prev;
+			prev = cur;
+		}
+
+		return diff / (double)(nElements - 2);
+	}
+
+	public double averageDifferenceNextValue(int intervalNrNow, double [] values, int nElements)
+	{
+		double prevValue = values[fixIndex(intervalNrNow - 1, nElements)];
+
+		double avgDiff = averageDifference(intervalNrNow, values, nElements);
+
+		return prevValue + avgDiff;
+	}
+
+	public int secondsFromMidnight(Calendar now)
+	{
+		return (now.get(Calendar.HOUR_OF_DAY) * 3600) + (now.get(Calendar.MINUTE) * 60) + now.get(Calendar.SECOND);
+	}
+
+	public Double predict(Calendar now, Calendar then)
 	{
 		double value;
-		int intervalNrMonth = dateToIntervalMonth(dayOfMonth, second);
-		int intervalNrWeek  = dateToIntervalWeek (day,        second);
-		int intervalNrDay   = dateToIntervalDay  (            second);
 
-		value = (nagiosErrorCountMonth[intervalNrMonth] * 2.0 + nagiosErrorCountWeek[intervalNrWeek] * 2.0 + nagiosErrorCountDay[intervalNrDay]) / 5.0;
+		int nowDOM = now.get(Calendar.DAY_OF_MONTH);
+		int nowDay = now.get(Calendar.DAY_OF_WEEK) - 1;
+		int nowSecond = secondsFromMidnight(now);
+                int intervalNrMonthNow = dateToIntervalMonth(nowDOM, nowSecond);
+                int intervalNrWeekNow  = dateToIntervalWeek (nowDay, nowSecond);
+                int intervalNrDayNow   = dateToIntervalDay  (        nowSecond);
+
+		int thenDOM = then.get(Calendar.DAY_OF_MONTH);
+		int thenDay = then.get(Calendar.DAY_OF_WEEK) - 1;
+		int thenSecond = secondsFromMidnight(then);
+                int intervalNrMonthThen = dateToIntervalMonth(thenDOM, thenSecond);
+                int intervalNrWeekThen  = dateToIntervalWeek (thenDay, thenSecond);
+                int intervalNrDayThen   = dateToIntervalDay  (         thenSecond);
+
+		double dayPrediction   = averageDifferenceNextValue(intervalNrDayNow,   nagiosErrorCountDay,   getElementCountDay());
+		double weekPrediction  = averageDifferenceNextValue(intervalNrWeekNow,  nagiosErrorCountWeek,  getElementCountWeek());
+		double monthPrediction = averageDifferenceNextValue(intervalNrMonthNow, nagiosErrorCountMonth, getElementCountMonth());
+
+		value = (dayPrediction + weekPrediction + monthPrediction +
+			nagiosErrorCountMonth[intervalNrMonthThen] * 2.0 + nagiosErrorCountWeek[intervalNrWeekThen] * 2.0 + nagiosErrorCountDay[intervalNrDayThen]) / 8.0;
 
 		return value;
 	}
