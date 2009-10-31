@@ -1,6 +1,8 @@
 /* Released under the GPL2. See license.txt for details. */
 import java.util.*;
 import java.net.Socket;
+import java.net.URL;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.BufferedReader;
@@ -269,6 +271,35 @@ public class JavNag
 		in.close();
 
 		socket.close();
+
+		if (nagiosVersion == NagiosVersion.V1)
+		{
+			addFromNagios1(fileDump);
+		}
+		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
+		{
+			addFromNagios2And3(fileDump);
+		}
+	}
+
+	/**
+	 * Retrieves a Nagios status from an URL
+	 *
+	 * @param url		URL
+	 * @param nagiosVersion	Nagios-version this file is from.
+	 * @see NagiosVersion
+	 */
+	public JavNag(URL url, NagiosVersion nagiosVersion) throws Exception
+	{
+		List<String> fileDump = new ArrayList<String>();
+		InputStreamReader inputStream = new InputStreamReader(url.openStream());
+		BufferedReader in = new BufferedReader(inputStream);
+		String line;
+
+		while((line = in.readLine()) != null)
+			fileDump.add(line);
+
+		in.close();
 
 		if (nagiosVersion == NagiosVersion.V1)
 		{
