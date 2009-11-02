@@ -92,16 +92,20 @@ public class Host
 	 *
 	 * @param hostParameterName	The name of the parameter. See nagios documentation for a list.
 	 * @param hostParameterValue	String with the value.
+	 * @return 			Parameter value.
 	 */
-	public void addParameter(String hostParameterName, String hostParameterValue)
+	public ParameterEntry addParameter(String hostParameterName, String hostParameterValue)
 	{
 		for(ParameterEntry currentHostEntry : hostEntries)
 		{
 			if (currentHostEntry.getParameterName().equals(hostParameterName))
-				return;
+				return currentHostEntry;
 		}
 
-		hostEntries.add(new ParameterEntry(hostParameterName, hostParameterValue));
+		ParameterEntry currentHostEntry = new ParameterEntry(hostParameterName, hostParameterValue);
+		hostEntries.add(currentHostEntry);
+
+		return currentHostEntry;
 	}
 
 	/**
@@ -110,8 +114,9 @@ public class Host
 	 * @param serviceName		Service to which this parameter/value pair applies.
 	 * @param serviceParameterName	Name of the parameter.
 	 * @param serviceParameterValue	Parameter value.
+	 * @return			Altered service
 	 */
-	public void addServiceEntry(String serviceName, String serviceParameterName, String serviceParameterValue)
+	public Service addServiceEntry(String serviceName, String serviceParameterName, String serviceParameterValue)
 	{
 		ParameterEntry parameterEntry = new ParameterEntry(serviceParameterName, serviceParameterValue);
 
@@ -120,12 +125,14 @@ public class Host
 			if (curService.getServiceName().equals(serviceName))
 			{
 				curService.addParameter(parameterEntry);
-				return;
+				return curService;
 			}
 		}
 
 		Service newService = new Service(serviceName);
 		newService.addParameter(parameterEntry);
 		services.add(newService);
+
+		return newService;
 	}
 }
