@@ -16,13 +16,14 @@ public class PlayWav
 
 		int nBytesRead = 0;
 		byte[] abData = new byte[128 * 1024];
- 
-		while (nBytesRead != -1)
+
+		do 
 		{
 			nBytesRead = audioInputStream.read(abData, 0, abData.length);
 			if (nBytesRead >= 0)
 				auline.write(abData, 0, nBytesRead);
 		}
+		while (nBytesRead != -1);
 
 		auline.drain();
 		auline.close();
