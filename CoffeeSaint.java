@@ -31,7 +31,7 @@ public class CoffeeSaint extends Frame
 	static int currentCounter = 0;
 	static java.util.List<String> imageFiles = new ArrayList<String>();
 	static int currentImageFile = 0;
-	static boolean adapterImgSize = false;
+	static boolean adaptImgSize = false;
 	static String execCmd;
 	static String predictorBrainFileName;
 	static Predictor predictor;
@@ -184,33 +184,138 @@ public class CoffeeSaint extends Frame
 		g.drawString("" + currentCounter, startX, newHeight);
 	}
 
+	public ImageParameters loadImage() throws Exception
+	{
+		if (imageFiles.size() > 0)
+		{
+			Image img;
+			String loadImage = imageFiles.get(currentImageFile);
+
+			System.out.println("Load image " + loadImage);
+
+			if (imageFiles.get(currentImageFile).substring(0, 7).equals("http://"))
+				img = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
+			else
+				img = Toolkit.getDefaultToolkit().createImage(loadImage);
+			new ImageIcon(img); //loads the image
+			Toolkit.getDefaultToolkit().sync();
+
+			int imgWidth = img.getWidth(null);
+			int imgHeight = img.getHeight(null);
+
+			currentImageFile++;
+			if (currentImageFile == imageFiles.size())
+				currentImageFile = 0;
+
+			return new ImageParameters(img, loadImage, imgWidth, imgHeight);
+		}
+
+		return null;
+	}
+
+	public Color predictWithColor(Calendar rightNow)
+	{
+		Color bgColor = Color.GREEN;
+
+		if (predictor != null)
+		{
+			Calendar future = Calendar.getInstance();
+			future.add(Calendar.SECOND, sleepTime);
+
+			Double value = predictor.predict(rightNow, future);
+			if (value != null && value != 0.0)
+			{
+				System.out.println("Expecting " + value + " problems after next interval");
+				int red = 15 + (int)(value * 5.0);
+				if (red < 0)
+					red = 0;
+				if (red > 255)
+					red = 255;
+				bgColor = new Color(red, 255, 0);
+			}
+		}
+
+		return bgColor;
+	}
+
+	public void learnProblems(Calendar rightNow, int nProblems) throws Exception
+	{
+		predictor.learn(rightNow, nProblems);
+
+		if ((System.currentTimeMillis() - lastPredictorDump)  > 1800000)
+		{
+			System.out.println("Dumping brain to " + predictorBrainFileName);
+
+			predictor.dumpBrainToFile(predictorBrainFileName);
+
+			lastPredictorDump = System.currentTimeMillis();
+		}
+	}
+
+	public void displayImage(ImageParameters imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
+	{
+		int curWindowHeight, offsetY;
+
+		if (adaptImgSize)
+		{
+			curWindowHeight = rowHeight * (nRows - (1 + nProblems));
+			offsetY = (1 + nProblems) * rowHeight;
+		}
+		else
+		{
+			curWindowHeight = rowHeight * (nRows - 1);
+			offsetY = rowHeight;
+		}
+
+		if (imageParameters.getWidth() == -1 || imageParameters.getHeight() == -1)
+		{
+			g.setColor(Color.RED);
+			String msg = "Could not load image " + imageParameters.getFileName();
+			System.out.println(msg);
+			g.drawString(msg, 0, windowHeight - rowHeight);
+		}
+		else
+		{
+			if (curWindowHeight > 0)
+			{
+				double wMul = (double)windowWidth / (double)imageParameters.getWidth();
+				double hMul = (double)curWindowHeight / (double)imageParameters.getHeight();
+				double multiplier = Math.min(wMul, hMul);
+				int newWidth  = (int)((double)imageParameters.getWidth()  * multiplier);
+				int newHeight = (int)((double)imageParameters.getHeight() * multiplier);
+				int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
+				int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + offsetY;
+
+				g.drawImage(imageParameters.getImage(), putX, putY, newWidth, newHeight, null);
+			}
+		}
+	}
+
+	public void showCoffeeSaintProblem(Exception e, Graphics g, int windowWidth, int characterSize, int rowHeight)
+	{
+		/* block in upper right to inform about error */
+		g.setColor(Color.RED);
+		g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
+
+		final String msg = "Error: " + e;
+		final int characterSizeError = Math.max(10, windowWidth / msg.length());
+		final Font f = new Font(fontName, Font.PLAIN, characterSizeError);
+		g.setFont(f);
+		final int y = rowHeight * (nRows - 1);
+		g.setColor(Color.RED);
+		g.fillRect(0, y, windowWidth, rowHeight);
+		g.setColor(Color.MAGENTA);
+		g.drawString(msg, 0, y + characterSizeError);
+	}
+
 	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
 	{
 		try
 		{
 			java.util.List<Problem> problems = new ArrayList<Problem>();
-			Image img = null;
-			int imgWidth = -1, imgHeight = -1;
 			String loadImage = null;
 
-			if (imageFiles.size() > 0)
-			{
-				loadImage = imageFiles.get(currentImageFile);
-				System.out.println("Load image " + loadImage);
-				if (imageFiles.get(currentImageFile).substring(0, 7).equals("http://"))
-					img = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
-				else
-					img = Toolkit.getDefaultToolkit().createImage(loadImage);
-				new ImageIcon(img); //loads the image
-				Toolkit.getDefaultToolkit().sync();
-				imgWidth = img.getWidth(null);
-				imgHeight = img.getHeight(null);
-
-				currentImageFile++;
-				if (currentImageFile == imageFiles.size())
-					currentImageFile = 0;
-			}
-
+			ImageParameters imageParameters = loadImage();
 
 			final Font f = new Font(fontName, Font.PLAIN, characterSize);
 			g.setFont(f);
@@ -236,83 +341,16 @@ public class CoffeeSaint extends Frame
 			Calendar rightNow = Calendar.getInstance();
 
 			if (problems.size() == 0)
-			{
-				bgColor = Color.GREEN;
-
-				if (predictor != null)
-				{
-					Calendar future = Calendar.getInstance();
-					future.add(Calendar.SECOND, sleepTime);
-
-					Double value = predictor.predict(rightNow, future);
-					if (value != null && value != 0.0)
-					{
-						System.out.println("Expecting " + value + " problems after next interval");
-						int red = 15 + (int)(value * 5.0);
-						if (red < 0)
-							red = 0;
-						if (red > 255)
-							red = 255;
-						bgColor = new Color(red, 255, 0);
-					}
-				}
-			}
+				bgColor = predictWithColor(rightNow);
 			if (predictor != null)
-			{
-				predictor.learn(rightNow, problems.size());
-
-				if ((System.currentTimeMillis() - lastPredictorDump)  > 1800000)
-				{
-					System.out.println("Dumping brain to " + predictorBrainFileName);
-
-					predictor.dumpBrainToFile(predictorBrainFileName);
-
-					lastPredictorDump = System.currentTimeMillis();
-				}
-			}
+				learnProblems(rightNow, problems.size());
 
 			/* clear frame */
 			g.setColor(bgColor);
 			g.fillRect(0, 0, windowWidth, windowHeight);
 
-			if (img != null)
-			{
-				int curWindowHeight, offsetY;
-
-				if (adapterImgSize)
-				{
-					curWindowHeight = rowHeight * (nRows - (1 + problems.size()));
-					offsetY = (1 + problems.size()) * rowHeight;
-				}
-				else
-				{
-					curWindowHeight = rowHeight * (nRows - 1);
-					offsetY = rowHeight;
-				}
-
-				if (imgWidth == -1 || imgHeight == -1)
-				{
-					g.setColor(Color.RED);
-					String msg = "Could not load image " + loadImage;
-					System.out.println(msg);
-					g.drawString(msg, 0, windowHeight - rowHeight);
-				}
-				else
-				{
-					if (curWindowHeight > 0)
-					{
-						double wMul = (double)windowWidth / (double)imgWidth;
-						double hMul = (double)curWindowHeight / (double)imgHeight;
-						double multiplier = Math.min(wMul, hMul);
-						int newWidth  = (int)((double)imgWidth  * multiplier);
-						int newHeight = (int)((double)imgHeight * multiplier);
-						int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
-						int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + offsetY;
-
-						g.drawImage(img, putX, putY, newWidth, newHeight, null);
-					}
-				}
-			}
+			if (imageParameters != null)
+				displayImage(imageParameters, problems.size(), g, rowHeight, adaptImgSize, windowWidth, windowHeight);
 
 			Totals totals = javNag.calculateStatistics();
 			String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
@@ -359,19 +397,7 @@ public class CoffeeSaint extends Frame
 		{
 			showException(e);
 
-			/* block in upper right to inform about error */
-			g.setColor(Color.RED);
-			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
-
-			final String msg = "Error: " + e;
-			final int characterSizeError = Math.max(10, windowWidth / msg.length());
-			final Font f = new Font(fontName, Font.PLAIN, characterSizeError);
-			g.setFont(f);
-			final int y = rowHeight * (nRows - 1);
-			g.setColor(Color.RED);
-			g.fillRect(0, y, windowWidth, rowHeight);
-			g.setColor(Color.MAGENTA);
-			g.drawString(msg, 0, y + characterSizeError);
+			showCoffeeSaintProblem(e, g, windowWidth, characterSize, rowHeight);
 		}
 	}
 
@@ -468,7 +494,27 @@ public class CoffeeSaint extends Frame
 		return null;
 	}
 
-	public static void showHelp()
+	public static CoffeeSaint initGraphics()
+	{
+		/* retrieve max window size */
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice[] gs = ge.getScreenDevices();
+		GraphicsConfiguration [] gc = gs[0].getConfigurations();
+		Rectangle r = gc[0].getBounds();
+
+		/* create frame to draw in */
+		CoffeeSaint frame = new CoffeeSaint();
+		frame.setSize(r.width, r.height);
+		System.out.println("Initial paint");
+
+		frame.setVisible(true);
+
+		frame.addWindowListener(new FrameListener());
+
+		return frame;
+	}
+
+	public static void showHelp(java.util.List<ColorPair> colorPairs)
 	{
 		System.out.println("--host x      Nagios host to connect to");
 		System.out.println("--port x      Port via which to retrieve the Nagios status (default: " + port + ")");
@@ -491,6 +537,10 @@ public class CoffeeSaint extends Frame
 		System.out.println("--counter     Show counter decreasing upto the point that a refresh will happen.");
 		System.out.println("--exec x      Execute program when one or more errors are shown.");
 		System.out.println("--predict x   File to write brain-dump to (and read from).");
+		System.out.print("Known colors:");
+		for(ColorPair colorPair : colorPairs)
+			System.out.print(" " + colorPair.getName());
+		System.out.println("");
 	}
 
 	public static void main(String[] arg)
@@ -512,7 +562,7 @@ public class CoffeeSaint extends Frame
 				else if (arg[loop].compareTo("--exec") == 0)
 					execCmd = arg[++loop];
 				else if (arg[loop].compareTo("--adapt-img") == 0)
-					adapterImgSize = true;
+					adaptImgSize = true;
 				else if (arg[loop].compareTo("--file") == 0)
 					file = arg[++loop];
 				else if (arg[loop].compareTo("--url") == 0)
@@ -602,13 +652,13 @@ public class CoffeeSaint extends Frame
 				}
 				else if (arg[loop].compareTo("--help") == 0 || arg[loop].compareTo("--h") == 0 )
 				{
-					showHelp();
+					showHelp(colorPairs);
 					System.exit(0);
 				}
 				else
 				{
 					System.err.println("Parameter " + arg[loop] + " not understood.");
-					showHelp();
+					showHelp(colorPairs);
 					System.exit(127);
 				}
 			}
@@ -643,20 +693,7 @@ public class CoffeeSaint extends Frame
 				}
 			}
 
-			/* retrieve max window size */
-			GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-			GraphicsDevice[] gs = ge.getScreenDevices();
-			GraphicsConfiguration [] gc = gs[0].getConfigurations();
-			Rectangle r = gc[0].getBounds();
-
-			/* create frame to draw in */
-			CoffeeSaint frame = new CoffeeSaint();
-			frame.setSize(r.width, r.height);
-			System.out.println("Initial paint");
-
-			frame.setVisible(true);
-
-			frame.addWindowListener(new FrameListener());
+			CoffeeSaint frame = initGraphics();
 
 			for(;;)
 			{
