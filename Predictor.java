@@ -1,3 +1,4 @@
+/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
