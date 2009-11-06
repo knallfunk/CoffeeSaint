@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint extends Frame
 {
-	static String version = "CoffeeSaint v0.7beta-003, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v0.7, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
