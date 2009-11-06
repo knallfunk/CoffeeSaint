@@ -1,3 +1,4 @@
+/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
 import java.awt.Color;
 
 class ColorPair
@@ -20,7 +21,7 @@ class ColorPair
 	{
 		String str = (String)o;
 
-		return str.equals(name);
+		return str.equalsIgnoreCase(name);
 	}
 
 	public Color getColor()
