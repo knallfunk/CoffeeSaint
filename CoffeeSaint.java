@@ -471,6 +471,8 @@ public class CoffeeSaint extends Frame
 		System.out.println("--predict x   File to write brain-dump to (and read from).");
 		System.out.println("--config x    Load configuration from file x. This overrides all configurationsettings set previously.");
 		System.out.println("--create-config x    Create new configuration file with filename x.");
+		System.out.println("--listen-port Port to listen for the internal webserver.");
+		System.out.println("--listen-adapter Network interface to listen for the internal webserver.");
 		System.out.print("Known colors:");
 		config.listColors();
 	}
@@ -517,6 +519,8 @@ public class CoffeeSaint extends Frame
 					config.setProblemSound(arg[++loop]);
 				else if (arg[loop].compareTo("--listen-port") == 0)
 					config.setHTTPServerListenPort(Integer.valueOf(arg[++loop]));
+				else if (arg[loop].compareTo("--listen-adapter") == 0)
+					config.setHTTPServerListenAdapter(arg[++loop]);
 				else if (arg[loop].compareTo("--list-bgcolors") == 0)
 				{
 					config.listColors();

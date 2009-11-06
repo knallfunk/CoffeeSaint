@@ -140,6 +140,8 @@ public class Config
 					setProblemSound(data);
 				else if (name.compareTo("listen-port") == 0)
 					setHTTPServerListenPort(Integer.valueOf(data));
+				else if (name.compareTo("listen-adapter") == 0)
+					setHTTPServerListenAdapter(data);
 				else if (name.compareTo("bgcolor") == 0)
 					setBackgroundColor(data);
 				else if (name.compareTo("textcolor") == 0)
@@ -200,6 +202,7 @@ public class Config
 		if (getProblemSound() != null)
 			writeLine(out, "sound = " + getProblemSound());
 		writeLine(out, "listen-port = " + getHTTPServerListenPort());
+		writeLine(out, "listen-adapter = " + getHTTPServerListenAdapter());
 		writeLine(out, "bgcolor = " + getBackgroundColorName());
 		writeLine(out, "textcolor = " + getTextColorName());
 		writeLine(out, "nrows = " + getNRows());
