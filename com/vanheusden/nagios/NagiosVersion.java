@@ -1,4 +1,6 @@
 /* Released under the GPL2. See license.txt for details. */
+package com.vanheusden.nagios;
+
 /**
  * Enum NagiosVersion. Defines the Nagios version.
  *
@@ -6,4 +8,4 @@
  * @version	%I%, %G%
  * @since	0.1 
  */
-enum NagiosVersion { V1, V2, V3 };
+public enum NagiosVersion { V1, V2, V3 };

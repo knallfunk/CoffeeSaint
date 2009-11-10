@@ -1,4 +1,6 @@
 /* Released under the GPL2. See license.txt for details. */
+package com.vanheusden.nagios;
+
 /**
  * Enum LineType. For internal use only.
  *
