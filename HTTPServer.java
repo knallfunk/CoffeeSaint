@@ -22,6 +22,7 @@ class HTTPServer implements Runnable
 	String adapter;
 	int port;
 	int webServerHits, webServer404;
+	boolean configNotWrittenToDisk = false;
 
 	public HTTPServer(Config config, CoffeeSaint frame, String adapter, int port)
 	{
@@ -140,9 +141,20 @@ class HTTPServer implements Runnable
 			reply.add(line);
 		}
 		reply.add("</SELECT></TD></TR>");
+		reply.add("<TR><TD>Background color OK-status:</TD><TD><SELECT NAME=\"bgColorOk\">\n");
+		for(ColorPair cp : config.getColors())
+		{
+			String line = "<OPTION VALUE=\"" + cp.getName() + "\"";
+			if (config.getBackgroundColorOkStatusName().equalsIgnoreCase(cp.getName()))
+				line += " SELECTED";
+			line += ">" + cp.getName() + "</OPTION>\n";
+			reply.add(line);
+		}
 		for(String image : config.getImageUrls())
-			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"" + image.hashCode() + "\" VALUE=\"on\">" + image + "</TD></TR>\n");
+			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
 		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
+		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + (config.getAdaptImageSize() ? "CHECKED" : "") + "></TD></TR>\n");
+		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + (config.getRandomWebcam() ? "CHECKED" : "") + "></TD></TR>\n");
 		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\"></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("</FORM>\n");
@@ -157,6 +169,8 @@ class HTTPServer implements Runnable
 
 		addHTTP200(reply);
 		addPageHeader(reply, "");
+
+		configNotWrittenToDisk = true;
 
 		HTTPRequestData nRows = socket.findRecord(requestData, "nRows");
 		if (nRows != null && nRows.getData() != null)
@@ -173,7 +187,7 @@ class HTTPServer implements Runnable
 
 		HTTPRequestData font = socket.findRecord(requestData, "font");
 		if (font != null && font.getData() != null)
-			config.setFontName(font.getData());
+			config.setFontName(URLDecoder.decode(font.getData(), "US-ASCII"));
 
 		HTTPRequestData textColor = socket.findRecord(requestData, "textColor");
 		if (textColor != null && textColor.getData() != null)
@@ -182,6 +196,10 @@ class HTTPServer implements Runnable
 		HTTPRequestData backgroundColor = socket.findRecord(requestData, "backgroundColor");
 		if (backgroundColor != null && backgroundColor.getData() != null)
 			config.setBackgroundColor(backgroundColor.getData());
+
+		HTTPRequestData bgColorOk = socket.findRecord(requestData, "bgColorOk");
+		if (bgColorOk != null && bgColorOk.getData() != null)
+			config.setBackgroundColorOkStatus(bgColorOk.getData());
 
 		HTTPRequestData sleepTime = socket.findRecord(requestData, "sleepTime");
 		if (sleepTime != null && sleepTime.getData() != null)
@@ -231,6 +249,18 @@ class HTTPServer implements Runnable
 			}
 		}
 
+		HTTPRequestData adapt_img = socket.findRecord(requestData, "adapt-img");
+		if (adapt_img != null && adapt_img.getData() != null)
+			config.setAdaptImageSize(true);
+		else
+			config.setAdaptImageSize(false);
+
+		HTTPRequestData randomize_img = socket.findRecord(requestData, "random-img");
+		if (randomize_img != null && randomize_img.getData() != null)
+			config.setRandomWebcam(true);
+		else
+			config.setRandomWebcam(false);
+
 		reply.add("<BR>\n");
 		reply.add("Form processed.<BR>\n");
 
@@ -240,7 +270,8 @@ class HTTPServer implements Runnable
 		addPageTail(reply, true);
 
 		// in case the number of rows has changed or so
-		frame.paint(frame.getGraphics());
+		if (config.getRunGui())
+			frame.paint(frame.getGraphics());
 
 		socket.sendReply(reply);
 	}
@@ -252,7 +283,8 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 		reply.add("<UL>\n");
-		reply.add("<LI><A HREF=\"/cgi-bin/force_reload.cgi\">force reload</A>\n");
+		if (config.getRunGui())
+			reply.add("<LI><A HREF=\"/cgi-bin/force_reload.cgi\">force reload</A>\n");
 		reply.add("<LI><A HREF=\"/cgi-bin/statistics.cgi\">statistics</A>\n");
 		reply.add("<LI><A HREF=\"/cgi-bin/nagios_status.cgi\">Nagios status</A>\n");
 		reply.add("<LI><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A>\n");
@@ -260,7 +292,16 @@ class HTTPServer implements Runnable
 		if (config.getConfigFilename() == null)
 			reply.add("<LI>No configuration-file selected (use --config), save configuration disabled\n");
 		else
-			reply.add("<LI><A HREF=\"/cgi-bin/write-config.cgi\">Write configuration to " + config.getConfigFilename() + "</A>\n");
+		{
+			String line = "<LI><A HREF=\"/cgi-bin/write-config.cgi\">Write configuration to " + config.getConfigFilename() + "</A>";
+			if (configNotWrittenToDisk == true)
+				line += " (changes pending!)";
+			line += "\n";
+			reply.add(line);
+		}
+		String sample = config.getProblemSound();
+		if (sample != null)
+			reply.add("<LI><A HREF=\"/cgi-bin/test-sound.cgi\">Test sound (" + sample + ")</A>\n");
 		reply.add("</UL>\n");
 		addPageTail(reply, false);
 
@@ -271,7 +312,8 @@ class HTTPServer implements Runnable
 	{
 		List<String> reply = new ArrayList<String>();
 
-		frame.paint(frame.getGraphics());
+		if (config.getRunGui())
+			frame.paint(frame.getGraphics());
 
 		addHTTP200(reply);
 		addPageHeader(reply, "<meta http-equiv=\"refresh\" content=\"5;url=/\">");
@@ -324,11 +366,13 @@ class HTTPServer implements Runnable
 		List<String> reply = new ArrayList<String>();
 
 		addHTTP200(reply);
-		addPageHeader(reply, "<meta http-equiv=\"refresh\" content=\"" + config.getSleepTime() + "\">");
+		reply.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD><meta http-equiv=\"refresh\" content=\"" + config.getSleepTime() + "\"></HEAD><BODY>");
+		reply.add("Generated by: " + CoffeeSaint.getVersion() + "<BR>");
+
 		try
 		{
 			frame.getProblemsSemaphore().acquire();
-			Color bgColor = Color.GREEN;
+			Color bgColor = config.getBackgroundColorOkStatus();
 			if (frame.getProblems().size() > 0)
 				bgColor = config.getBackgroundColor();
 			reply.add("<TABLE WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
@@ -349,7 +393,9 @@ class HTTPServer implements Runnable
 		{
 			frame.getProblemsSemaphore().release();
 		}
-		addPageTail(reply, true);
+
+		reply.add("</BODY>");
+		reply.add("</HTML>");
 
 		socket.sendReply(reply);
 	}
@@ -362,17 +408,37 @@ class HTTPServer implements Runnable
 		addPageHeader(reply, "");
 		String fileName = config.getConfigFilename();
 
+		config.clearImageList();
+
 		if (fileName != null)
 		{
-			reply.add("Configuration re-loaded from file: " + fileName +".<BR>\n");
 			config.loadConfig(fileName);
-			frame.paint(frame.getGraphics());
+			reply.add("Configuration re-loaded from file: " + fileName +".<BR>\n");
+			if (config.getRunGui())
+				frame.paint(frame.getGraphics());
 		}
 		else
 		{
 			config.setDefaultParameterValues();
 			reply.add("No configuration-file selected, resetting program defaults.<BR>\n");
 		}
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
+	public void sendReply_cgibin_testsound_cgi(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		String sample = config.getProblemSound();
+		new PlayWav(sample);
+
+		reply.add("Played audio-file " + sample);
 
 		addPageTail(reply, true);
 
@@ -391,6 +457,7 @@ class HTTPServer implements Runnable
 		{
 			config.writeConfig(fileName);
 			reply.add("Wrote configuration to file: " + fileName +".<BR>\n");
+			configNotWrittenToDisk = false;
 		}
 		catch(Exception e)
 		{
@@ -461,6 +528,8 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_reloadconfig_cgi(socket);
 					else if (url.equals("/cgi-bin/write-config.cgi"))
 						sendReply_cgibin_writeconfig_cgi(socket);
+					else if (url.equals("/cgi-bin/test-sound.cgi"))
+						sendReply_cgibin_testsound_cgi(socket);
 					else
 					{
 						sendReply_404(socket, url);
