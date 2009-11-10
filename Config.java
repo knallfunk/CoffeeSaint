@@ -31,13 +31,17 @@ public class Config
 	private Color backgroundColor = Color.GRAY;
 	private String backgroundColorName = "GRAY";
 	private Color fontColor = Color.BLACK;
+	private String bgColorOkStatusName = "GREEN";
+	private Color bgColorOkStatus = Color.GREEN;
 	private String fontColorName = "BLACK";
 	private String problemSound = null;
 	private boolean counter = false;
 	private java.util.List<String> imageFiles = new ArrayList<String>();
-	private boolean adaptImgSize = false;
+	private boolean adaptImgSize = true;
 	private String execCmd;
 	private String predictorBrainFileName;
+	private boolean gui = true;
+	private boolean randomWebcam = false;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -70,6 +74,9 @@ public class Config
 		fontColorName = "BLACK";
 		counter = false;
 		adaptImgSize = false;
+		randomWebcam = false;
+		bgColorOkStatus = Color.GREEN;
+		bgColorOkStatusName = "GREEN";
 
 		unlock();
 	}
@@ -126,6 +133,10 @@ public class Config
 					setExec(data);
 				else if (name.compareTo("adapt-img") == 0)
 					setAdaptImageSize(data.equalsIgnoreCase("true") ? true : false);
+				else if (name.compareTo("random-img") == 0)
+					setRandomWebcam(data.equalsIgnoreCase("true") ? true : false);
+				else if (name.compareTo("no-gui") == 0)
+					setRunGui(!(data.equalsIgnoreCase("true") ? true : false));
 				else if (name.compareTo("host") == 0)
 					setNagiosStatusHost(data);
 				else if (name.compareTo("port") == 0)
@@ -146,6 +157,8 @@ public class Config
 					setBackgroundColor(data);
 				else if (name.compareTo("textcolor") == 0)
 					setTextColor(data);
+				else if (name.compareTo("bgcolorok") == 0)
+					setBackgroundColorOkStatus(data);
 				else if (name.compareTo("nrows") == 0)
 					setNRows(Integer.valueOf(data));
 				else if (name.compareTo("interval") == 0)
@@ -189,6 +202,7 @@ public class Config
 		if (getExec() != null)
 			writeLine(out, "exec = " + getExec());
 		writeLine(out, "adapt-img = " + (getAdaptImageSize() ? "true" : "false"));
+		writeLine(out, "random-img = " + (getRandomWebcam() ? "true" : "false"));
 		if (getNagiosStatusHost() != null)
 		{
 			writeLine(out, "host = " + getNagiosStatusHost());
@@ -205,6 +219,7 @@ public class Config
 		writeLine(out, "listen-adapter = " + getHTTPServerListenAdapter());
 		writeLine(out, "bgcolor = " + getBackgroundColorName());
 		writeLine(out, "textcolor = " + getTextColorName());
+		writeLine(out, "bgcolorok = " + getBackgroundColorOkStatusName());
 		writeLine(out, "nrows = " + getNRows());
 		writeLine(out, "interval = " + getSleepTime());
 		if (getNagiosStatusVersion() == NagiosVersion.V1)
@@ -268,6 +283,38 @@ public class Config
 		System.out.println("Known colors: ");
 		for(ColorPair currentColor : colorPairs)
 			System.out.println("    " + currentColor.getName());
+	}
+
+	public void setRandomWebcam(boolean random)
+	{
+		lock();
+		randomWebcam = random;
+		unlock();
+	}
+
+	public boolean getRandomWebcam()
+	{
+		boolean copy;
+		lock();
+		copy = randomWebcam;
+		unlock();
+		return copy;
+	}
+
+	public void setRunGui(boolean runGui)
+	{
+		lock();
+		gui = runGui;
+		unlock();
+	}
+
+	public boolean getRunGui()
+	{
+		boolean copy;
+		lock();
+		copy = gui;
+		unlock();
+		return copy;
 	}
 
 	public void setBrainFileName(String fileName)
@@ -446,6 +493,35 @@ public class Config
 		return copy;
 	}
 
+	public void setBackgroundColorOkStatus(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		bgColorOkStatus = color;
+		bgColorOkStatusName = colorName;
+		unlock();
+	}
+
+	public Color getBackgroundColorOkStatus()
+	{
+		Color copy;
+		lock();
+		copy = bgColorOkStatus;
+		unlock();
+		return copy;
+	}
+
+	public String getBackgroundColorOkStatusName()
+	{
+		String copy;
+		lock();
+		copy = bgColorOkStatusName;
+		unlock();
+		return copy;
+	}
+
 	public void setBackgroundColor(String colorName) throws Exception
 	{
 		Color color = selectColor(colorName);
@@ -561,6 +637,11 @@ public class Config
 		copy = nagiosVersion;
 		unlock();
 		return copy;
+	}
+
+	public void clearImageList()
+	{
+		imageFiles = new ArrayList<String>();
 	}
 
 	public void addImageUrl(String url)
@@ -703,6 +784,7 @@ public class Config
 
 	public void setFontName(String fontName)
 	{
+		System.out.println("set font name: " + fontName);
 		lock();
 		this.fontName = fontName;
 		unlock();
