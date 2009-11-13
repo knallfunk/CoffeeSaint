@@ -8,6 +8,7 @@ import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.net.SocketException;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -17,19 +18,24 @@ import javax.imageio.*;
 
 class HTTPServer implements Runnable
 {
-	Config config;
-	CoffeeSaint frame;
-	String adapter;
-	int port;
+	final Config config;
+	final CoffeeSaint coffeeSaint;
+	final String adapter;
+	final int port;
+	final Statistics statistics;
+	final Gui gui;
+	//
 	int webServerHits, webServer404;
 	boolean configNotWrittenToDisk = false;
 
-	public HTTPServer(Config config, CoffeeSaint frame, String adapter, int port)
+	public HTTPServer(Config config, CoffeeSaint coffeeSaint, String adapter, int port, Statistics statistics, Gui gui)
 	{
 		this.config = config;
-		this.frame = frame;
+		this.coffeeSaint = coffeeSaint;
 		this.adapter = adapter;
 		this.port = port;
+		this.statistics = statistics;
+		this.gui = gui;
 	}
 
 	public void addHTTP200(List<String> whereTo)
@@ -76,18 +82,18 @@ class HTTPServer implements Runnable
 		try
 		{
 			socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/jpeg\r\n\r\n".getBytes());
-			frame.getImageSemaphore().acquire();
-			Image img = frame.imageParameters.getImage();
+			Image img = coffeeSaint.loadImage().getImage();
 			ImageIO.write(createBufferedImage(img), "jpg", socket.getOutputStream());
 			socket.close();
+		}
+		catch(SocketException se)
+		{
+			// really don't care if the transmit failed; browser
+			// probably closed session
 		}
 		catch(Exception e)
 		{
 			throw e;
-		}
-		finally
-		{
-			frame.getImageSemaphore().release();
 		}
 	}
 
@@ -271,7 +277,7 @@ class HTTPServer implements Runnable
 
 		// in case the number of rows has changed or so
 		if (config.getRunGui())
-			frame.paint(frame.getGraphics());
+			gui.paint(gui.getGraphics());
 
 		socket.sendReply(reply);
 	}
@@ -313,7 +319,7 @@ class HTTPServer implements Runnable
 		List<String> reply = new ArrayList<String>();
 
 		if (config.getRunGui())
-			frame.paint(frame.getGraphics());
+			gui.paint(gui.getGraphics());
 
 		addHTTP200(reply);
 		addPageHeader(reply, "<meta http-equiv=\"refresh\" content=\"5;url=/\">");
@@ -331,24 +337,20 @@ class HTTPServer implements Runnable
 		addPageHeader(reply, "");
 		try
 		{
-			frame.getStatisticsSemaphore().acquire();
 			reply.add("<TABLE>\n");
-			reply.add("<TR><TD>Total number of refreshes:</TD><TD>" + CoffeeSaint.nRefreshes + "</TD></TR>\n");
-			reply.add("<TR><TD>Total refresh time:</TD><TD>" + CoffeeSaint.totalRefreshTime + "</TD></TR>\n");
-			reply.add("<TR><TD>Average refresh time:</TD><TD>" + (CoffeeSaint.totalRefreshTime / (double)CoffeeSaint.nRefreshes) + "</TD></TR>\n");
-			reply.add("<TR><TD>Total image refresh time:</TD><TD>" + CoffeeSaint.totalImageLoadTime + "</TD></TR>\n");
-			reply.add("<TR><TD>Average image refresh time:</TD><TD>" + (CoffeeSaint.totalImageLoadTime / (double)CoffeeSaint.nRefreshes) + "</TD></TR>\n");
-			reply.add("<TR><TD>Total running time:</TD><TD>" + ((double)(System.currentTimeMillis() - CoffeeSaint.runningSince) / 1000.0) + "s</TD></TR>\n");
+			int nRefreshes = statistics.getNRefreshes();
+			reply.add("<TR><TD>Total number of refreshes:</TD><TD>" + nRefreshes + "</TD></TR>\n");
+			reply.add("<TR><TD>Total refresh time:</TD><TD>" + statistics.getTotalRefreshTime() + "</TD></TR>\n");
+			reply.add("<TR><TD>Average refresh time:</TD><TD>" + (statistics.getTotalRefreshTime() / (double)nRefreshes) + "</TD></TR>\n");
+			reply.add("<TR><TD>Total image refresh time:</TD><TD>" + statistics.getTotalImageLoadTime() + "</TD></TR>\n");
+			reply.add("<TR><TD>Average image refresh time:</TD><TD>" + (statistics.getTotalImageLoadTime() / (double)nRefreshes) + "</TD></TR>\n");
+			reply.add("<TR><TD>Total running time:</TD><TD>" + ((double)(System.currentTimeMillis() - statistics.getRunningSince()) / 1000.0) + "s</TD></TR>\n");
 			reply.add("<TR><TD>Number of webserver hits:</TD><TD>" + webServerHits + "</TD></TR>\n");
 			reply.add("<TR><TD>Number of 404 pages serverd:</TD><TD>" + webServer404 + "</TD></TR>\n");
 		}
 		catch(Exception e)
 		{
 			throw e;
-		}
-		finally
-		{
-			frame.getStatisticsSemaphore().release();
 		}
 		reply.add("</TABLE>\n");
 		addPageTail(reply, true);
@@ -371,17 +373,19 @@ class HTTPServer implements Runnable
 
 		try
 		{
-			frame.getProblemsSemaphore().acquire();
+			coffeeSaint.lockProblems();
+			coffeeSaint.loadNagiosData();
+			coffeeSaint.findProblems();
 			Color bgColor = config.getBackgroundColorOkStatus();
-			if (frame.getProblems().size() > 0)
+			if (coffeeSaint.getProblems().size() > 0)
 				bgColor = config.getBackgroundColor();
 			reply.add("<TABLE WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
-			for(Problem currentProblem : frame.getProblems())
+			for(Problem currentProblem : coffeeSaint.getProblems())
 			{
-				String stateColor = htmlColorString(frame.stateToColor(currentProblem.getCurrent_state()));
+				String stateColor = htmlColorString(coffeeSaint.stateToColor(currentProblem.getCurrent_state()));
 				reply.add("<TR><TD BGCOLOR=\"#" + stateColor + "\" TEXT=\"#" + htmlColorString(config.getTextColor()) + "\">" + currentProblem.getMessage() + "</TD></TR>\n");
 			}
-			if (frame.getProblems().size() == 0)
+			if (coffeeSaint.getProblems().size() == 0)
 				reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER><IMG SRC=\"/image.jpg\" BORDER=\"0\"></TD></TR>\n");
 			reply.add("</TABLE>\n");
 		}
@@ -391,7 +395,7 @@ class HTTPServer implements Runnable
 		}
 		finally
 		{
-			frame.getProblemsSemaphore().release();
+			coffeeSaint.unlockProblems();
 		}
 
 		reply.add("</BODY>");
@@ -415,7 +419,7 @@ class HTTPServer implements Runnable
 			config.loadConfig(fileName);
 			reply.add("Configuration re-loaded from file: " + fileName +".<BR>\n");
 			if (config.getRunGui())
-				frame.paint(frame.getGraphics());
+				gui.paint(gui.getGraphics());
 		}
 		else
 		{
@@ -490,10 +494,12 @@ class HTTPServer implements Runnable
 
 		try
 		{
+			System.out.println("Listening on " + adapter + ":" + port);
 			socket = new MyHTTPServer(adapter, port);
 
 			for(;;)
 			{
+				System.out.println("Waiting for connection");
 				try
 				{
 					List<HTTPRequestData> request = socket.acceptConnectionGetRequest();
