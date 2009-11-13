@@ -15,54 +15,28 @@ import java.awt.font.FontRenderContext;
 import java.io.FileNotFoundException;
 import java.util.concurrent.Semaphore;
 
-public class CoffeeSaint extends Frame
+public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v0.8beta-005, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v0.9beta-001, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
-	static boolean lastState = false;	// false: no problems
-	static int currentCounter = 0;
-	//
 	static Predictor predictor;
 	static long lastPredictorDump = 0;
 	//
 	static int currentImageFile = 0;
 	static Semaphore imageSemaphore = new Semaphore(1);
-	static ImageParameters imageParameters;
-	// deze in een apart object FIXME
-	static Semaphore statisticsSemaphore = new Semaphore(1);
-	static double totalRefreshTime, runningSince, totalImageLoadTime;
-	static int nRefreshes;
+	//
+	static Statistics statistics = new Statistics();
 	//
 	static Semaphore problemsSemaphore = new Semaphore(1);
 	static java.util.List<Problem> problems;
+	static JavNag javNag;
 	//
 	Random random = new Random();
 
 	public CoffeeSaint()
 	{
-		super();
-	}
-
-	public java.util.List<Problem> getProblems()
-	{
-		return problems;
-	}
-
-	static public Semaphore getProblemsSemaphore()
-	{
-		return problemsSemaphore;
-	}
-
-	static public Semaphore getStatisticsSemaphore()
-	{
-		return statisticsSemaphore;
-	}
-
-	static public Semaphore getImageSemaphore()
-	{
-		return imageSemaphore;
 	}
 
 	static public Predictor getPredictor()
@@ -98,16 +72,14 @@ public class CoffeeSaint extends Frame
 		return newStr.substring(newStr.length() - 2);
 	}
 
-	int setFont(Graphics g, int rowHeight)
+	String getScreenHeader(JavNag javNag, Calendar rightNow)
 	{
-		Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
-		g.setFont(f);
-		int fullHeight = g.getFontMetrics().getHeight();
-		int newHeight = (int)((double)rowHeight * ((double)rowHeight / fullHeight));
-		f = new Font(config.getFontName(), Font.PLAIN, newHeight);
-		g.setFont(f);
+		// FIXME Config.headerString = "Crit: %CRIT Warn: %WARN Down: %DOWN, Unr: %UNREACHABLE %H:%M";
+		// parse dat
 
-		return newHeight;
+		Totals totals = javNag.calculateStatistics();
+		String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
+		return msg;
 	}
 
 	public Color stateToColor(String state)
@@ -124,40 +96,11 @@ public class CoffeeSaint extends Frame
 		return Color.MAGENTA;
 	}
 
-	void drawRow(Graphics g, int totalNRows, String msg, int row, String state, int windowWidth, int windowHeight, int rowHeight, Color bgColor)
-	{
-		g.setColor(stateToColor(state));
-
-		final int y = rowHeight * row;
-
-		g.fillRect(0, y, windowWidth, rowHeight);
-
-		g.setColor(config.getTextColor());
-
-		int newHeight = setFont(g, rowHeight);
-
-		g.drawString(msg, 0, y + newHeight);
-	}
-
-	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
-	{
-		/* counter upto the next reload */
-		int newHeight = setFont(g, rowHeight);
-		Font f = new Font(config.getFontName(), Font.PLAIN, newHeight);
-		String str = "" + config.getSleepTime();
-		Rectangle2D boundingRectangle = f.getStringBounds(str, 0, str.length(), new FontRenderContext(null, false, false));
-		g.setFont(f);
-		g.setColor(config.getBackgroundColor());
-		int startX = windowWidth - (int)boundingRectangle.getWidth();
-		g.fillRect(startX, 0, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
-		g.setColor(config.getTextColor());
-		f = new Font(config.getFontName(), Font.PLAIN, newHeight);
-		g.setFont(f);
-		g.drawString("" + currentCounter, startX, newHeight);
-	}
-
 	public ImageParameters loadImage() throws Exception
 	{
+		imageSemaphore.acquireUninterruptibly();
+
+		ImageParameters result = null;
 		int nImages = config.getNImageUrls();
 
 		if (nImages > 0)
@@ -199,10 +142,12 @@ public class CoffeeSaint extends Frame
 					currentImageFile = 0;
 			}
 
-			return new ImageParameters(img, loadImage, imgWidth, imgHeight);
+			result = new ImageParameters(img, loadImage, imgWidth, imgHeight);
 		}
 
-		return null;
+		imageSemaphore.release();
+
+		return result;
 	}
 
 	public Color predictWithColor(Calendar rightNow)
@@ -244,69 +189,10 @@ public class CoffeeSaint extends Frame
 		}
 	}
 
-	public void displayImage(ImageParameters imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
-	{
-		int curWindowHeight, offsetY;
-
-		if (adaptImgSize)
-		{
-			curWindowHeight = rowHeight * (config.getNRows() - (1 + nProblems));
-			offsetY = (1 + nProblems) * rowHeight;
-		}
-		else
-		{
-			curWindowHeight = rowHeight * (config.getNRows() - 1);
-			offsetY = rowHeight;
-		}
-
-		if (imageParameters.getWidth() == -1 || imageParameters.getHeight() == -1)
-		{
-			g.setColor(Color.RED);
-			String msg = "Could not load image " + imageParameters.getFileName();
-			System.out.println(msg);
-			g.drawString(msg, 0, windowHeight - rowHeight);
-		}
-		else
-		{
-			if (curWindowHeight > 0)
-			{
-				double wMul = (double)windowWidth / (double)imageParameters.getWidth();
-				double hMul = (double)curWindowHeight / (double)imageParameters.getHeight();
-				double multiplier = Math.min(wMul, hMul);
-				int newWidth  = (int)((double)imageParameters.getWidth()  * multiplier);
-				int newHeight = (int)((double)imageParameters.getHeight() * multiplier);
-				int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
-				int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + offsetY;
-
-				g.drawImage(imageParameters.getImage(), putX, putY, newWidth, newHeight, null);
-			}
-		}
-	}
-
-	public void showCoffeeSaintProblem(Exception e, Graphics g, int windowWidth, int characterSize, int rowHeight)
-	{
-		System.out.println("Graphics: " + g);
-
-		/* block in upper right to inform about error */
-		g.setColor(Color.RED);
-		g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
-
-		final String msg = "Error: " + e;
-		final int characterSizeError = Math.max(10, windowWidth / msg.length());
-		final Font f = new Font(config.getFontName(), Font.PLAIN, characterSizeError);
-		g.setFont(f);
-		final int y = rowHeight * (config.getNRows() - 1);
-		g.setColor(Color.RED);
-		g.fillRect(0, y, windowWidth, rowHeight);
-		g.setColor(Color.MAGENTA);
-		g.drawString(msg, 0, y + characterSizeError);
-	}
-
-	public JavNag loadNagiosData() throws Exception
+	public void loadNagiosData() throws Exception
 	{
 		long startLoadTs = System.currentTimeMillis();
 
-		JavNag javNag;
 		if (config.getNagiosStatusHost() != null)
 			javNag = new JavNag(config.getNagiosStatusHost(), config.getNagiosStatusPort(), config.getNagiosStatusVersion());
 		else if (config.getNagiosStatusURL() != null)
@@ -318,210 +204,51 @@ public class CoffeeSaint extends Frame
 
 		double took = (double)(endLoadTs - startLoadTs) / 1000.0;
 		System.out.println("Took " + took + "s to load status data");
-		statisticsSemaphore.acquire();
-		totalRefreshTime += took;
-		nRefreshes++;
-		statisticsSemaphore.release();
 
-		return javNag;
+		statistics.addToTotalRefreshTime(took);
+		statistics.addToNRefreshes(1);
 	}
 
-	public java.util.List<Problem> findProblems(JavNag javNag)
+	public void findProblems() throws Exception
 	{
-		java.util.List<Problem> problems = new ArrayList<Problem>();
+		problems = new ArrayList<Problem>();
+
 		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, config.getAlwaysNotify(), config.getAlsoAcknowledged());
 
+		if (predictor != null)
+		{
+			Calendar rightNow = Calendar.getInstance();
+			learnProblems(rightNow, problems.size());
+		}
+
+		problemsSemaphore.release();
+	}
+
+	public void lockProblems()
+	{
+		problemsSemaphore.acquireUninterruptibly();
+	}
+
+	public void unlockProblems()
+	{
+		problemsSemaphore.release();
+	}
+
+	public java.util.List<Problem> getProblems()
+	{
 		return problems;
 	}
 
-	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
+	public JavNag getNagiosData()
 	{
-		try
-		{
-			String loadImage = null;
-			long startLoadTs, endLoadTs;
-			double took;
-
-			startLoadTs = System.currentTimeMillis();
-			imageSemaphore.acquire();
-			imageParameters = loadImage();
-			imageSemaphore.release();
-			endLoadTs = System.currentTimeMillis();
-			took = (double)(endLoadTs - startLoadTs) / 1000.0;
-			statisticsSemaphore.acquire();
-			totalImageLoadTime += took;
-			statisticsSemaphore.release();
-
-			String fontName = config.getFontName();
-			System.out.println("Current font name: " + fontName);
-			System.out.println("Current character size: " + characterSize);
-			final Font f = new Font(fontName, Font.PLAIN, characterSize);
-			g.setFont(f);
-
-			/* block in upper right to inform about load */
-			g.setColor(Color.BLUE);
-			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
-
-			/* load data from nagios server */
-			JavNag javNag = loadNagiosData();
-
-			/* find the problems in the nagios data */
-			problemsSemaphore.acquire();
-			problems = findProblems(javNag);
-			problemsSemaphore.release();
-
-			Color bgColor = config.getBackgroundColor();
-			Calendar rightNow = Calendar.getInstance();
-
-			problemsSemaphore.acquire();
-			if (problems.size() == 0)
-				bgColor = predictWithColor(rightNow);
-			if (predictor != null)
-				learnProblems(rightNow, problems.size());
-
-			/* clear frame */
-			g.setColor(bgColor);
-			g.fillRect(0, 0, windowWidth, windowHeight);
-
-			imageSemaphore.acquire();
-			if (imageParameters != null)
-				displayImage(imageParameters, problems.size(), g, rowHeight, config.getAdaptImageSize(), windowWidth, windowHeight);
-			imageSemaphore.release();
-
-			Totals totals = javNag.calculateStatistics();
-			String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
-			int curNRows = 0;
-			drawRow(g, config.getNRows(), msg, curNRows++, problems.size() == 0 ? "0" : "255", windowWidth, windowHeight, rowHeight, bgColor);
-
-			for(Problem currentProblem : problems)
-			{
-				System.out.println(currentProblem.getCurrent_state() + ": " + currentProblem.getMessage());
-				drawRow(g, config.getNRows(), currentProblem.getMessage(), curNRows, currentProblem.getCurrent_state(), windowWidth, windowHeight, rowHeight, bgColor);
-				curNRows++;
-
-				if (curNRows == config.getNRows())
-					break;
-			}
-
-			if (problems.size() > 0)
-			{
-				if (lastState == false)
-				{
-					if (config.getProblemSound() != null)
-					{
-						System.out.println("Playing sound " + config.getProblemSound());
-						new PlayWav(config.getProblemSound());
-					}
-
-					if (config.getExec() != null)
-					{
-						System.out.println("Invoking " + config.getExec());
-						Runtime.getRuntime().exec(config.getExec());
-					}
-				}
-
-				lastState = true;
-			}
-			else
-			{
-				lastState = false;
-			}
-			problemsSemaphore.release();
-
-			System.out.println("Memory usage: " + ((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024)) + "MB");
-		}
-		catch(Exception e)
-		{
-			showException(e);
-
-			if (g != null)
-				showCoffeeSaintProblem(e, g, windowWidth, characterSize, rowHeight);
-		}
-	}
-
-	public void paint(Graphics g)
-	{
-		final int windowWidth  = getSize().width;
-		final int windowHeight = getSize().height;
-		System.out.println("Window size: " + windowWidth + "x" + windowHeight);
-		final int rowHeight = windowHeight / config.getNRows();
-		final int characterSize = Math.max(10, rowHeight - 1);
-
-		System.out.println("*** Paint PROBLEMS " + currentCounter);
-		drawProblems(g, windowWidth, windowHeight, rowHeight, characterSize);
-		currentCounter = config.getSleepTime();
-		System.out.println("Sleep time: " + currentCounter);
-	}
-
-	public void update(Graphics g)
-	{
-		final int windowWidth  = getSize().width;
-		final int windowHeight = getSize().height;
-		final int rowHeight = windowHeight / config.getNRows();
-		final int characterSize = rowHeight - 1;
-
-		if (currentCounter <= 0)
-		{
-			System.out.println("*** Update PROBLEMS " + currentCounter);
-			drawProblems(g, windowWidth, windowHeight, rowHeight, characterSize);
-			currentCounter = config.getSleepTime();
-		}
-		else if (config.getCounter())
-		{
-			System.out.println("*** update COUNTER " + currentCounter);
-			drawCounter(g, windowWidth, windowHeight, rowHeight, characterSize);
-		}
-
-		currentCounter--;
-	}
-
-	public static CoffeeSaint initGraphics()
-	{
-		/* retrieve max window size */
-		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		GraphicsDevice[] gs = ge.getScreenDevices();
-		GraphicsConfiguration [] gc = gs[0].getConfigurations();
-		Rectangle r = gc[0].getBounds();
-
-		/* create frame to draw in */
-		CoffeeSaint frame = new CoffeeSaint();
-		frame.setSize(r.width, r.height);
-		System.out.println("Initial paint");
-
-		frame.setVisible(true);
-
-		frame.addWindowListener(new FrameListener(config));
-
-		return frame;
+		return javNag;
 	}
 
 	public static void daemonLoop(CoffeeSaint coffeeSaint, Config config) throws Exception
 	{
 		for(;;)
 		{
-			/* load data from nagios server */
-			JavNag javNag = coffeeSaint.loadNagiosData();
-
-			/* find the problems in the nagios data */
-			problemsSemaphore.acquire();
-			coffeeSaint.problems = coffeeSaint.findProblems(javNag);
-			problemsSemaphore.release();
-
 			Thread.sleep(config.getSleepTime() * 1000);
-		}
-	}
-
-	public static void guiLoop(CoffeeSaint coffeeSaint) throws Exception
-	{
-		for(;;)
-		{
-			System.out.println("Invoke paint");
-
-			coffeeSaint.repaint();
-
-			System.out.println("Sleep");
-
-			Thread.sleep(1000);
 		}
 	}
 
@@ -561,9 +288,7 @@ public class CoffeeSaint extends Frame
 	{
 		try
 		{
-			statisticsSemaphore.acquire();
-			runningSince = System.currentTimeMillis();
-			statisticsSemaphore.release();
+			statistics.setRunningSince(System.currentTimeMillis());
 
 			System.out.println(version);
 			System.out.println("");
@@ -676,19 +401,30 @@ public class CoffeeSaint extends Frame
 				}
 			}
 
-			CoffeeSaint coffeeSaint;
+			CoffeeSaint coffeeSaint = new CoffeeSaint();
+			Gui gui = null;
 			if (config.getRunGui())
-				coffeeSaint = initGraphics();
-			else
-				coffeeSaint = new CoffeeSaint();
+			{
+				System.out.println("Start gui");
+				gui = new Gui(config, coffeeSaint, statistics);
+			}
 
 			if (config.getHTTPServerListenPort() != -1)
-				new Thread(new HTTPServer(config, coffeeSaint, config.getHTTPServerListenAdapter(), config.getHTTPServerListenPort())).start();
+			{
+				System.out.println("Start HTTP server");
+				new Thread(new HTTPServer(config, coffeeSaint, config.getHTTPServerListenAdapter(), config.getHTTPServerListenPort(), statistics, gui)).start();
+			}
 
 			if (config.getRunGui())
-				guiLoop(coffeeSaint);
+			{
+				System.out.println("Start gui loop");
+				gui.guiLoop();
+			}
 			else
+			{
+				System.out.println("Start daemon loop");
 				daemonLoop(coffeeSaint, config);
+			}
 		}
 		catch(Exception e)
 		{
