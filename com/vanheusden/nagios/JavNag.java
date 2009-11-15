@@ -53,8 +53,8 @@ public class JavNag
 		for(String currentLine : fileDump)
 		{
 			String [] elements = currentLine.split(";");
-			if (elements.length != 21 && elements.length != 32)
-				throw new Exception("Expecting either 21 or 32 elements per line, got " + elements.length);
+			if (elements.length != 21 && elements.length != 32 && elements.length != 31)
+				throw new Exception("Expecting either 21 or 32 elements per line, got " + elements.length + ": " + currentLine);
 			int space = elements[0].indexOf(" ");
 			if (space == -1)
 				throw new Exception("Invalid line: first field should contain space");
@@ -66,7 +66,7 @@ public class JavNag
 			{
 				Host host = addAndOrFindHost(hostName);
 				int current_state = 255;
-				if (elements[2].equals("UP"))
+				if (elements[2].equals("UP") || elements[2].equals("OK"))
 					current_state = 0;
 				else
 					current_state = 2;
@@ -89,6 +89,8 @@ public class JavNag
 				addHostParameterEntry(host, "failure_prediction_enabled", elements[18]);
 				addHostParameterEntry(host, "process_performance_data", elements[19]);
 				addHostParameterEntry(host, "plugin_output", elements[20]);
+
+				addHostParameterEntry(host, "state_type", "1"); // version 1 doesn't set this so always assume hard state
 			}
 			else if (type.equals("SERVICE"))
 			{
@@ -131,7 +133,11 @@ public class JavNag
 				addServiceEntry(service, "failure_prediction_enabled", elements[28]);
 				addServiceEntry(service, "process_performance_date", elements[29]);
 				addServiceEntry(service, "obsess_over_service", elements[30]);
-				addServiceEntry(service, "plugin_output", elements[31]);
+				assert elements.length == 31 || elements.length == 32;
+				if (elements.length == 32) // in case of missing plugin output
+					addServiceEntry(service, "plugin_output", elements[31]);
+				else
+					addServiceEntry(service, "plugin_output", "");
 			}
 		}
 	}
@@ -390,21 +396,28 @@ public class JavNag
 	 */
 	public boolean shouldIShowHost(Host host, boolean always_notify, boolean also_acknowledged)
 	{
-		if (host.getParameter("state_type").equals("1") == false)
+		if (host.getParameter("state_type").equals("0") == true) // if SOFT, do not show
 			return false;
 
-		if (host.getParameter("current_state").equals("0") == true)
+		if (host.getParameter("current_state").equals("0") == true) // if OK do not show
 			return false;
 
+		// if active_checks are not enabled and passive checks neither, do not show
 		if (host.getParameter("active_checks_enabled").equals("0") == true && host.getParameter("passive_checks_enabled").equals("0") == true)
 			return false;
 
-		if (host.getParameter("scheduled_downtime_depth").equals("0") == false)
+		// downtime_depth == 0, do not show
+		if (Double.valueOf(host.getParameter("scheduled_downtime_depth")) != 0.0)
+		{
+			System.out.println("scheduled_downtime_depth " + host.getParameter("scheduled_downtime_depth"));
 			return false;
+		}
 
+		// notifications disabled, do not show
 		if (!always_notify && host.getParameter("notifications_enabled").equals("0") == true)
 			return false;
 
+		// is has been acknowledged, do not show
 		if (!also_acknowledged && host.getParameter("problem_has_been_acknowledged").equals("1") == true)
 			return false;
 
@@ -431,7 +444,7 @@ public class JavNag
 		if (service.getParameter("active_checks_enabled").equals("0") == true && service.getParameter("passive_checks_enabled").equals("0") == true)
 			return false;
 
-		if (service.getParameter("scheduled_downtime_depth").equals("0") == false)
+		if (Double.valueOf(service.getParameter("scheduled_downtime_depth")) != 0.0)
 			return false;
 
 		if (!always_notify && service.getParameter("notifications_enabled").equals("0") == true)
