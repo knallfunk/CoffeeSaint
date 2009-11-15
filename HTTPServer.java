@@ -373,20 +373,35 @@ class HTTPServer implements Runnable
 
 		try
 		{
+			Calendar rightNow = Calendar.getInstance();
+
 			coffeeSaint.lockProblems();
 			coffeeSaint.loadNagiosData();
 			coffeeSaint.findProblems();
+
 			Color bgColor = config.getBackgroundColorOkStatus();
 			if (coffeeSaint.getProblems().size() > 0)
 				bgColor = config.getBackgroundColor();
+
 			reply.add("<TABLE WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
+
 			for(Problem currentProblem : coffeeSaint.getProblems())
 			{
 				String stateColor = htmlColorString(coffeeSaint.stateToColor(currentProblem.getCurrent_state()));
-				reply.add("<TR><TD BGCOLOR=\"#" + stateColor + "\" TEXT=\"#" + htmlColorString(config.getTextColor()) + "\">" + currentProblem.getMessage() + "</TD></TR>\n");
+
+				String escapeString;
+				if (currentProblem.getService() == null)
+					escapeString = config.getHostIssue();
+				else
+					escapeString = config.getServiceIssue();
+				String output = coffeeSaint.processStringWithEscapes(escapeString, coffeeSaint.getNagiosData(), rightNow, currentProblem);
+
+				reply.add("<TR><TD BGCOLOR=\"#" + stateColor + "\" TEXT=\"#" + htmlColorString(config.getTextColor()) + "\">" + output + "</TD></TR>\n");
 			}
+
 			if (coffeeSaint.getProblems().size() == 0)
 				reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER><IMG SRC=\"/image.jpg\" BORDER=\"0\"></TD></TR>\n");
+
 			reply.add("</TABLE>\n");
 		}
 		catch(Exception e)

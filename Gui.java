@@ -196,14 +196,24 @@ public class Gui extends Frame
 
 			JavNag javNag = coffeeSaint.getNagiosData();
 			System.out.println("JavNag: " + javNag);
-			String msg = coffeeSaint.getScreenHeader(javNag, rightNow);
+			String header = coffeeSaint.getScreenHeader(javNag, rightNow);
 			int curNRows = 0;
-			drawRow(g, config.getNRows(), msg, curNRows++, problems.size() == 0 ? "0" : "255", windowWidth, windowHeight, rowHeight, bgColor);
+			drawRow(g, config.getNRows(), header, curNRows++, problems.size() == 0 ? "0" : "255", windowWidth, windowHeight, rowHeight, bgColor);
 
 			for(Problem currentProblem : problems)
 			{
-				System.out.println(currentProblem.getCurrent_state() + ": " + currentProblem.getMessage());
-				drawRow(g, config.getNRows(), currentProblem.getMessage(), curNRows, currentProblem.getCurrent_state(), windowWidth, windowHeight, rowHeight, bgColor);
+				String escapeString;
+System.out.println("service " + currentProblem.getService());
+System.out.println("host " + currentProblem.getHost());
+				if (currentProblem.getService() == null)
+					escapeString = config.getHostIssue();
+				else
+					escapeString = config.getServiceIssue();
+				String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem);
+
+				System.out.println(output);
+
+				drawRow(g, config.getNRows(), output, curNRows, currentProblem.getCurrent_state(), windowWidth, windowHeight, rowHeight, bgColor);
 				curNRows++;
 
 				if (curNRows == config.getNRows())

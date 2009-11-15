@@ -19,29 +19,31 @@ public class Config
 	private String host = null, file = null;
 	private URL url = null;
 	private int port = 33333;
-	private int nRows = 10;
-	private int sleepTime = 30;
+	private int nRows;
+	private int sleepTime;
 	private NagiosVersion nagiosVersion = NagiosVersion.V3;
-	private String fontName = "Courier";
+	private String fontName;
 	private String listenAdapter = "0.0.0.0";
 	private int listenPort = -1;
 	private java.util.List<Pattern> prioPatterns;
 	private String prefersFilename;
-	private boolean always_notify = false, also_acknowledged = false;
-	private Color backgroundColor = Color.GRAY;
-	private String backgroundColorName = "GRAY";
-	private Color fontColor = Color.BLACK;
-	private String bgColorOkStatusName = "GREEN";
-	private Color bgColorOkStatus = Color.GREEN;
-	private String fontColorName = "BLACK";
+	private boolean always_notify, also_acknowledged;
+	private Color backgroundColor;
+	private String backgroundColorName;
+	private Color fontColor;
+	private String fontColorName;
+	private String bgColorOkStatusName;
+	private Color bgColorOkStatus;
 	private String problemSound = null;
-	private boolean counter = false;
+	private boolean counter;
 	private java.util.List<String> imageFiles = new ArrayList<String>();
-	private boolean adaptImgSize = true;
+	private boolean adaptImgSize;
 	private String execCmd;
 	private String predictorBrainFileName;
 	private boolean gui = true;
-	private boolean randomWebcam = false;
+	private boolean randomWebcam;
+	private String header;
+	private String issueHost, issueService;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -65,7 +67,7 @@ public class Config
 
 		nRows = 10;
 		sleepTime = 30;
-		fontName = "Courier";
+		fontName = "Arial";
 		always_notify = false;
 		also_acknowledged = false;
 		backgroundColor = Color.GRAY;
@@ -77,6 +79,9 @@ public class Config
 		randomWebcam = false;
 		bgColorOkStatus = Color.GREEN;
 		bgColorOkStatusName = "GREEN";
+		header = "Crt: %CRITICAL, Wrn: %WARNING, Unr: %UNREACHABLE, Dwn: %DOWN, %H:%M";
+		issueHost = "%HOSTNAME";
+		issueService = "%HOSTNAME: %SERVICENAME";
 
 		unlock();
 	}
@@ -139,6 +144,12 @@ public class Config
 					setRunGui(!(data.equalsIgnoreCase("true") ? true : false));
 				else if (name.compareTo("host") == 0)
 					setNagiosStatusHost(data);
+				else if (name.compareTo("header") == 0)
+					setHeader(data);
+				else if (name.compareTo("host-issue") == 0)
+					setHostIssue(data);
+				else if (name.compareTo("service-issue") == 0)
+					setServiceIssue(data);
 				else if (name.compareTo("port") == 0)
 					setNagiosStatusPort(Integer.valueOf(data));
 				else if (name.compareTo("file") == 0)
@@ -235,6 +246,10 @@ public class Config
 		writeLine(out, "always-notify = " + (getAlwaysNotify() ? "true" : "false"));
 		writeLine(out, "also-acknowledged = " + (getAlsoAcknowledged() ? "true" : "false"));
 		writeLine(out, "font = " + getFontName());
+		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
+		writeLine(out, "header = " + getHeader());
+		writeLine(out, "host-issue = " + getHostIssue());
+		writeLine(out, "service-issue = " + getServiceIssue());
 
 		out.close();
 	}
@@ -283,6 +298,54 @@ public class Config
 		System.out.println("Known colors: ");
 		for(ColorPair currentColor : colorPairs)
 			System.out.println("    " + currentColor.getName());
+	}
+
+	public void setHostIssue(String string)
+	{
+		lock();
+		this.issueHost = string;
+		unlock();
+	}
+
+	public String getHostIssue()
+	{
+		String copy;
+		lock();
+		copy = issueHost;
+		unlock();
+		return copy;
+	}
+
+	public void setServiceIssue(String string)
+	{
+		lock();
+		this.issueService = string;
+		unlock();
+	}
+
+	public String getServiceIssue()
+	{
+		String copy;
+		lock();
+		copy = issueService;
+		unlock();
+		return copy;
+	}
+
+	public void setHeader(String header)
+	{
+		lock();
+		this.header = header;
+		unlock();
+	}
+
+	public String getHeader()
+	{
+		String copy;
+		lock();
+		copy = header;
+		unlock();
+		return copy;
 	}
 
 	public void setRandomWebcam(boolean random)
