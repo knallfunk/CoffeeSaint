@@ -203,8 +203,6 @@ public class Gui extends Frame
 			for(Problem currentProblem : problems)
 			{
 				String escapeString;
-System.out.println("service " + currentProblem.getService());
-System.out.println("host " + currentProblem.getHost());
 				if (currentProblem.getService() == null)
 					escapeString = config.getHostIssue();
 				else
