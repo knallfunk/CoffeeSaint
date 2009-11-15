@@ -7,15 +7,16 @@ import java.util.regex.Pattern;
 
 public class Problems
 {
-	static void addProblem(List<Pattern> prioPatterns, List<Problem> problems, List<Problem> lessImportant, String msg, String state)
+	static void addProblem(List<Pattern> prioPatterns, List<Problem> problems, List<Problem> lessImportant, Host host, Service service, String state)
 	{
 		boolean important = false;
 
 		if (prioPatterns != null)
 		{
+			String msg = host.getHostName() + ": " + (service != null ? service.getServiceName() : "");
+
 			for(Pattern currentPattern : prioPatterns)
 			{
-				// System.out.println("Checking " + msg + " against " + currentPattern.pattern());
 				if (currentPattern.matcher(msg).matches())
 				{
 					important = true;
@@ -26,9 +27,9 @@ public class Problems
 		}
 
 		if (important)
-			problems.add(new Problem(msg, state));
+			problems.add(new Problem(host, service, state));
 		else
-			lessImportant.add(new Problem(msg, state));
+			lessImportant.add(new Problem(host, service, state));
 	}
 
 	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> problems, boolean always_notify, boolean also_acknowledged)
@@ -41,9 +42,8 @@ public class Problems
 
 			if (javNag.shouldIShowHost(currentHost, always_notify, also_acknowledged))
 			{
-				String msg = currentHost.getHostName();
-				String state = currentHost.getParameter("current_state");
 				String useState = null;
+				String state = currentHost.getParameter("current_state");
 
 				if (state.equals("0")) /* UP = OK */
 					useState = "0";
@@ -52,7 +52,7 @@ public class Problems
 				else /* all other states (including 'pending' ("3")) are WARNING */
 					useState = "1";
 
-				addProblem(prioPatterns, problems, lessImportant, msg, useState);
+				addProblem(prioPatterns, problems, lessImportant, currentHost, null, useState);
 			}
 			else
 			{
@@ -61,10 +61,9 @@ public class Problems
 					assert currentService != null;
 					if (javNag.shouldIShowService(currentService, always_notify, also_acknowledged))
 					{
-						String msg = currentHost.getHostName() + ": " + currentService.getServiceName();
 						String state = currentService.getParameter("current_state");
 
-						addProblem(prioPatterns, problems, lessImportant, msg, state);
+						addProblem(prioPatterns, problems, lessImportant, currentHost, currentService, state);
 					}
 				}
 			}

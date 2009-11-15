@@ -3,18 +3,25 @@ package com.vanheusden.nagios;
 
 public class Problem
 {
-	String message;
+	Host host;
+	Service service;
 	String current_state;
 
-	public Problem(String message, String current_state)
+	public Problem(Host host, Service service, String current_state)
 	{
-		this.message = message;
+		this.host = host;
+		this.service = service;
 		this.current_state = current_state;
 	}
 
-	public String getMessage()
+	public Host getHost()
 	{
-		return message;
+		return host;
+	}
+
+	public Service getService()
+	{
+		return service;
 	}
 
 	public String getCurrent_state()
