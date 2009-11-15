@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v0.9beta-001, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v0.9, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
