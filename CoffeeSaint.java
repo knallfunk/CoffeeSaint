@@ -72,14 +72,144 @@ public class CoffeeSaint
 		return newStr.substring(newStr.length() - 2);
 	}
 
-	String getScreenHeader(JavNag javNag, Calendar rightNow)
+	public String hostState(String state)
 	{
-		// FIXME Config.headerString = "Crit: %CRIT Warn: %WARN Down: %DOWN, Unr: %UNREACHABLE %H:%M";
-		// parse dat
+		if (state.equals("0")) /* UP = OK */
+			return "OK";
 
-		Totals totals = javNag.calculateStatistics();
-		String msg = "" + totals.getNCritical() + "|" + totals.getNWarning() + "|" + totals.getNOk() + " - " + totals.getNUp() + "|" + totals.getNDown() + "|" + totals.getNUnreachable() + "|" + totals.getNPending() + " - " + make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + rightNow.get(Calendar.MINUTE));
-		return msg;
+		if (state.equals("1"))
+			return "DOWN";
+
+		if (state.equals("2"))
+			return "UNREACHABLE";
+
+		if (state.equals("3"))
+			return "PENDING";
+
+		return "?";
+	}
+
+	public String serviceState(String state)
+	{
+		if (state.equals("0")) /* UP = OK */
+			return "OK";
+
+		if (state.equals("1"))
+			return "WARNING";
+
+		if (state.equals("2"))
+			return "CRITICAL";
+
+		return "?";
+
+	}
+
+	public String stringTsToDate(String ts)
+	{
+		long seconds = Long.valueOf(ts);
+
+		Calendar then = Calendar.getInstance();
+		then.setTimeInMillis(seconds * 1000L);
+System.out.println(ts + ": " + (seconds * 1000L));
+
+		return "" + then.get(Calendar.YEAR) + "/" + then.get(Calendar.MONTH) + "/" + then.get(Calendar.DAY_OF_MONTH) + " " + make2Digit("" + then.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + then.get(Calendar.MINUTE)) + ":" + make2Digit("" + then.get(Calendar.SECOND));
+	}
+
+	public String processStringEscapes(JavNag javNag, Totals totals, Calendar rightNow, Problem problem, String cmd)
+	{
+		if (cmd.equals("CRITICAL"))
+			return "" + totals.getNCritical();
+		if (cmd.equals("WARNING"))
+			return "" + totals.getNWarning();
+		if (cmd.equals("OK"))
+			return "" + totals.getNOk();
+
+		if (cmd.equals("UP"))
+			return "" + totals.getNUp();
+		if (cmd.equals("DOWN"))
+			return "" + totals.getNDown();
+		if (cmd.equals("UNREACHABLE"))
+			return "" + totals.getNUnreachable();
+		if (cmd.equals("PENDING"))
+			return "" + totals.getNPending();
+
+		if (cmd.equals("H"))
+			return make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY));
+		if (cmd.equals("M"))
+			return make2Digit("" + rightNow.get(Calendar.MINUTE));
+
+		if (cmd.equals("HOSTNAME") && problem != null && problem.getHost() != null)
+			return problem.getHost().getHostName();
+
+		if (cmd.equals("SERVICENAME") && problem != null && problem.getService() != null)
+			return problem.getService().getServiceName();
+
+		if (cmd.equals("HOSTSTATE") && problem != null && problem.getHost() != null)
+			return hostState(problem.getHost().getParameter("current_state"));
+
+		if (cmd.equals("SERVICESTATE") && problem != null && problem.getService() != null)
+			return serviceState(problem.getService().getParameter("current_state"));
+
+		if (cmd.equals("HOSTSINCE") && problem != null && problem.getHost() != null)
+			return stringTsToDate(problem.getHost().getParameter("last_state_change"));
+
+		if (cmd.equals("SERVICESINCE") && problem != null && problem.getService() != null)
+			return stringTsToDate(problem.getService().getParameter("last_state_change"));
+
+		if (cmd.equals("HOSTFLAPPING") && problem != null && problem.getHost() != null)
+			return problem.getHost().getParameter("is_flapping").equals("1") ? "FLAPPING" : "";
+
+		if (cmd.equals("SERVICEFLAPPING") && problem != null && problem.getService() != null)
+			return problem.getService().getParameter("is_flapping").equals("1") ? "FLAPPING" : "";
+
+		return "?" + cmd + "?";
+	}
+
+	public String processStringWithEscapes(String in, JavNag javNag, Calendar rightNow, Problem problem)
+	{
+		final Totals totals = javNag.calculateStatistics();
+		boolean loadingCmd = false;
+		String cmd = "", output = "";
+
+		for(int index=0; index<in.length(); index++)
+		{
+			if (loadingCmd)
+			{
+				if (!(in.charAt(index) >= 'A' && in.charAt(index) <= 'Z') && !(in.charAt(index) >= 'a' && in.charAt(index) <= 'z'))
+				{
+					output += processStringEscapes(javNag, totals, rightNow, problem, cmd);
+
+					cmd = "";
+					loadingCmd = false;
+
+					if (in.charAt(index) == '%')
+						loadingCmd = true;
+					else
+						output += in.charAt(index);
+				}
+				else
+				{
+					cmd += in.charAt(index);
+				}
+			}
+			else
+			{
+				if (in.charAt(index) == '%')
+					loadingCmd = true;
+				else
+					output += in.charAt(index);
+			}
+		}
+
+		if (cmd.equals("") == false)
+			output += processStringEscapes(javNag, totals, rightNow, problem, cmd);
+
+		return output;
+	}
+
+	public String getScreenHeader(JavNag javNag, Calendar rightNow)
+	{
+		return processStringWithEscapes(config.getHeader(), javNag, rightNow, null);
 	}
 
 	public Color stateToColor(String state)
@@ -280,8 +410,20 @@ public class CoffeeSaint
 		System.out.println("--create-config x    Create new configuration file with filename x.");
 		System.out.println("--listen-port Port to listen for the internal webserver.");
 		System.out.println("--listen-adapter Network interface to listen for the internal webserver.");
+		System.out.println("--header x    String to display in header. Can contain escapes, see below.");
+		System.out.println("--host-issue x  String defining how to format host-issues.");
+		System.out.println("--service-issue x  String defining how to format service-issues.");
+		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
+		System.out.println("");
+		System.out.println("Escapes:");
+		System.out.println("  %CRITICAL/%WARNING/%OK, %UP/%DOWN/%UNREACHABLE/%PENDING");
+		System.out.println("  %H:%M       Current hour/minute");
+		System.out.println("  %HOSTNAME/%SERVICENAME    host/service with problem");
+		System.out.println("  %HOSTSTATE/%SERVICESTATE  host/service state");
+		System.out.println("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem");
+		System.out.println("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping");
 	}
 
 	public static void main(String[] arg)
@@ -302,6 +444,12 @@ public class CoffeeSaint
 					config.writeConfig(arg[++loop]);
 					config.setConfigFilename(arg[loop]);
 				}
+				else if (arg[loop].compareTo("--header") == 0)
+					config.setHeader(arg[++loop]);
+				else if (arg[loop].compareTo("--service-issue") == 0)
+					config.setServiceIssue(arg[++loop]);
+				else if (arg[loop].compareTo("--host-issue") == 0)
+					config.setHostIssue(arg[++loop]);
 				else if (arg[loop].compareTo("--random-img") == 0)
 					config.setRandomWebcam(true);
 				else if (arg[loop].compareTo("--no-gui") == 0)
