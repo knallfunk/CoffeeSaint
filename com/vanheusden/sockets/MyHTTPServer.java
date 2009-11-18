@@ -58,6 +58,11 @@ public class MyHTTPServer
 		return request;
 	}
 
+	public InetSocketAddress getRemoteSocketAddress()
+	{
+		return (InetSocketAddress)socket.getRemoteSocketAddress();
+	}
+
 	public InputStream getInputStream() throws Exception
 	{
 		return socket.getInputStream();
