@@ -590,7 +590,7 @@ class HTTPServer implements Runnable
 					if (space != -1)
 						url = url.substring(0, space);
 
-					System.out.println("HTTP " + requestType + "-request for: " + url);
+					System.out.println("HTTP " + socket.getRemoteSocketAddress().getHostName() + " " + requestType + "-request for: " + url);
 
 					webServerHits++;
 
