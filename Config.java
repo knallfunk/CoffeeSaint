@@ -44,6 +44,7 @@ public class Config
 	private boolean randomWebcam;
 	private String header;
 	private String issueHost, issueService;
+	private boolean showHeader;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -82,6 +83,7 @@ public class Config
 		header = "Crt: %CRITICAL, Wrn: %WARNING, Unr: %UNREACHABLE, Dwn: %DOWN, %H:%M";
 		issueHost = "%HOSTNAME";
 		issueService = "%HOSTNAME: %SERVICENAME";
+		showHeader = true;
 
 		unlock();
 	}
@@ -184,6 +186,8 @@ public class Config
 					setAlwaysNotify(data.equalsIgnoreCase("true") ? true : false);
 				else if (name.compareTo("also-acknowledged") == 0)
 					setAlsoAcknowledged(data.equalsIgnoreCase("true") ? true : false);
+				else if (name.compareTo("show-header") == 0)
+					setShowHeader(data.equalsIgnoreCase("true") ? true : false);
 				else if (name.compareTo("font") == 0)
 					setFontName(data);
 				else
@@ -248,6 +252,7 @@ public class Config
 		writeLine(out, "font = " + getFontName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
 		writeLine(out, "header = " + getHeader());
+		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
 
@@ -344,6 +349,22 @@ public class Config
 		String copy;
 		lock();
 		copy = header;
+		unlock();
+		return copy;
+	}
+
+	public void setShowHeader(boolean show)
+	{
+		lock();
+		showHeader = show;
+		unlock();
+	}
+
+	public boolean getShowHeader()
+	{
+		boolean copy;
+		lock();
+		copy = showHeader;
 		unlock();
 		return copy;
 	}

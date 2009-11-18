@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v0.9, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.0-beta002, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -413,6 +413,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("--header x    String to display in header. Can contain escapes, see below.");
 		System.out.println("--host-issue x  String defining how to format host-issues.");
 		System.out.println("--service-issue x  String defining how to format service-issues.");
+		System.out.println("--no-header   Do not display the statistics line in the upper row.");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -444,6 +445,8 @@ System.out.println(ts + ": " + (seconds * 1000L));
 					config.writeConfig(arg[++loop]);
 					config.setConfigFilename(arg[loop]);
 				}
+				else if (arg[loop].compareTo("--no-header") == 0)
+					config.setShowHeader(false);
 				else if (arg[loop].compareTo("--header") == 0)
 					config.setHeader(arg[++loop]);
 				else if (arg[loop].compareTo("--service-issue") == 0)

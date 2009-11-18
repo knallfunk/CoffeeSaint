@@ -92,17 +92,18 @@ public class Gui extends Frame
 
 	public void displayImage(ImageParameters imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
 	{
+		int headerOffset = config.getShowHeader() ? 1 : 0;
 		int curWindowHeight, offsetY;
 
 		if (adaptImgSize)
 		{
-			curWindowHeight = rowHeight * (config.getNRows() - (1 + nProblems));
-			offsetY = (1 + nProblems) * rowHeight;
+			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + nProblems));
+			offsetY = (headerOffset + nProblems) * rowHeight;
 		}
 		else
 		{
-			curWindowHeight = rowHeight * (config.getNRows() - 1);
-			offsetY = rowHeight;
+			curWindowHeight = rowHeight * (config.getNRows() - headerOffset);
+			offsetY = rowHeight * headerOffset;
 		}
 
 		if (imageParameters.getWidth() == -1 || imageParameters.getHeight() == -1)
@@ -196,9 +197,14 @@ public class Gui extends Frame
 
 			JavNag javNag = coffeeSaint.getNagiosData();
 			System.out.println("JavNag: " + javNag);
-			String header = coffeeSaint.getScreenHeader(javNag, rightNow);
+
 			int curNRows = 0;
-			drawRow(g, config.getNRows(), header, curNRows++, problems.size() == 0 ? "0" : "255", windowWidth, windowHeight, rowHeight, bgColor);
+
+			if (config.getShowHeader())
+			{
+				String header = coffeeSaint.getScreenHeader(javNag, rightNow);
+				drawRow(g, config.getNRows(), header, curNRows++, problems.size() == 0 ? "0" : "255", windowWidth, windowHeight, rowHeight, bgColor);
+			}
 
 			for(Problem currentProblem : problems)
 			{
