@@ -8,6 +8,7 @@ import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.io.InputStream;
 import java.net.SocketException;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
@@ -49,7 +50,7 @@ class HTTPServer implements Runnable
 
 	public void addPageHeader(List<String> whereTo, String head)
 	{
-		whereTo.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD>" + head + "</HEAD><BODY><table width=\"100%\" bgcolor=\"#000000\" cellpadding=\"0\" cellspacing=\"0\"><tr><td><A HREF=\"/\"><img src=\"http://www.vanheusden.com/images/vanheusden02.jpg?source=coffeesaint\" BORDER=\"0\"></A></td></tr></table><BR>\n");
+		whereTo.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD>" + head + "<link rel=\"shortcut icon\" href=\"/favicon.ico\" type=\"image/x-icon\" /></HEAD><BODY><table width=\"100%\" bgcolor=\"#000000\" cellpadding=\"0\" cellspacing=\"0\"><tr><td><A HREF=\"/\"><img src=\"http://www.vanheusden.com/images/vanheusden02.jpg?source=coffeesaint\" BORDER=\"0\"></A></td></tr></table><BR>\n");
 		whereTo.add("<TABLE><TR VALIGN=TOP><TD VALIGN=TOP ALIGN=LEFT WIDTH=225><IMG SRC=\"http://vanheusden.com/java/CoffeeSaint/coffeesaint.jpg?source=coffeesaint\" BORDER=\"0\" ALT=\"logo (C) Bas Schuiling\"></TD><TD ALIGN=LEFT>\n");
 
 		whereTo.add("<BR><H1>" + CoffeeSaint.getVersion() + "</H1><BR><BR>");
@@ -75,6 +76,29 @@ class HTTPServer implements Runnable
 		g.drawImage(image, 0, 0, null);
 
 		return bufferedImage;
+	}
+
+	public void sendReply_favicon_ico(MyHTTPServer socket) throws Exception
+	{
+		try
+		{
+			socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/x-icon\r\n\r\n".getBytes());
+			InputStream is = this.getClass().getResourceAsStream("com/vanheusden/CoffeeSaint/favicon.ico");
+			int length = is.available();
+			byte [] icon = new byte[length];
+			is.read(icon);
+			socket.getOutputStream().write(icon);
+			socket.close();
+		}
+		catch(SocketException se)
+		{
+			// really don't care if the transmit failed; browser
+			// probably closed session
+		}
+		catch(Exception e)
+		{
+			throw e;
+		}
 	}
 
 	public void sendReply_imagejpg(MyHTTPServer socket) throws Exception
@@ -164,6 +188,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD></TR>\n");
+		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + (config.getShowHeader() ? "CHECKED" : "") + "></TD></TR>\n");
 		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\"></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("</FORM>\n");
@@ -282,6 +307,12 @@ class HTTPServer implements Runnable
 		if (serviceIssue != null && serviceIssue.getData() != null)
 			config.setServiceIssue(URLDecoder.decode(serviceIssue.getData(), "US-ASCII"));
 
+		HTTPRequestData show_header = socket.findRecord(requestData, "show-header");
+		if (show_header != null && show_header.getData() != null)
+			config.setShowHeader(true);
+		else
+			config.setShowHeader(false);
+
 		reply.add("<BR>\n");
 		reply.add("Form processed.<BR>\n");
 
@@ -396,8 +427,11 @@ class HTTPServer implements Runnable
 
 			JavNag javNag = coffeeSaint.getNagiosData();
 
-			String header = coffeeSaint.getScreenHeader(javNag, rightNow);
-			reply.add(header + "<BR>");
+			if (config.getShowHeader())
+			{
+				String header = coffeeSaint.getScreenHeader(javNag, rightNow);
+				reply.add(header + "<BR>");
+			}
 
 			Color bgColor = config.getBackgroundColorOkStatus();
 			if (coffeeSaint.getProblems().size() > 0)
@@ -480,6 +514,18 @@ class HTTPServer implements Runnable
 		reply.add("Played audio-file " + sample);
 
 		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
+	public void sendReply_robots_txt(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+
+		reply.add("User-agent: *\n");
+		reply.add("Disallow: /\n");
 
 		socket.sendReply(reply);
 	}
@@ -571,6 +617,10 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_writeconfig_cgi(socket);
 					else if (url.equals("/cgi-bin/test-sound.cgi"))
 						sendReply_cgibin_testsound_cgi(socket);
+					else if (url.equals("/robots.txt"))
+						sendReply_robots_txt(socket);
+					else if (url.equals("/favicon.ico"))
+						sendReply_favicon_ico(socket);
 					else
 					{
 						sendReply_404(socket, url);
