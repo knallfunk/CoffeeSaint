@@ -43,6 +43,7 @@ public class Config
 	private boolean gui = true;
 	private boolean randomWebcam;
 	private String header;
+	private boolean headerSet = false;
 	private String issueHost, issueService;
 	private boolean showHeader;
 	// global lock shielding all parameters
@@ -80,7 +81,8 @@ public class Config
 		randomWebcam = false;
 		bgColorOkStatus = Color.GREEN;
 		bgColorOkStatusName = "GREEN";
-		header = "Crt: %CRITICAL, Wrn: %WARNING, Unr: %UNREACHABLE, Dwn: %DOWN, %H:%M";
+		header = "Cr %CRITICAL, Wa %WARNING, Un %UNREACHABLE, Dn %DOWN, %H:%M";
+		headerSet = false;
 		issueHost = "%HOSTNAME";
 		issueService = "%HOSTNAME: %SERVICENAME";
 		showHeader = true;
@@ -251,7 +253,8 @@ public class Config
 		writeLine(out, "also-acknowledged = " + (getAlsoAcknowledged() ? "true" : "false"));
 		writeLine(out, "font = " + getFontName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
-		writeLine(out, "header = " + getHeader());
+		if (getHeaderSet() == true)
+			writeLine(out, "header = " + getHeader());
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
@@ -337,10 +340,20 @@ public class Config
 		return copy;
 	}
 
+	public boolean getHeaderSet()
+	{
+		boolean copy;
+		lock();
+		copy = headerSet;
+		unlock();
+		return copy;
+	}
+
 	public void setHeader(String header)
 	{
 		lock();
 		this.header = header;
+		headerSet = true;
 		unlock();
 	}
 
@@ -406,6 +419,9 @@ public class Config
 		lock();
 		predictorBrainFileName = fileName;
 		unlock();
+
+		if (getHeaderSet() == false)
+			header = "Cr %CRITICAL, Wa %WARNING, Un %UNREACHABLE, Dn %DOWN, %PREDICT, %H:%M";
 	}
 
 	public String getBrainFileName()

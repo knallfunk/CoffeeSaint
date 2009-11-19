@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.0, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.1, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -132,6 +132,21 @@ System.out.println(ts + ": " + (seconds * 1000L));
 			return "" + totals.getNUnreachable();
 		if (cmd.equals("PENDING"))
 			return "" + totals.getNPending();
+
+		if (cmd.equals("PREDICT"))
+		{
+			Double count = predictProblemCount(rightNow);
+			if (count == null)
+				return "?";
+			String countStr = "" + count;
+			int dot = countStr.indexOf(".");
+			if (dot != -1)
+				countStr = countStr.substring(0, dot + 2);
+			return countStr;
+		}
+
+		if (cmd.equals("HISTORICAL"))
+			return "" + predictor.getHistorical(rightNow);
 
 		if (cmd.equals("H"))
 			return make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY));
@@ -280,24 +295,35 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		return result;
 	}
 
+	public Double predictProblemCount(Calendar rightNow)
+	{
+		Calendar future = Calendar.getInstance();
+		future.add(Calendar.SECOND, config.getSleepTime());
+
+		Double value = predictor.predict(rightNow, future);
+		if (value != null)
+			value = Math.ceil(value * 10.0) / 10.0;
+
+		System.out.println("Prediction value: " + value);
+
+		return value;
+	}
+
 	public Color predictWithColor(Calendar rightNow)
 	{
 		Color bgColor = config.getBackgroundColorOkStatus();
 
 		if (predictor != null)
 		{
-			Calendar future = Calendar.getInstance();
-			future.add(Calendar.SECOND, config.getSleepTime());
-
-			Double value = predictor.predict(rightNow, future);
+			Double value = predictProblemCount(rightNow);
 			if (value != null && value != 0.0)
 			{
 				System.out.println("Expecting " + value + " problems after next interval");
-				int red = 15 + (int)(value * 5.0);
+				int red = 100 + (int)(value * (100.0 / (double)config.getNRows()));
 				if (red < 0)
 					red = 0;
-				if (red > 255)
-					red = 255;
+				if (red > 200)
+					red = 200;
 				bgColor = new Color(red, 255, 0);
 			}
 		}
@@ -425,6 +451,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("  %HOSTSTATE/%SERVICESTATE  host/service state");
 		System.out.println("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem");
 		System.out.println("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping");
+		System.out.println("  %PREDICT/%HISTORICAL      ");
 	}
 
 	public static void main(String[] arg)
@@ -549,6 +576,10 @@ System.out.println(ts + ": " + (seconds * 1000L));
 				catch(FileNotFoundException e)
 				{
 					System.err.println("File " + config.getBrainFileName() + " not found, continuing(!) anyway");
+				}
+				catch(Exception e)
+				{
+					throw e;
 				}
 			}
 
