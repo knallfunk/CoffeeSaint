@@ -48,12 +48,16 @@ class Predictor
 			return;
 		}
 
+		System.out.println("Brain dump version: " + line);
+
 		line = in.readLine();
 		if (line.equals("" + interval) == false)
 		{
 			System.err.println("Expected interval " + interval + " but the file has " + line + ".");
 			return;
 		}
+
+		System.out.println("Brain interval: " + line);
 
 		for(int index=0; index<getElementCountMonth(); index++)
 		{
@@ -71,6 +75,20 @@ class Predictor
 		{
 			String necd = in.readLine();
 			nagiosErrorCountDay [index] = Double.valueOf(necd);
+		}
+
+		String trailer = in.readLine();
+		if (trailer != null)
+		{
+			if (!trailer.equals("END"))
+			{
+				System.err.println("Expected 'END', got " + trailer);
+				nagiosErrorCountMonth = new double[getElementCountMonth()];
+				nagiosErrorCountWeek  = new double[getElementCountWeek()];
+				nagiosErrorCountDay   = new double[getElementCountDay ()];
+			}
+			else
+				System.out.println("END found");
 		}
 
                 in.close();
@@ -98,6 +116,8 @@ class Predictor
 
 		for(int index=0; index<getElementCountDay(); index++)
 			writeLine(out, "" + nagiosErrorCountDay [index]);
+
+		writeLine(out, "END");
 
 		out.close();
 	}
@@ -145,33 +165,51 @@ class Predictor
 
 		return nr;
 	}
-
-	public double averageDifference(int intervalNrNow, double [] values, int nElements)
-	{
-		double prev = values[fixIndex(intervalNrNow + 1, nElements)];
-		double diff = 0.0;
-		for(int index=2; index<nElements; index++)
-		{
-			double cur = values[fixIndex(intervalNrNow + index, nElements)];
-			diff += cur - prev;
-			prev = cur;
-		}
-
-		return diff / (double)(nElements - 2);
-	}
-
-	public double averageDifferenceNextValue(int intervalNrNow, double [] values, int nElements)
-	{
-		double prevValue = values[fixIndex(intervalNrNow - 1, nElements)];
-
-		double avgDiff = averageDifference(intervalNrNow, values, nElements);
-
-		return prevValue + avgDiff;
-	}
-
 	public int secondsFromMidnight(Calendar now)
 	{
 		return (now.get(Calendar.HOUR_OF_DAY) * 3600) + (now.get(Calendar.MINUTE) * 60) + now.get(Calendar.SECOND);
+	}
+
+	// http://nl.wikipedia.org/wiki/Regressie-analyse#Meervoudige_lineaire_regressie
+	// http://nl.wikipedia.org/wiki/Kleinste-kwadratenmethode
+	public double predictWithLeastSquaresEstimate(int intervalNrNow, double [] values, int nElements, long nIndexsIntoTheFuture)
+	{
+		double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumX2 = 0.0;
+
+		for(int index=1; index<nElements; index++)
+		{
+			int timeStamp = -(nElements - index);
+
+			sumX += timeStamp;
+			int realIndex = fixIndex(intervalNrNow + index, nElements);
+			sumY += values[realIndex];
+			sumXY += timeStamp * values[realIndex];
+			sumX2 += Math.pow(timeStamp, 2.0);
+		}
+		int usedNElements = nElements;
+
+		double b = (usedNElements * sumXY - sumX * sumY) /
+			   (usedNElements * sumX2 - sumX * sumX);
+		double a = (sumY / usedNElements) - b * (sumX / usedNElements);
+
+		return a + nIndexsIntoTheFuture * b;
+	}
+
+	public double getHistorical(int intervalNrDay, int intervalNrWeek, int intervalNrMonth)
+	{
+		return (nagiosErrorCountMonth[intervalNrMonth] + nagiosErrorCountWeek[intervalNrWeek] + nagiosErrorCountDay[intervalNrDay]) / 3.0;
+	}
+
+	public double getHistorical(Calendar when)
+	{
+		int DOM    = when.get(Calendar.DAY_OF_MONTH);
+		int day    = when.get(Calendar.DAY_OF_WEEK) - 1;
+		int second = secondsFromMidnight(when);
+                int intervalNrMonth = dateToIntervalMonth(DOM, second);
+                int intervalNrWeek  = dateToIntervalWeek (day, second);
+                int intervalNrDay   = dateToIntervalDay  (     second);
+
+		return getHistorical(intervalNrDay, intervalNrWeek, intervalNrMonth);
 	}
 
 	public Double predict(Calendar now, Calendar then)
@@ -192,12 +230,15 @@ class Predictor
                 int intervalNrWeekThen  = dateToIntervalWeek (thenDay, thenSecond);
                 int intervalNrDayThen   = dateToIntervalDay  (         thenSecond);
 
-		double dayPrediction   = averageDifferenceNextValue(intervalNrDayNow,   nagiosErrorCountDay,   getElementCountDay());
-		double weekPrediction  = averageDifferenceNextValue(intervalNrWeekNow,  nagiosErrorCountWeek,  getElementCountWeek());
-		double monthPrediction = averageDifferenceNextValue(intervalNrMonthNow, nagiosErrorCountMonth, getElementCountMonth());
+		long nIndexesIntoTheFutre = (then.getTimeInMillis() - now.getTimeInMillis()) / (1000 * interval);
+		double dayPredictionLSE   = predictWithLeastSquaresEstimate(intervalNrDayNow,   nagiosErrorCountDay,   getElementCountDay(),   nIndexesIntoTheFutre);
+		double weekPredictionLSE  = predictWithLeastSquaresEstimate(intervalNrWeekNow,  nagiosErrorCountWeek,  getElementCountWeek(),  nIndexesIntoTheFutre);
+		double monthPredictionLSE = predictWithLeastSquaresEstimate(intervalNrMonthNow, nagiosErrorCountMonth, getElementCountMonth(), nIndexesIntoTheFutre);
+		System.out.println("LSE, day: " + dayPredictionLSE + ", week: " + weekPredictionLSE + ", month: " + monthPredictionLSE);
 
-		value = (dayPrediction + weekPrediction + monthPrediction +
-			nagiosErrorCountMonth[intervalNrMonthThen] * 2.0 + nagiosErrorCountWeek[intervalNrWeekThen] * 2.0 + nagiosErrorCountDay[intervalNrDayThen]) / 8.0;
+		value = (dayPredictionLSE * 1.0 + weekPredictionLSE * 2.0 + monthPredictionLSE * 3.0 +
+			getHistorical(intervalNrDayThen, intervalNrWeekThen, intervalNrMonthThen)) / 7.0;
+		System.out.println("predict return: " + value);
 
 		return value;
 	}
