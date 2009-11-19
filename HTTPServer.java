@@ -433,9 +433,11 @@ class HTTPServer implements Runnable
 				reply.add(header + "<BR>");
 			}
 
-			Color bgColor = config.getBackgroundColorOkStatus();
+			Color bgColor;
 			if (coffeeSaint.getProblems().size() > 0)
 				bgColor = config.getBackgroundColor();
+			else
+				bgColor = coffeeSaint.predictWithColor(rightNow);
 
 			reply.add("<TABLE WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
 
@@ -454,7 +456,12 @@ class HTTPServer implements Runnable
 			}
 
 			if (coffeeSaint.getProblems().size() == 0)
-				reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER><IMG SRC=\"/image.jpg\" BORDER=\"0\"></TD></TR>\n");
+			{
+				if (config.getNImageUrls() >= 1)
+					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER><IMG SRC=\"/image.jpg\" BORDER=\"0\"></TD></TR>\n");
+				else
+					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER>All fine.</TD></TR>\n");
+			}
 
 			reply.add("</TABLE>\n");
 		}
@@ -590,7 +597,7 @@ class HTTPServer implements Runnable
 					if (space != -1)
 						url = url.substring(0, space);
 
-					System.out.println("HTTP " + socket.getRemoteSocketAddress().getHostName() + " " + requestType + "-request for: " + url);
+					System.out.println("HTTP " + socket.getRemoteSocketAddress() + " " + requestType + "-request for: " + url);
 
 					webServerHits++;
 
