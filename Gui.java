@@ -180,7 +180,6 @@ public class Gui extends Frame
 			coffeeSaint.loadNagiosData();
 			coffeeSaint.findProblems();
 			java.util.List<Problem> problems = coffeeSaint.getProblems();
-			System.out.println("Problems: " + problems);
 
 			Color bgColor = config.getBackgroundColor();
 			Calendar rightNow = Calendar.getInstance();
