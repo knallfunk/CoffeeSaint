@@ -16,12 +16,9 @@ import java.util.regex.Pattern;
 public class Config
 {
 	// parameters set/get by this object
-	private String host = null, file = null;
-	private URL url = null;
-	private int port = 33333;
+	private java.util.List<NagiosDataSource> ndsList = new ArrayList<NagiosDataSource>();
 	private int nRows;
 	private int sleepTime;
-	private NagiosVersion nagiosVersion = NagiosVersion.V3;
 	private String fontName;
 	private String listenAdapter = "0.0.0.0";
 	private int listenPort = -1;
@@ -117,6 +114,7 @@ public class Config
 	{
 		lock();
 		configFilename = fileName;
+		ndsList = new ArrayList<NagiosDataSource>();
 		unlock();
 
 		BufferedReader in;
@@ -136,63 +134,85 @@ public class Config
 				String name = line.substring(0, is).trim();
 				String data = line.substring(is + 1).trim();
 
-				if (name.compareTo("config") == 0)
+				if (name.equals("config"))
 					loadConfig(data);
-				else if (name.compareTo("predict") == 0)
+				else if (name.equals("source"))
+				{
+					String [] parameters = data.split(" ");
+					NagiosDataSource nds = null;
+					NagiosVersion nv = null;
+					String type = parameters[0];
+					String versionStr = parameters[1];
+
+					if (versionStr.equals("1"))
+						nv = NagiosVersion.V1;
+					else if (versionStr.equals("2"))
+						nv = NagiosVersion.V2;
+					else if (versionStr.equals("3"))
+						nv = NagiosVersion.V3;
+					else
+						throw new Exception("Nagios version '" + versionStr + "' not known.");
+
+					if (type.equalsIgnoreCase("http"))
+						nds = new NagiosDataSource(new URL(parameters[2]), nv);
+					else if (type.equalsIgnoreCase("file"))
+						nds = new NagiosDataSource(parameters[2], nv);
+					else if (type.equalsIgnoreCase("tcp"))
+					{
+						String host = parameters[2];
+						int port = Integer.valueOf(parameters[3]);
+						nds = new NagiosDataSource(host, port, nv);
+					}
+					else
+						throw new Exception("Data source-type '" + type + "' not understood.");
+
+					addNagiosDataSource(nds);
+				}
+				else if (name.equals("predict"))
 					setBrainFileName(data);
-				else if (name.compareTo("exec") == 0)
+				else if (name.equals("exec"))
 					setExec(data);
-				else if (name.compareTo("adapt-img") == 0)
+				else if (name.equals("adapt-img"))
 					setAdaptImageSize(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.compareTo("random-img") == 0)
+				else if (name.equals("random-img"))
 					setRandomWebcam(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.compareTo("no-gui") == 0)
+				else if (name.equals("no-gui"))
 					setRunGui(!(data.equalsIgnoreCase("true") ? true : false));
-				else if (name.compareTo("host") == 0)
-					setNagiosStatusHost(data);
-				else if (name.compareTo("header") == 0)
+				else if (name.equals("header"))
 					setHeader(data);
-				else if (name.compareTo("host-issue") == 0)
+				else if (name.equals("host-issue"))
 					setHostIssue(data);
-				else if (name.compareTo("service-issue") == 0)
+				else if (name.equals("service-issue"))
 					setServiceIssue(data);
-				else if (name.compareTo("port") == 0)
-					setNagiosStatusPort(Integer.valueOf(data));
-				else if (name.compareTo("file") == 0)
-					setNagiosStatusFile(data);
-				else if (name.compareTo("url") == 0)
-					setNagiosStatusURL(data);
-				else if (name.compareTo("counter") == 0)
+				else if (name.equals("counter"))
 					setCounter(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.compareTo("sound") == 0)
+				else if (name.equals("sound"))
 					setProblemSound(data);
-				else if (name.compareTo("listen-port") == 0)
+				else if (name.equals("listen-port"))
 					setHTTPServerListenPort(Integer.valueOf(data));
-				else if (name.compareTo("listen-adapter") == 0)
+				else if (name.equals("listen-adapter"))
 					setHTTPServerListenAdapter(data);
-				else if (name.compareTo("bgcolor") == 0)
+				else if (name.equals("bgcolor"))
 					setBackgroundColor(data);
-				else if (name.compareTo("textcolor") == 0)
+				else if (name.equals("textcolor"))
 					setTextColor(data);
-				else if (name.compareTo("bgcolorok") == 0)
+				else if (name.equals("bgcolorok"))
 					setBackgroundColorOkStatus(data);
-				else if (name.compareTo("nrows") == 0)
+				else if (name.equals("nrows"))
 					setNRows(Integer.valueOf(data));
-				else if (name.compareTo("interval") == 0)
+				else if (name.equals("interval"))
 					setSleepTime(Integer.valueOf(data));
-				else if (name.compareTo("version") == 0)
-					setNagiosStatusVersion(data);
-				else if (name.compareTo("image") == 0)
+				else if (name.equals("image"))
 					addImageUrl(data);
-				else if (name.compareTo("prefer") == 0)
+				else if (name.equals("prefer"))
 					loadPrefers(data);
-				else if (name.compareTo("always-notify") == 0)
+				else if (name.equals("always-notify"))
 					setAlwaysNotify(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.compareTo("also-acknowledged") == 0)
+				else if (name.equals("also-acknowledged"))
 					setAlsoAcknowledged(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.compareTo("show-header") == 0)
+				else if (name.equals("show-header"))
 					setShowHeader(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.compareTo("font") == 0)
+				else if (name.equals("font"))
 					setFontName(data);
 				else
 					throw new Exception("Unknown parameter on line " + lineNr);
@@ -222,15 +242,6 @@ public class Config
 			writeLine(out, "exec = " + getExec());
 		writeLine(out, "adapt-img = " + (getAdaptImageSize() ? "true" : "false"));
 		writeLine(out, "random-img = " + (getRandomWebcam() ? "true" : "false"));
-		if (getNagiosStatusHost() != null)
-		{
-			writeLine(out, "host = " + getNagiosStatusHost());
-			writeLine(out, "port = " + getNagiosStatusPort());
-		}
-		if (getNagiosStatusFile() != null)
-			writeLine(out, "file = " + getNagiosStatusFile());
-		if (getNagiosStatusURL() != null)
-			writeLine(out, "url = " + getNagiosStatusURL());
 		writeLine(out, "counter = " + (getCounter() ? "true" : "false"));
 		if (getProblemSound() != null)
 			writeLine(out, "sound = " + getProblemSound());
@@ -241,12 +252,6 @@ public class Config
 		writeLine(out, "bgcolorok = " + getBackgroundColorOkStatusName());
 		writeLine(out, "nrows = " + getNRows());
 		writeLine(out, "interval = " + getSleepTime());
-		if (getNagiosStatusVersion() == NagiosVersion.V1)
-			writeLine(out, "version = 1");
-		else if (getNagiosStatusVersion() == NagiosVersion.V2)
-			writeLine(out, "version = 2");
-		else if (getNagiosStatusVersion() == NagiosVersion.V3)
-			writeLine(out, "version = 3");
 		for(String imgUrl : getImageUrls())
 			writeLine(out, "image = " + imgUrl);
 		if (getPrefersFilename() != null)
@@ -260,6 +265,35 @@ public class Config
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
+
+		for(NagiosDataSource dataSource : getNagiosDataSources())
+		{
+			String type = "?";
+			if (dataSource.getType() == NagiosDataSourceType.TCP)
+				type = "tcp";
+			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+				type = "http";
+			else if (dataSource.getType() == NagiosDataSourceType.FILE)
+				type = "file";
+
+			String version = "?";
+			if (dataSource.getVersion() == NagiosVersion.V1)
+				version = "1";
+			else if (dataSource.getVersion() == NagiosVersion.V2)
+				version = "2";
+			else if (dataSource.getVersion() == NagiosVersion.V3)
+				version = "3";
+
+			String parameters = "?";
+			if (dataSource.getType() == NagiosDataSourceType.TCP)
+				parameters = dataSource.getHost() + " " + dataSource.getPort();
+			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+				parameters = dataSource.getURL().toString();
+			else if (dataSource.getType() == NagiosDataSourceType.FILE)
+				parameters = dataSource.getFile();
+
+			writeLine(out, "source = " + type + " " + version + " " + parameters);
+		}
 
 		out.close();
 	}
@@ -467,22 +501,6 @@ public class Config
 		return copy;
 	}
 
-	public void setNagiosStatusHost(String host)
-	{
-		lock();
-		this.host = host;
-		unlock();
-	}
-
-	public String getNagiosStatusHost()
-	{
-		String copy;
-		lock();
-		copy = host;
-		unlock();
-		return copy;
-	}
-
 	public void setHttpRememberNHosts(int n)
 	{
 		lock();
@@ -499,53 +517,6 @@ public class Config
 		return copy;
 	}
 
-	public void setNagiosStatusPort(int port)
-	{
-		lock();
-		this.port = port;
-		unlock();
-	}
-
-	public int getNagiosStatusPort()
-	{
-		int copy;
-		lock();
-		copy = port;
-		unlock();
-		return copy;
-	}
-
-	public void setNagiosStatusFile(String file)
-	{
-		lock();
-		this.file = file;
-		unlock();
-	}
-
-	public String getNagiosStatusFile()
-	{
-		String copy;
-		lock();
-		copy = file;
-		unlock();
-		return copy;
-	}
-
-	public void setNagiosStatusURL(String url) throws Exception
-	{
-		lock();
-		this.url = new URL(url);
-		unlock();
-	}
-
-	public URL getNagiosStatusURL()
-	{
-		URL copy;
-		lock();
-		copy = url;
-		unlock();
-		return copy;
-	}
 
 	public void setCounter(boolean doCounter)
 	{
@@ -730,33 +701,6 @@ public class Config
 		return copy;
 	}
 
-	public void setNagiosStatusVersion(String version) throws Exception
-	{
-		NagiosVersion nv = null;
-
-		if (version.equals("1"))
-			nv = NagiosVersion.V1;
-		else if (version.equals("2"))
-			nv = NagiosVersion.V2;
-		else if (version.equals("3"))
-			nv = NagiosVersion.V3;
-		else
-			throw new Exception("Invalid nagios version selected (" + version + ").");
-
-		lock();
-		this.nagiosVersion = nv;
-		unlock();
-	}
-
-	public NagiosVersion getNagiosStatusVersion()
-	{
-		NagiosVersion copy;
-		lock();
-		copy = nagiosVersion;
-		unlock();
-		return copy;
-	}
-
 	public void clearImageList()
 	{
 		imageFiles = new ArrayList<String>();
@@ -913,6 +857,22 @@ public class Config
 		String copy;
 		lock();
 		copy = fontName;
+		unlock();
+		return copy;
+	}
+
+	public void addNagiosDataSource(NagiosDataSource nds)
+	{
+		lock();
+		ndsList.add(nds);
+		unlock();
+	}
+
+	public java.util.List<NagiosDataSource> getNagiosDataSources()
+	{
+		java.util.List<NagiosDataSource> copy;
+		lock();
+		copy = ndsList;
 		unlock();
 		return copy;
 	}

@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.2, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.3, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -362,14 +362,33 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 	public void loadNagiosData() throws Exception
 	{
+		javNag = new JavNag();
+
 		long startLoadTs = System.currentTimeMillis();
 
-		if (config.getNagiosStatusHost() != null)
-			javNag = new JavNag(config.getNagiosStatusHost(), config.getNagiosStatusPort(), config.getNagiosStatusVersion());
-		else if (config.getNagiosStatusURL() != null)
-			javNag = new JavNag(config.getNagiosStatusURL(), config.getNagiosStatusVersion());
-		else
-			javNag = new JavNag(config.getNagiosStatusFile(), config.getNagiosStatusVersion());
+		for(NagiosDataSource dataSource : config.getNagiosDataSources())
+		{
+			System.out.print("Loading data from: ");
+			if (dataSource.getType() == NagiosDataSourceType.TCP)
+			{
+				System.out.print(dataSource.getHost() + " " + dataSource.getPort());
+				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion());
+			}
+			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+			{
+				System.out.print(dataSource.getURL());
+				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion());
+			}
+			else if (dataSource.getType() == NagiosDataSourceType.FILE)
+			{
+				System.out.print(dataSource.getFile());
+				javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion());
+			}
+			else
+				throw new Exception("Unknown data-source type: " + dataSource.getType());
+
+			System.out.println(" - done.");
+		}
 
 		long endLoadTs = System.currentTimeMillis();
 
@@ -425,10 +444,14 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 	public static void showHelp()
 	{
-		System.out.println("--host x      Nagios host to connect to");
-		System.out.println("--port x      Port via which to retrieve the Nagios status");
-		System.out.println("  OR");
-		System.out.println("--file x      File to load status from");
+		System.out.println("--source type version x  Source to retrieve from.");
+		System.out.println("              Type can be: http, tcp, file");
+		System.out.println("              http expects an url like http://keetweej.vanheusden.com/status.dat");
+		System.out.println("              tcp expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
+		System.out.println("              file expects a file-name, e.g. /var/cache/nagios3/status.dat");
+		System.out.println("              version selects the nagios-version. E.g. 1, 2 or 3.");
+		System.out.println("              You can add as many Nagios servers as you like.");
+		System.out.println("              Example: --source file 3 /var/cache/nagios3/status.dat");
 		System.out.println("");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
@@ -488,6 +511,37 @@ System.out.println(ts + ": " + (seconds * 1000L));
 					config.writeConfig(arg[++loop]);
 					config.setConfigFilename(arg[loop]);
 				}
+				else if (arg[loop].compareTo("--source") == 0)
+				{
+					NagiosDataSource nds = null;
+					NagiosVersion nv = null;
+					String type = arg[++loop];
+					String versionStr = arg[++loop];
+
+					if (versionStr.equals("1"))
+						nv = NagiosVersion.V1;
+					else if (versionStr.equals("2"))
+						nv = NagiosVersion.V2;
+					else if (versionStr.equals("3"))
+						nv = NagiosVersion.V3;
+					else
+						throw new Exception("Nagios version '" + versionStr + "' not known.");
+
+					if (type.equalsIgnoreCase("http"))
+						nds = new NagiosDataSource(new URL(arg[++loop]), nv);
+					else if (type.equalsIgnoreCase("file"))
+						nds = new NagiosDataSource(arg[++loop], nv);
+					else if (type.equalsIgnoreCase("tcp"))
+					{
+						String host = arg[++loop];
+						int port = Integer.valueOf(arg[++loop]);
+						nds = new NagiosDataSource(host, port, nv);
+					}
+					else
+						throw new Exception("Data source-type '" + type + "' not understood.");
+
+					config.addNagiosDataSource(nds);
+				}
 				else if (arg[loop].compareTo("--no-header") == 0)
 					config.setShowHeader(false);
 				else if (arg[loop].compareTo("--header") == 0)
@@ -508,14 +562,6 @@ System.out.println(ts + ": " + (seconds * 1000L));
 					config.setExec(arg[++loop]);
 				else if (arg[loop].compareTo("--adapt-img") == 0)
 					config.setAdaptImageSize(true);
-				else if (arg[loop].compareTo("--host") == 0)
-					config.setNagiosStatusHost(arg[++loop]);
-				else if (arg[loop].compareTo("--port") == 0)
-					config.setNagiosStatusPort(Integer.valueOf(arg[++loop]));
-				else if (arg[loop].compareTo("--file") == 0)
-					config.setNagiosStatusFile(arg[++loop]);
-				else if (arg[loop].compareTo("--url") == 0)
-					config.setNagiosStatusURL(arg[++loop]);
 				else if (arg[loop].compareTo("--counter") == 0)
 					config.setCounter(true);
 				else if (arg[loop].compareTo("--sound") == 0)
@@ -537,8 +583,6 @@ System.out.println(ts + ": " + (seconds * 1000L));
 					config.setNRows(Integer.valueOf(arg[++loop]));
 				else if (arg[loop].compareTo("--interval") == 0)
 					config.setSleepTime(Integer.valueOf(arg[++loop]));
-				else if (arg[loop].compareTo("--version") == 0)
-					config.setNagiosStatusVersion(arg[++loop]);
 				else if (arg[loop].compareTo("--image") == 0)
 					config.addImageUrl(arg[++loop]);
 				else if (arg[loop].compareTo("--prefer") == 0)
@@ -565,18 +609,9 @@ System.out.println(ts + ": " + (seconds * 1000L));
 				}
 			}
 
-			int nSet = 0;
-			nSet += (config.getNagiosStatusHost() != null ? 1 : 0);
-			nSet += (config.getNagiosStatusFile() != null ? 1 : 0);
-			nSet += (config.getNagiosStatusURL()  != null ? 1 : 0);
-			if (nSet == 0)
+			if (config.getNagiosDataSources().size() == 0)
 			{
-				System.err.println("You need to select a host with either --host (& --port), a file with --file or an URL with --url.");
-				System.exit(127);
-			}
-			else if (nSet > 1)
-			{
-				System.err.println("--host, --file and --url are mutual exclusive.");
+				System.err.println("You need to select at least one Nagios data-source.");
 				System.exit(127);
 			}
 
