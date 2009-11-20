@@ -974,9 +974,10 @@ public class Config
 
 	public java.util.List<NagiosDataSource> getNagiosDataSources()
 	{
-		java.util.List<NagiosDataSource> copy;
+		java.util.List<NagiosDataSource> copy = new ArrayList<NagiosDataSource>();
 		lock();
-		copy = ndsList;
+		for(NagiosDataSource current : ndsList)
+			copy.add(current);
 		unlock();
 		return copy;
 	}
