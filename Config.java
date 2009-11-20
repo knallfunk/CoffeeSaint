@@ -46,6 +46,7 @@ public class Config
 	private boolean headerSet = false;
 	private String issueHost, issueService;
 	private boolean showHeader;
+	private int httpRememberNHosts;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -86,6 +87,7 @@ public class Config
 		issueHost = "%HOSTNAME";
 		issueService = "%HOSTNAME: %SERVICENAME";
 		showHeader = true;
+		httpRememberNHosts = 10;
 
 		unlock();
 	}
@@ -477,6 +479,22 @@ public class Config
 		String copy;
 		lock();
 		copy = host;
+		unlock();
+		return copy;
+	}
+
+	public void setHttpRememberNHosts(int n)
+	{
+		lock();
+		this.httpRememberNHosts = n;
+		unlock();
+	}
+
+	public int getHttpRememberNHosts()
+	{
+		int copy;
+		lock();
+		copy = httpRememberNHosts;
 		unlock();
 		return copy;
 	}
