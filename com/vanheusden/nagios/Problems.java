@@ -2,11 +2,61 @@
 package com.vanheusden.nagios;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public class Problems
+public class Problems implements Comparator<Problem>
 {
+	String sortField;
+	boolean sortNumeric;
+
+	public Problems(String field, boolean numeric)
+	{
+		this.sortField   = field;
+		this.sortNumeric = numeric;
+	}
+
+	public int compare(Problem a, Problem b)
+	{
+		Problem pa = (Problem)a;
+		Problem pb = (Problem)b;
+
+		if (sortField.equals("host_name"))
+		{
+			return pa.getHost().getHostName().compareTo(pb.getHost().getHostName());
+		}
+		else
+		{
+			Service pas = pa.getService();
+			Service pbs = pb.getService();
+
+			if (pas != null && pbs != null)
+			{
+				if (sortNumeric)
+					return (int)(Long.valueOf(pbs.getParameter(sortField)) - Long.valueOf(pas.getParameter(sortField)));
+
+				return pas.getParameter(sortField).compareTo(pbs.getParameter(sortField));
+			}
+			else
+			{
+				Host pah = pa.getHost();
+				Host pbh = pb.getHost();
+
+				if (sortNumeric)
+					return (int)(Long.valueOf(pbh.getParameter(sortField)) - Long.valueOf(pah.getParameter(sortField)));
+
+				return pah.getParameter(sortField).compareTo(pbh.getParameter(sortField));
+			}
+		}
+	}
+
+	public static void sortList(List<Problem> problems, String field, boolean numeric)
+	{
+		Collections.sort(problems, new Problems(field, numeric));
+	}
+
 	static void addProblem(List<Pattern> prioPatterns, List<Problem> problems, List<Problem> lessImportant, Host host, Service service, String state)
 	{
 		boolean important = false;
@@ -32,10 +82,8 @@ public class Problems
 			lessImportant.add(new Problem(host, service, state));
 	}
 
-	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> problems, boolean always_notify, boolean also_acknowledged)
+	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> prioProblems, List<Problem> lessImportant, boolean always_notify, boolean also_acknowledged)
 	{
-		List<Problem> lessImportant = new ArrayList<Problem>();
-
 		for(Host currentHost: javNag.getListOfHosts())
 		{
 			assert currentHost != null;
@@ -52,7 +100,7 @@ public class Problems
 				else /* all other states (including 'pending' ("3")) are WARNING */
 					useState = "1";
 
-				addProblem(prioPatterns, problems, lessImportant, currentHost, null, useState);
+				addProblem(prioPatterns, prioProblems, lessImportant, currentHost, null, useState);
 			}
 			else
 			{
@@ -63,15 +111,10 @@ public class Problems
 					{
 						String state = currentService.getParameter("current_state");
 
-						addProblem(prioPatterns, problems, lessImportant, currentHost, currentService, state);
+						addProblem(prioPatterns, prioProblems, lessImportant, currentHost, currentService, state);
 					}
 				}
 			}
-		}
-
-		for(Problem currentLessImportant : lessImportant)
-		{
-			problems.add(currentLessImportant);
 		}
 	}
 }
