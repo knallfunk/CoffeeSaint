@@ -253,6 +253,8 @@ public class Gui extends Frame
 		}
 		catch(Exception e)
 		{
+			statistics.incExceptions();
+
 			CoffeeSaint.showException(e);
 
 			if (g != null)
