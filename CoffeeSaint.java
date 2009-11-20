@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.1, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.2, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -177,6 +177,18 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		if (cmd.equals("SERVICEFLAPPING") && problem != null && problem.getService() != null)
 			return problem.getService().getParameter("is_flapping").equals("1") ? "FLAPPING" : "";
 
+		if (cmd.equals("OUTPUT") && problem != null)
+		{
+			String output;
+			if (problem.getService() != null)
+				output = problem.getService().getParameter("plugin_output");
+			else
+				output = problem.getHost().getParameter("plugin_output");
+			if (output != null)
+				return output;
+			return "?";
+		}
+
 		return "?" + cmd + "?";
 	}
 
@@ -235,10 +247,13 @@ System.out.println(ts + ": " + (seconds * 1000L));
 			return Color.YELLOW;
 		else if (state.equals("2") == true)
 			return Color.RED;
+		else if (state.equals("3") == true) // UNKNOWN STATE
+			return Color.MAGENTA;
 		else if (state.equals("255") == true)
 			return config.getBackgroundColor();
 
-		return Color.MAGENTA;
+		System.out.println("Unknown state: " + state);
+		return Color.ORANGE;
 	}
 
 	public ImageParameters loadImage() throws Exception
@@ -452,6 +467,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem");
 		System.out.println("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping");
 		System.out.println("  %PREDICT/%HISTORICAL      ");
+		System.out.println("  %OUTPUT                   Plugin output");
 	}
 
 	public static void main(String[] arg)
@@ -576,10 +592,6 @@ System.out.println(ts + ": " + (seconds * 1000L));
 				catch(FileNotFoundException e)
 				{
 					System.err.println("File " + config.getBrainFileName() + " not found, continuing(!) anyway");
-				}
-				catch(Exception e)
-				{
-					throw e;
 				}
 			}
 
