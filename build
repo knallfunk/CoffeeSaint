@@ -1,0 +1,7 @@
+#! /bin/sh
+
+find . -name \*class | xargs rm
+
+javac -Xlint:deprecation -d . *java
+
+jar cmf manifest.txt CoffeeSaint.jar `find . -name \*.class -o -name favicon.ico` `find com/ -name \*.png -o -name \*.jpg -o -name \*.txt`
