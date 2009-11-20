@@ -1,0 +1,4 @@
+- fix font heights
+- font configurable per state
+- help bij config-scherm met de te gebruiken escapes
+- loadNagiosData 'synchronized' ?
