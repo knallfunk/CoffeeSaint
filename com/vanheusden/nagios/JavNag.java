@@ -230,96 +230,6 @@ public class JavNag
 	}
 
 	/**
-	 * Loads a Nagios statusfile. See "status_file" in nagios.cfg.
-	 *
-	 * @param fileName	Path to status-file.
-	 * @param nagiosVersion	Nagios-version this file is from.
-	 * @see NagiosVersion
-	 */
-	public JavNag(String fileName, NagiosVersion nagiosVersion) throws Exception
-	{
-		List<String> fileDump = new ArrayList<String>();
-		BufferedReader in = new BufferedReader(new FileReader(fileName));
-		String line;
-
-		while((line = in.readLine()) != null)
-			fileDump.add(line);
-
-		in.close();
-
-		if (nagiosVersion == NagiosVersion.V1)
-		{
-			addFromNagios1(fileDump);
-		}
-		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
-		{
-			addFromNagios2And3(fileDump);
-		}
-	}
-
-	/**
-	 * Retrieves a Nagios status from a host/port (TCP).
-	 *
-	 * @param host		Hostname (must be resolvable).
-	 * @param port		Portnumber.
-	 * @param nagiosVersion	Nagios-version this file is from.
-	 * @see NagiosVersion
-	 */
-	public JavNag(String host, int port, NagiosVersion nagiosVersion) throws Exception
-	{
-		List<String> fileDump = new ArrayList<String>();
-		Socket socket = new Socket(host, port);
-		InputStreamReader inputStream = new InputStreamReader(socket.getInputStream());
-		BufferedReader in = new BufferedReader(inputStream);
-		String line;
-
-		while((line = in.readLine()) != null)
-			fileDump.add(line);
-
-		in.close();
-
-		socket.close();
-
-		if (nagiosVersion == NagiosVersion.V1)
-		{
-			addFromNagios1(fileDump);
-		}
-		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
-		{
-			addFromNagios2And3(fileDump);
-		}
-	}
-
-	/**
-	 * Retrieves a Nagios status from an URL
-	 *
-	 * @param url		URL
-	 * @param nagiosVersion	Nagios-version this file is from.
-	 * @see NagiosVersion
-	 */
-	public JavNag(URL url, NagiosVersion nagiosVersion) throws Exception
-	{
-		List<String> fileDump = new ArrayList<String>();
-		InputStreamReader inputStream = new InputStreamReader(url.openStream());
-		BufferedReader in = new BufferedReader(inputStream);
-		String line;
-
-		while((line = in.readLine()) != null)
-			fileDump.add(line);
-
-		in.close();
-
-		if (nagiosVersion == NagiosVersion.V1)
-		{
-			addFromNagios1(fileDump);
-		}
-		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
-		{
-			addFromNagios2And3(fileDump);
-		}
-	}
-
-	/**
 	 * calculateStatistics returns a Totals object with statistics-totals. E.g. total number
 	 * of services with critical/warning/ok states.
 	 *
@@ -454,5 +364,114 @@ public class JavNag
 			return false;
 
 		return true;
+	}
+
+	public void loadNagiosData(String fileName, NagiosVersion nagiosVersion) throws Exception
+	{
+		List<String> fileDump = new ArrayList<String>();
+		BufferedReader in = new BufferedReader(new FileReader(fileName));
+		String line;
+
+		while((line = in.readLine()) != null)
+			fileDump.add(line);
+
+		in.close();
+
+		if (nagiosVersion == NagiosVersion.V1)
+		{
+			addFromNagios1(fileDump);
+		}
+		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
+		{
+			addFromNagios2And3(fileDump);
+		}
+	}
+
+	public void loadNagiosData(String host, int port, NagiosVersion nagiosVersion) throws Exception
+	{
+		List<String> fileDump = new ArrayList<String>();
+		Socket socket = new Socket(host, port);
+		InputStreamReader inputStream = new InputStreamReader(socket.getInputStream());
+		BufferedReader in = new BufferedReader(inputStream);
+		String line;
+
+		while((line = in.readLine()) != null)
+			fileDump.add(line);
+
+		in.close();
+
+		socket.close();
+
+		if (nagiosVersion == NagiosVersion.V1)
+		{
+			addFromNagios1(fileDump);
+		}
+		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
+		{
+			addFromNagios2And3(fileDump);
+		}
+	}
+
+	public void loadNagiosData(URL url, NagiosVersion nagiosVersion) throws Exception
+	{
+		List<String> fileDump = new ArrayList<String>();
+		InputStreamReader inputStream = new InputStreamReader(url.openStream());
+		BufferedReader in = new BufferedReader(inputStream);
+		String line;
+
+		while((line = in.readLine()) != null)
+			fileDump.add(line);
+
+		in.close();
+
+		if (nagiosVersion == NagiosVersion.V1)
+		{
+			addFromNagios1(fileDump);
+		}
+		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
+		{
+			addFromNagios2And3(fileDump);
+		}
+	}
+
+	public JavNag()
+	{
+	}
+
+	/**
+	 * Loads a Nagios statusfile. See "status_file" in nagios.cfg.
+	 *
+	 * @param fileName	Path to status-file.
+	 * @param nagiosVersion	Nagios-version this file is from.
+	 * @see NagiosVersion
+	 */
+	public JavNag(String fileName, NagiosVersion nagiosVersion) throws Exception
+	{
+		loadNagiosData(fileName, nagiosVersion);
+	}
+
+	/**
+	 * Retrieves a Nagios status from a host/port (TCP).
+	 *
+	 * @param host		Hostname (must be resolvable).
+	 * @param port		Portnumber.
+	 * @param nagiosVersion	Nagios-version this file is from.
+	 * @see NagiosVersion
+	 */
+	public JavNag(String host, int port, NagiosVersion nagiosVersion) throws Exception
+	{
+		loadNagiosData(host, port, nagiosVersion);
+	}
+
+	/**
+	 * Retrieves a Nagios status from an URL
+	 *
+	 * @param url		URL
+	 * @param nagiosVersion	Nagios-version this file is from.
+	 * @see NagiosVersion
+	 */
+	public JavNag(URL url, NagiosVersion nagiosVersion) throws Exception
+	{
+		loadNagiosData(url, nagiosVersion);
 	}
 }
