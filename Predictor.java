@@ -146,13 +146,16 @@ class Predictor
 		int nowSecond = (now.get(Calendar.HOUR_OF_DAY) * 3600) + (now.get(Calendar.MINUTE) * 60) + now.get(Calendar.SECOND);
 
 		intervalNr = dateToIntervalMonth(nowDOM, nowSecond);
-		nagiosErrorCountMonth[intervalNr] = (nagiosErrorCountMonth[intervalNr] * 3.0 + (double)errorCount) / 4.0;
+		// nagiosErrorCountMonth[intervalNr] = (nagiosErrorCountMonth[intervalNr] * 3.0 + (double)errorCount) / 4.0;
+		nagiosErrorCountMonth[intervalNr] = (double)errorCount;
 
 		intervalNr = dateToIntervalWeek(nowDay, nowSecond);
-		nagiosErrorCountWeek[intervalNr] = (nagiosErrorCountWeek[intervalNr] * 3.0 + (double)errorCount) / 4.0;
+		// nagiosErrorCountWeek[intervalNr] = (nagiosErrorCountWeek[intervalNr] * 3.0 + (double)errorCount) / 4.0;
+		nagiosErrorCountWeek[intervalNr] = (double)errorCount;
 
 		intervalNr = dateToIntervalDay(nowSecond);
-		nagiosErrorCountDay [intervalNr] = (nagiosErrorCountDay [intervalNr] * 3.0 + (double)errorCount) / 4.0;
+		// nagiosErrorCountDay [intervalNr] = (nagiosErrorCountDay [intervalNr] * 3.0 + (double)errorCount) / 4.0;
+		nagiosErrorCountDay [intervalNr] = (double)errorCount;
 	}
 
 	int fixIndex(int nr, int nElements)
