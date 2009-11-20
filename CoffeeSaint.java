@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.3, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.4-beta001, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -360,7 +360,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		}
 	}
 
-	public void loadNagiosData() throws Exception
+	synchronized public void loadNagiosData() throws Exception
 	{
 		javNag = new JavNag();
 
@@ -401,9 +401,17 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 	public void findProblems() throws Exception
 	{
+		java.util.List<Problem> lessImportant = new ArrayList<Problem>();
 		problems = new ArrayList<Problem>();
 
-		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, config.getAlwaysNotify(), config.getAlsoAcknowledged());
+		// collect problems
+		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged());
+		// sort problems
+		Problems.sortList(problems, config.getSortOrder(), config.getSortOrderNumeric());
+		Problems.sortList(lessImportant, config.getSortOrder(), config.getSortOrderNumeric());
+		// and combine them
+		for(Problem currentLessImportant : lessImportant)
+			problems.add(currentLessImportant);
 
 		if (predictor != null)
 		{
@@ -478,6 +486,9 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("--host-issue x  String defining how to format host-issues.");
 		System.out.println("--service-issue x  String defining how to format service-issues.");
 		System.out.println("--no-header   Do not display the statistics line in the upper row.");
+		System.out.println("--sort-order x  Sort on field x.");
+		System.out.println(" OR");
+		System.out.println("--sort-order-numeric x  Sort on field x, numeric.");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -491,6 +502,10 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping");
 		System.out.println("  %PREDICT/%HISTORICAL      ");
 		System.out.println("  %OUTPUT                   Plugin output");
+		System.out.println("");
+		System.out.println("Sort-fields:");
+		config.listSortFields();
+		System.out.println("");
 	}
 
 	public static void main(String[] arg)
@@ -542,6 +557,10 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 					config.addNagiosDataSource(nds);
 				}
+				else if (arg[loop].compareTo("--sort-order") == 0)
+					config.setSortOrder(arg[++loop], false);
+				else if (arg[loop].compareTo("--sort-order-numeric") == 0)
+					config.setSortOrder(arg[++loop], true);
 				else if (arg[loop].compareTo("--no-header") == 0)
 					config.setShowHeader(false);
 				else if (arg[loop].compareTo("--header") == 0)
