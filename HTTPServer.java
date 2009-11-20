@@ -211,7 +211,10 @@ class HTTPServer implements Runnable
 
 		addHTTP200(reply);
 		addPageHeader(reply, "");
+
 		reply.add("<FORM ACTION=\"/cgi-bin/config-do.cgi\" METHOD=\"POST\">\n");
+
+		reply.add("<H2>General parameters</H2>\n");
 		reply.add("<TABLE BORDER=\"1\">\n");
 
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD></TR>\n");
@@ -265,7 +268,7 @@ class HTTPServer implements Runnable
 			reply.add(line);
 		}
 		for(String image : config.getImageUrls())
-			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
+			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
 		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
 		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + (config.getAdaptImageSize() ? "CHECKED" : "") + "></TD></TR>\n");
 		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + (config.getRandomWebcam() ? "CHECKED" : "") + "></TD></TR>\n");
@@ -273,9 +276,66 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + (config.getShowHeader() ? "CHECKED" : "") + "></TD></TR>\n");
-		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes\"></TD></TR>\n");
+		reply.add("<TR><TD>Sort order:</TD><TD><SELECT NAME=\"sort-order\">\n");
+		for(String current : config.getSortFields())
+		{
+			String line = "<OPTION VALUE=\"" + current + "\"";
+			if (config.getSortOrder().equalsIgnoreCase(current))
+				line += " SELECTED";
+			line += ">" + current + "</OPTION>\n";
+			reply.add(line);
+		}
+		reply.add("</SELECT></TD></TR>");
+		reply.add("<TR><TD>Sort numeric:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-numeric\" VALUE=\"on\" " + (config.getSortOrderNumeric() ? "CHECKED" : "") + "></TD></TR>\n");
 		reply.add("</TABLE>\n");
+		reply.add("<BR>\n");
+		reply.add("<H2>Nagios server(s)</H2>\n");
+		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD></TR>\n");
+		for(NagiosDataSource dataSource : config.getNagiosDataSources())
+		{
+			String type = "?";
+			if (dataSource.getType() == NagiosDataSourceType.TCP)
+				type = "tcp";
+			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+				type = "http";
+			else if (dataSource.getType() == NagiosDataSourceType.FILE)
+				type = "file";
+
+			String version = "?";
+			if (dataSource.getVersion() == NagiosVersion.V1)
+				version = "1";
+			else if (dataSource.getVersion() == NagiosVersion.V2)
+				version = "2";
+			else if (dataSource.getVersion() == NagiosVersion.V3)
+				version = "3";
+
+			String parameters = "?";
+			if (dataSource.getType() == NagiosDataSourceType.TCP)
+				parameters = dataSource.getHost() + " " + dataSource.getPort();
+			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+				parameters = dataSource.getURL().toString();
+			else if (dataSource.getType() == NagiosDataSourceType.FILE)
+				parameters = dataSource.getFile();
+
+			String serverString = parameters;
+			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD></TR>\n");
+		}
+		reply.add("<TR>\n");
+		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
+		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\">3</OPTION></SELECT></TD>\n");
+		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"server-add-parameters\"></TD>\n");
+		reply.add("</TR>\n");
+		
+		reply.add("</TABLE>\n");
+		reply.add("<BR>\n");
+
+		reply.add("<H2>Submit changes</H2>\n");
+		reply.add("<INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes!\"><BR>\n");
+		reply.add("<BR>\n");
+
 		reply.add("</FORM>\n");
+
 		addPageTail(reply, true);
 
 		socket.sendReply(reply);
@@ -358,12 +418,16 @@ class HTTPServer implements Runnable
 		{
 			try
 			{
-				int hash = Integer.valueOf(webcam.getName());
-				config.removeImageUrl(hash);
+				String fieldName = webcam.getName();
+				if (fieldName.substring(0, 7).equals("webcam_"))
+				{
+					int hash = Integer.valueOf(fieldName.substring(7));
+					config.removeImageUrl(hash);
+				}
 			}
-			catch(NumberFormatException nfe)
+			catch(IndexOutOfBoundsException ioobe)
 			{
-				// ignore
+				// ignore, probably not a webcam-field
 			}
 		}
 
@@ -396,6 +460,92 @@ class HTTPServer implements Runnable
 			config.setShowHeader(true);
 		else
 			config.setShowHeader(false);
+
+		boolean son = false;
+		HTTPRequestData sort_order_numeric = socket.findRecord(requestData, "sort-order-numeric");
+		if (sort_order_numeric != null && sort_order_numeric.getData() != null)
+			son = true;
+		else
+			son = false;
+		HTTPRequestData sort_order = socket.findRecord(requestData, "sort-order");
+		if (sort_order != null && sort_order.getData() != null)
+			config.setSortOrder(URLDecoder.decode(sort_order.getData(), "US-ASCII"), son);
+
+		// add server
+		HTTPRequestData server_add_parameters = socket.findRecord(requestData, "server-add-parameters");
+		if (server_add_parameters != null && server_add_parameters.getData() != null && server_add_parameters.getData().equals("") == false)
+		{
+			NagiosDataSourceType ndst = null;
+			NagiosVersion nv = null;
+			String parametersStr = null;
+
+			HTTPRequestData type = socket.findRecord(requestData, "server-add-type");
+			if (type != null && type.getData() != null)
+			{
+				if (type.getData().equals("tcp"))
+					ndst = NagiosDataSourceType.TCP;
+				else if (type.getData().equals("http"))
+					ndst = NagiosDataSourceType.HTTP;
+				else if (type.getData().equals("file"))
+					ndst = NagiosDataSourceType.FILE;
+			}
+
+			HTTPRequestData version = socket.findRecord(requestData, "server-add-version");
+			if (version != null && version.getData() != null)
+			{
+				if (version.getData().equals("1"))
+					nv = NagiosVersion.V1;
+				else if (version.getData().equals("2"))
+					nv = NagiosVersion.V2;
+				else if (version.getData().equals("3"))
+					nv = NagiosVersion.V3;
+			}
+
+			HTTPRequestData parameters = socket.findRecord(requestData, "server-add-parameters");
+			if (parameters != null && parameters.getData() != null)
+				parametersStr = parameters.getData();
+
+			if (ndst == null && nv == null && parametersStr == null)
+			{
+				reply.add("Field missing or invalid data in field for server-add.<BR>\n");
+			}
+			else
+			{
+				if (ndst == NagiosDataSourceType.TCP)
+				{
+					int port = 33333;
+					int space = parametersStr.indexOf(" ");
+					if (space != -1)
+					{
+						port = Integer.valueOf(parametersStr.substring(space + 1).trim());
+						parametersStr = parametersStr.substring(0, space);
+					}
+
+					config.addNagiosDataSource(new NagiosDataSource(parametersStr, port, nv));
+				}
+				else if (ndst == NagiosDataSourceType.HTTP)
+					config.addNagiosDataSource(new NagiosDataSource(new URL(URLDecoder.decode(parametersStr, "US-ASCII")), nv));
+				else if (ndst == NagiosDataSourceType.FILE)
+					config.addNagiosDataSource(new NagiosDataSource(parametersStr, nv));
+			}
+		}
+
+		for(HTTPRequestData server : requestData)
+		{
+			try
+			{
+				String fieldName = server.getName();
+				if (fieldName.substring(0, 9).equals("serverid_"))
+				{
+					int hash = Integer.valueOf(fieldName.substring(9));
+					config.removeServer(hash);
+				}
+			}
+			catch(IndexOutOfBoundsException ioobe)
+			{
+				// ignore, probably not a webcam-field
+			}
+		}
 
 		reply.add("<BR>\n");
 		reply.add("Form processed.<BR>\n");
