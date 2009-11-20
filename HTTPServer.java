@@ -11,6 +11,8 @@ import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -44,6 +46,7 @@ class HTTPServer implements Runnable
 	public void addHTTP200(List<String> whereTo)
 	{
 		whereTo.add("HTTP/1.0 200 OK\r\n");
+		whereTo.add("Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n");
 		whereTo.add("Server: " + CoffeeSaint.getVersion() + "\r\n");
 		whereTo.add("Connection: close\r\n");
 		whereTo.add("Content-Type: text/html\r\n");
@@ -85,22 +88,57 @@ class HTTPServer implements Runnable
 		return bufferedImage;
 	}
 
-	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType) throws Exception
+	public long getModificationDate(String fileName) throws Exception
+	{
+		URL url = getClass().getClassLoader().getResource(fileName);
+		URLConnection urlConnection = url.openConnection();
+		return urlConnection.getLastModified();
+	}
+
+	public String getHTTPDate(Calendar when)
+	{
+		SimpleDateFormat dateFormatter = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss a zzz");
+
+		return dateFormatter.format(when.getTime());
+	}
+
+	public String getModificationDateString(String fileName) throws Exception
+	{
+		long ts = getModificationDate(fileName);
+
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTimeInMillis(ts);
+
+		return getHTTPDate(calendar);
+	}
+
+	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType, boolean headRequest) throws Exception
 	{
 		try
 		{
-			socket.getOutputStream().write(("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: " + mimeType + "\r\n\r\n").getBytes());
-			InputStream is = getClass().getClassLoader().getResourceAsStream(fileName);
-			int length = is.available();
-			System.out.println("Sending " + fileName + " which is " + length + " bytes long and of type " + mimeType + ".");
-			byte [] icon = new byte[length];
-			while(length > 0)
+			String reply = "HTTP/1.0 200 OK\r\n";
+			reply += "Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n";
+			reply += "Server: " + CoffeeSaint.getVersion() + "\r\n";
+			reply += "Last-Modified: " + getModificationDateString(fileName) + "\r\n";
+			reply += "Connection: close\r\n";
+			reply += "Content-Type: " + mimeType + "\r\n";
+			reply += "\r\n";
+			socket.getOutputStream().write(reply.getBytes());
+
+			if (!headRequest)
 			{
-				int nRead = is.read(icon);
-				if (nRead < 0)
-					break;
-				socket.getOutputStream().write(icon, 0, nRead);
-				length -= nRead;
+				InputStream is = getClass().getClassLoader().getResourceAsStream(fileName);
+				int length = is.available();
+				System.out.println("Sending " + fileName + " which is " + length + " bytes long and of type " + mimeType + ".");
+				byte [] icon = new byte[length];
+				while(length > 0)
+				{
+					int nRead = is.read(icon);
+					if (nRead < 0)
+						break;
+					socket.getOutputStream().write(icon, 0, nRead);
+					length -= nRead;
+				}
 			}
 			socket.close();
 		}
@@ -111,44 +149,44 @@ class HTTPServer implements Runnable
 		}
 	}
 
-	public void sendReply_favicon_ico(MyHTTPServer socket) throws Exception
+	public void sendReply_favicon_ico(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/favicon.ico", "image/x-icon");
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/favicon.ico", "image/x-icon", headRequest);
 	}
 
-	public void sendReply_images_configure_png(MyHTTPServer socket) throws Exception
+	public void sendReply_images_configure_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_configure.png", "image/png");
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_configure.png", "image/png", headRequest);
 	}
 
-	public void sendReply_images_statistics_png(MyHTTPServer socket) throws Exception
+	public void sendReply_images_statistics_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_mimetype_log.png", "image/png");
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_mimetype_log.png", "image/png", headRequest);
 	}
 
-	public void sendReply_images_actions_png(MyHTTPServer socket) throws Exception
+	public void sendReply_images_actions_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_player_play.png", "image/png");
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_player_play.png", "image/png", headRequest);
 	}
 
-	public void sendReply_images_links_png(MyHTTPServer socket) throws Exception
+	public void sendReply_images_links_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_mimetype_html.png", "image/png");
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_mimetype_html.png", "image/png", headRequest);
 	}
 
-	public void sendReply_images_the_coffee_saint_jpg(MyHTTPServer socket) throws Exception
+	public void sendReply_images_the_coffee_saint_jpg(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/the_coffee_saint.jpg", "image/jpeg");
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/the_coffee_saint.jpg", "image/jpeg", headRequest);
 	}
 
-	public void sendReply_images_vanheusden02_jpg(MyHTTPServer socket) throws Exception
+	public void sendReply_images_vanheusden02_jpg(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/vanheusden02.jpg", "image/jpeg");
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/vanheusden02.jpg", "image/jpeg", headRequest);
 	}
 
-	public void sendReply_robots_txt(MyHTTPServer socket) throws Exception
+	public void sendReply_robots_txt(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/robots.txt", "text/plain");
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/robots.txt", "text/plain", headRequest);
 	}
 
 	public void sendReply_imagejpg(MyHTTPServer socket) throws Exception
@@ -451,16 +489,16 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Links</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>CoffeeSaint website (for updates):</TD><TD><A HREF=\"http://vanheusden.com/java/CoffeeSaint/\">http://vanheusden.com/java/CoffeeSaint/</A></TD></TR>\n");
-		reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
-		reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
-		reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
-		reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
-		// reply.add("<TR><TD></TD><TD></TD></TR>\n");
-		reply.add("</TABLE>\n");
+								       reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
+														 reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
+																					    reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
+																												       reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
+																																			// reply.add("<TR><TD></TD><TD></TD></TR>\n");
+																																			reply.add("</TABLE>\n");
 
-		addPageTail(reply, true);
+																																			addPageTail(reply, true);
 
-		socket.sendReply(reply);
+																																			socket.sendReply(reply);
 	}
 	public void sendReply_cgibin_statistics_cgi(MyHTTPServer socket) throws Exception
 	{
@@ -701,6 +739,10 @@ class HTTPServer implements Runnable
 						hosts.remove(0);
 					webServerHits++;
 
+					boolean isHeadRequest = false;
+					if (requestType.equals("HEAD"))
+						isHeadRequest = true;
+
 					if (url.equals("/") || url.equals("/index.html"))
 						sendReply_root(socket);
 					else if (url.equals("/cgi-bin/force_reload.cgi"))
@@ -727,21 +769,21 @@ class HTTPServer implements Runnable
 					else if (url.equals("/cgi-bin/log.cgi"))
 						sendReply_cgibin_log_cgi(socket);
 					else if (url.equals("/images/statistics.png"))
-						sendReply_images_statistics_png(socket);
+						sendReply_images_statistics_png(socket, isHeadRequest);
 					else if (url.equals("/images/configure.png"))
-						sendReply_images_configure_png(socket);
+						sendReply_images_configure_png(socket, isHeadRequest);
 					else if (url.equals("/images/actions.png"))
-						sendReply_images_actions_png(socket);
+						sendReply_images_actions_png(socket, isHeadRequest);
 					else if (url.equals("/images/links.png"))
-						sendReply_images_links_png(socket);
+						sendReply_images_links_png(socket, isHeadRequest);
 					else if (url.equals("/images/the_coffee_saint.jpg"))
-						sendReply_images_the_coffee_saint_jpg(socket);
+						sendReply_images_the_coffee_saint_jpg(socket, isHeadRequest);
 					else if (url.equals("/images/vanheusden02.jpg"))
-						sendReply_images_vanheusden02_jpg(socket);
+						sendReply_images_vanheusden02_jpg(socket, isHeadRequest);
 					else if (url.equals("/robots.txt"))
-						sendReply_robots_txt(socket);
+						sendReply_robots_txt(socket, isHeadRequest);
 					else if (url.equals("/favicon.ico"))
-						sendReply_favicon_ico(socket);
+						sendReply_favicon_ico(socket, isHeadRequest);
 					else if (url.equals("/links.html"))
 						sendReply_links_html(socket);
 					else
