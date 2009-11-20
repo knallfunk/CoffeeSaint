@@ -2,13 +2,14 @@
 /* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
 import java.util.concurrent.Semaphore;
 
-class Statistics
+public class Statistics
 {
-	Semaphore statisticsSemaphore = new Semaphore(1);
-	double totalRefreshTime, runningSince, totalImageLoadTime;
-	int nRefreshes;
+	private final Semaphore statisticsSemaphore = new Semaphore(1);
+	private double totalRefreshTime, runningSince, totalImageLoadTime;
+	private int nRefreshes;
+	private int exceptions;
 
-	Statistics()
+	public Statistics()
 	{
 	}
 
@@ -22,7 +23,7 @@ class Statistics
 		statisticsSemaphore.release();
 	}
 
-	double getTotalRefreshTime()
+	public double getTotalRefreshTime()
 	{
 		double copy;
 		lock();
@@ -31,7 +32,7 @@ class Statistics
 		return copy;
 	}
 
-	double getRunningSince()
+	public double getRunningSince()
 	{
 		double copy;
 		lock();
@@ -40,7 +41,7 @@ class Statistics
 		return copy;
 	}
 
-	double getTotalImageLoadTime()
+	public double getTotalImageLoadTime()
 	{
 		double copy;
 		lock();
@@ -49,7 +50,7 @@ class Statistics
 		return copy;
 	}
 
-	int getNRefreshes()
+	public int getNRefreshes()
 	{
 		int copy;
 		lock();
@@ -58,31 +59,47 @@ class Statistics
 		return copy;
 	}
 
-	void addToTotalRefreshTime(double time)
+	public void addToTotalRefreshTime(double time)
 	{
 		lock();
 		totalRefreshTime += time;
 		unlock();
 	}
 
-	void addToTotalImageLoadTime(double time)
+	public void addToTotalImageLoadTime(double time)
 	{
 		lock();
 		totalImageLoadTime += time;
 		unlock();
 	}
 
-	void addToNRefreshes(int n)
+	public void addToNRefreshes(int n)
 	{
 		lock();
 		nRefreshes += n;
 		unlock();
 	}
 
-	void setRunningSince(double time)
+	public void setRunningSince(double time)
 	{
 		lock();
 		runningSince = time;
 		unlock();
+	}
+
+	public void incExceptions()
+	{
+		lock();
+		exceptions++;
+		unlock();
+	}
+
+	public int getNExceptions()
+	{
+		int copy;
+		lock();
+		copy = exceptions;
+		unlock();
+		return copy;
 	}
 }
