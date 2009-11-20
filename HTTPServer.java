@@ -131,6 +131,11 @@ class HTTPServer implements Runnable
 		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_player_play.png", "image/png");
 	}
 
+	public void sendReply_images_links_png(MyHTTPServer socket) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_mimetype_html.png", "image/png");
+	}
+
 	public void sendReply_images_the_coffee_saint_jpg(MyHTTPServer socket) throws Exception
 	{
 		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/the_coffee_saint.jpg", "image/jpeg");
@@ -379,11 +384,11 @@ class HTTPServer implements Runnable
 		reply.add("<TABLE BORDER=\"1\">\n");
 
 		// stats
-		reply.add("<TR><TH ROWSPAN=\"2\" BGCOLOR=\"#99b0FF\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"2\" BGCOLOR=\"#99a0FF\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/log.cgi\">List of connecting hosts</A></TD></TR>\n");
 
 		// configure
-		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99C0ff\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99b0ff\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/reload-config.cgi\">Reload configuration</A></TD></TR>\n");
 		if (config.getConfigFilename() == null)
 			reply.add("<TR><TD>No configuration-file selected (use --config), save configuration disabled</TD></TR>\n");
@@ -397,7 +402,7 @@ class HTTPServer implements Runnable
 		}
 
 		// actions
-		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99d0ff\"><IMG SRC=\"/images/actions.png\" ALT=\"Actions\"></TH>");
+		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99c0ff\"><IMG SRC=\"/images/actions.png\" ALT=\"Actions\"></TH>");
 		if (config.getRunGui())
 			reply.add("<TD><A HREF=\"/cgi-bin/force_reload.cgi\">Force reload</A></TD>\n");
 		else
@@ -409,6 +414,9 @@ class HTTPServer implements Runnable
 			reply.add("<TR><TD><A HREF=\"/cgi-bin/test-sound.cgi\">Test sound (" + sample + ")</A></TD></TR>\n");
 		else
 			reply.add("<TR><TD>No sound selected</TD></TR>\n");
+
+		// links
+		reply.add("<TR><TH ROWSPAN=\"1\" BGCOLOR=\"#99d0ff\"><IMG SRC=\"/images/links.png\" ALT=\"Links\"></TH><TD><A HREF=\"/links.html\">Links relevant to this program</A></TD></TR>\n");
 
 		//
 		reply.add("</TABLE>\n");
@@ -432,6 +440,28 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+
+	public void sendReply_links_html(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		reply.add("<H1>Links</H1>\n");
+		reply.add("<TABLE>\n");
+		reply.add("<TR><TD>CoffeeSaint website (for updates):</TD><TD><A HREF=\"http://vanheusden.com/java/CoffeeSaint/\">http://vanheusden.com/java/CoffeeSaint/</A></TD></TR>\n");
+		reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
+		reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
+		reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
+		reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
+		// reply.add("<TR><TD></TD><TD></TD></TR>\n");
+		reply.add("</TABLE>\n");
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
 	public void sendReply_cgibin_statistics_cgi(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -702,6 +732,8 @@ class HTTPServer implements Runnable
 						sendReply_images_configure_png(socket);
 					else if (url.equals("/images/actions.png"))
 						sendReply_images_actions_png(socket);
+					else if (url.equals("/images/links.png"))
+						sendReply_images_links_png(socket);
 					else if (url.equals("/images/the_coffee_saint.jpg"))
 						sendReply_images_the_coffee_saint_jpg(socket);
 					else if (url.equals("/images/vanheusden02.jpg"))
@@ -710,6 +742,8 @@ class HTTPServer implements Runnable
 						sendReply_robots_txt(socket);
 					else if (url.equals("/favicon.ico"))
 						sendReply_favicon_ico(socket);
+					else if (url.equals("/links.html"))
+						sendReply_links_html(socket);
 					else
 					{
 						sendReply_404(socket, url);
