@@ -9,6 +9,7 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
@@ -25,6 +26,7 @@ class HTTPServer implements Runnable
 	final int port;
 	final Statistics statistics;
 	final Gui gui;
+	final List<HTTPLogEntry> hosts = new ArrayList<HTTPLogEntry>();
 	//
 	int webServerHits, webServer404;
 	boolean configNotWrittenToDisk = false;
@@ -50,10 +52,17 @@ class HTTPServer implements Runnable
 
 	public void addPageHeader(List<String> whereTo, String head)
 	{
-		whereTo.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD>" + head + "<link rel=\"shortcut icon\" href=\"/favicon.ico\" type=\"image/x-icon\" /></HEAD><BODY><table width=\"100%\" bgcolor=\"#000000\" cellpadding=\"0\" cellspacing=\"0\"><tr><td><A HREF=\"/\"><img src=\"http://www.vanheusden.com/images/vanheusden02.jpg?source=coffeesaint\" BORDER=\"0\"></A></td></tr></table><BR>\n");
-		whereTo.add("<TABLE><TR VALIGN=TOP><TD VALIGN=TOP ALIGN=LEFT WIDTH=225><IMG SRC=\"http://vanheusden.com/java/CoffeeSaint/coffeesaint.jpg?source=coffeesaint\" BORDER=\"0\" ALT=\"logo (C) Bas Schuiling\"></TD><TD ALIGN=LEFT>\n");
+		whereTo.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD>" + head + "<link rel=\"shortcut icon\" href=\"/favicon.ico\" type=\"image/x-icon\" /></HEAD><BODY><table width=\"100%\" bgcolor=\"#000000\" cellpadding=\"0\" cellspacing=\"0\"><tr><td><A HREF=\"/\"><img src=\"/images/vanheusden02.jpg\" BORDER=\"0\"></A></td></tr></table><BR>\n");
+		whereTo.add("<TABLE><TR VALIGN=TOP><TD VALIGN=TOP ALIGN=LEFT WIDTH=225><IMG SRC=\"/images/the_coffee_saint.jpg\" BORDER=\"0\" ALT=\"logo (C) Bas Schuiling\"></TD><TD ALIGN=LEFT>\n");
 
 		whereTo.add("<BR><H1>" + CoffeeSaint.getVersion() + "</H1><BR><BR>");
+	}
+
+	public String formatDate(Calendar when)
+	{
+		SimpleDateFormat dateFormatter = new SimpleDateFormat("E yyyy.MM.dd  hh:mm:ss a zzz");
+
+		return dateFormatter.format(when.getTime());
 	}
 
 	public void addPageTail(List<String> whereTo, boolean mainMenu)
@@ -63,9 +72,7 @@ class HTTPServer implements Runnable
 		if (mainMenu)
 			whereTo.add("<A HREF=\"/\">Back to main menu</A><BR>");
 
-		SimpleDateFormat dateFormatter = new SimpleDateFormat("E yyyy.MM.dd 'at' hh:mm:ss a zzz");
-
-		whereTo.add(dateFormatter.format(Calendar.getInstance().getTime()) + "</TD></TR></TABLE></BODY></HTML>");
+		whereTo.add(formatDate(Calendar.getInstance()) + "</TD></TR></TABLE></BODY></HTML>");
 	}
 
 	public BufferedImage createBufferedImage(Image image)
@@ -78,16 +85,23 @@ class HTTPServer implements Runnable
 		return bufferedImage;
 	}
 
-	public void sendReply_favicon_ico(MyHTTPServer socket) throws Exception
+	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType) throws Exception
 	{
 		try
 		{
-			socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/x-icon\r\n\r\n".getBytes());
-			InputStream is = this.getClass().getResourceAsStream("com/vanheusden/CoffeeSaint/favicon.ico");
+			socket.getOutputStream().write(("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: " + mimeType + "\r\n\r\n").getBytes());
+			InputStream is = getClass().getClassLoader().getResourceAsStream(fileName);
 			int length = is.available();
+			System.out.println("Sending " + fileName + " which is " + length + " bytes long and of type " + mimeType + ".");
 			byte [] icon = new byte[length];
-			is.read(icon);
-			socket.getOutputStream().write(icon);
+			while(length > 0)
+			{
+				int nRead = is.read(icon);
+				if (nRead < 0)
+					break;
+				socket.getOutputStream().write(icon, 0, nRead);
+				length -= nRead;
+			}
 			socket.close();
 		}
 		catch(SocketException se)
@@ -95,10 +109,41 @@ class HTTPServer implements Runnable
 			// really don't care if the transmit failed; browser
 			// probably closed session
 		}
-		catch(Exception e)
-		{
-			throw e;
-		}
+	}
+
+	public void sendReply_favicon_ico(MyHTTPServer socket) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/favicon.ico", "image/x-icon");
+	}
+
+	public void sendReply_images_configure_png(MyHTTPServer socket) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_configure.png", "image/png");
+	}
+
+	public void sendReply_images_statistics_png(MyHTTPServer socket) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_mimetype_log.png", "image/png");
+	}
+
+	public void sendReply_images_actions_png(MyHTTPServer socket) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_player_play.png", "image/png");
+	}
+
+	public void sendReply_images_the_coffee_saint_jpg(MyHTTPServer socket) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/the_coffee_saint.jpg", "image/jpeg");
+	}
+
+	public void sendReply_images_vanheusden02_jpg(MyHTTPServer socket) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/vanheusden02.jpg", "image/jpeg");
+	}
+
+	public void sendReply_robots_txt(MyHTTPServer socket) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/robots.txt", "text/plain");
 	}
 
 	public void sendReply_imagejpg(MyHTTPServer socket) throws Exception
@@ -114,10 +159,6 @@ class HTTPServer implements Runnable
 		{
 			// really don't care if the transmit failed; browser
 			// probably closed session
-		}
-		catch(Exception e)
-		{
-			throw e;
 		}
 	}
 
@@ -189,7 +230,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + (config.getShowHeader() ? "CHECKED" : "") + "></TD></TR>\n");
-		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\"></TD></TR>\n");
+		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes\"></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("</FORM>\n");
 		addPageTail(reply, true);
@@ -334,27 +375,43 @@ class HTTPServer implements Runnable
 
 		addHTTP200(reply);
 		addPageHeader(reply, "");
-		reply.add("<UL>\n");
-		if (config.getRunGui())
-			reply.add("<LI><A HREF=\"/cgi-bin/force_reload.cgi\">force reload</A>\n");
-		reply.add("<LI><A HREF=\"/cgi-bin/statistics.cgi\">statistics</A>\n");
-		reply.add("<LI><A HREF=\"/cgi-bin/nagios_status.cgi\">Nagios status</A>\n");
-		reply.add("<LI><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A>\n");
-		reply.add("<LI><A HREF=\"/cgi-bin/reload-config.cgi\">Reload configuration</A>\n");
+
+		reply.add("<TABLE BORDER=\"1\">\n");
+
+		// stats
+		reply.add("<TR><TH ROWSPAN=\"2\" BGCOLOR=\"#99b0FF\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
+		reply.add("<TR><TD><A HREF=\"/cgi-bin/log.cgi\">List of connecting hosts</A></TD></TR>\n");
+
+		// configure
+		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99C0ff\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
+		reply.add("<TR><TD><A HREF=\"/cgi-bin/reload-config.cgi\">Reload configuration</A></TD></TR>\n");
 		if (config.getConfigFilename() == null)
-			reply.add("<LI>No configuration-file selected (use --config), save configuration disabled\n");
+			reply.add("<TR><TD>No configuration-file selected (use --config), save configuration disabled</TD></TR>\n");
 		else
 		{
-			String line = "<LI><A HREF=\"/cgi-bin/write-config.cgi\">Write configuration to " + config.getConfigFilename() + "</A>";
+			String line = "<TR><TD><A HREF=\"/cgi-bin/write-config.cgi\">Write configuration to " + config.getConfigFilename() + "</A>";
 			if (configNotWrittenToDisk == true)
 				line += " (changes pending!)";
-			line += "\n";
+			line += "</TD></TR>\n";
 			reply.add(line);
 		}
+
+		// actions
+		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99d0ff\"><IMG SRC=\"/images/actions.png\" ALT=\"Actions\"></TH>");
+		if (config.getRunGui())
+			reply.add("<TD><A HREF=\"/cgi-bin/force_reload.cgi\">Force reload</A></TD>\n");
+		else
+			reply.add("<TD>Force reload disabled, not running GUI</TD></TR>\n");
+		reply.add("</TR>\n");
+		reply.add("<TR><TD><A HREF=\"/cgi-bin/nagios_status.cgi\">Nagios status</A></TD></TR>\n");
 		String sample = config.getProblemSound();
 		if (sample != null)
-			reply.add("<LI><A HREF=\"/cgi-bin/test-sound.cgi\">Test sound (" + sample + ")</A>\n");
-		reply.add("</UL>\n");
+			reply.add("<TR><TD><A HREF=\"/cgi-bin/test-sound.cgi\">Test sound (" + sample + ")</A></TD></TR>\n");
+		else
+			reply.add("<TR><TD>No sound selected</TD></TR>\n");
+
+		//
+		reply.add("</TABLE>\n");
 		addPageTail(reply, false);
 
 		socket.sendReply(reply);
@@ -381,24 +438,20 @@ class HTTPServer implements Runnable
 
 		addHTTP200(reply);
 		addPageHeader(reply, "");
-		try
-		{
-			reply.add("<TABLE>\n");
-			int nRefreshes = statistics.getNRefreshes();
-			reply.add("<TR><TD>Total number of refreshes:</TD><TD>" + nRefreshes + "</TD></TR>\n");
-			reply.add("<TR><TD>Total refresh time:</TD><TD>" + statistics.getTotalRefreshTime() + "</TD></TR>\n");
-			reply.add("<TR><TD>Average refresh time:</TD><TD>" + (statistics.getTotalRefreshTime() / (double)nRefreshes) + "</TD></TR>\n");
-			reply.add("<TR><TD>Total image refresh time:</TD><TD>" + statistics.getTotalImageLoadTime() + "</TD></TR>\n");
-			reply.add("<TR><TD>Average image refresh time:</TD><TD>" + (statistics.getTotalImageLoadTime() / (double)nRefreshes) + "</TD></TR>\n");
-			reply.add("<TR><TD>Total running time:</TD><TD>" + ((double)(System.currentTimeMillis() - statistics.getRunningSince()) / 1000.0) + "s</TD></TR>\n");
-			reply.add("<TR><TD>Number of webserver hits:</TD><TD>" + webServerHits + "</TD></TR>\n");
-			reply.add("<TR><TD>Number of 404 pages serverd:</TD><TD>" + webServer404 + "</TD></TR>\n");
-		}
-		catch(Exception e)
-		{
-			throw e;
-		}
+
+		reply.add("<TABLE>\n");
+		int nRefreshes = statistics.getNRefreshes();
+		reply.add("<TR><TD>Total number of refreshes:</TD><TD>" + nRefreshes + "</TD></TR>\n");
+		reply.add("<TR><TD>Total refresh time:</TD><TD>" + statistics.getTotalRefreshTime() + "</TD></TR>\n");
+		reply.add("<TR><TD>Average refresh time:</TD><TD>" + (statistics.getTotalRefreshTime() / (double)nRefreshes) + "</TD></TR>\n");
+		reply.add("<TR><TD>Total image refresh time:</TD><TD>" + statistics.getTotalImageLoadTime() + "</TD></TR>\n");
+		reply.add("<TR><TD>Average image refresh time:</TD><TD>" + (statistics.getTotalImageLoadTime() / (double)nRefreshes) + "</TD></TR>\n");
+		reply.add("<TR><TD>Total running time:</TD><TD>" + ((double)(System.currentTimeMillis() - statistics.getRunningSince()) / 1000.0) + "s</TD></TR>\n");
+		reply.add("<TR><TD>Number of webserver hits:</TD><TD>" + webServerHits + "</TD></TR>\n");
+		reply.add("<TR><TD>Number of 404 pages serverd:</TD><TD>" + webServer404 + "</TD></TR>\n");
+		reply.add("<TR><TD>Number of Java exceptions:</TD><TD>" + statistics.getNExceptions() + "</TD></TR>\n");
 		reply.add("</TABLE>\n");
+
 		addPageTail(reply, true);
 
 		socket.sendReply(reply);
@@ -525,18 +578,6 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_robots_txt(MyHTTPServer socket) throws Exception
-	{
-		List<String> reply = new ArrayList<String>();
-
-		addHTTP200(reply);
-
-		reply.add("User-agent: *\n");
-		reply.add("Disallow: /\n");
-
-		socket.sendReply(reply);
-	}
-
 	public void sendReply_cgibin_writeconfig_cgi(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -553,8 +594,29 @@ class HTTPServer implements Runnable
 		}
 		catch(Exception e)
 		{
+			statistics.incExceptions();
+
 			reply.add("Problem during storing of configuration-file: " + e);
 		}
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
+	public void sendReply_cgibin_log_cgi(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		reply.add("Last connected hosts:<BR>");
+		reply.add("<TABLE>");
+		reply.add("<TR><TD><B>host</B></TD><TD><B>when</B></TD></TR>");
+		for(int index=hosts.size() - 1; index>=0; index--)
+			reply.add("<TR><TD>" + hosts.get(index).getAddress().toString().substring(1) + "</TD><TD>" + formatDate(hosts.get(index).getTimestamp()) + "</TD></TR>");
+		reply.add("</TABLE>");
 
 		addPageTail(reply, true);
 
@@ -597,8 +659,16 @@ class HTTPServer implements Runnable
 					if (space != -1)
 						url = url.substring(0, space);
 
-					System.out.println("HTTP " + socket.getRemoteSocketAddress() + " " + requestType + "-request for: " + url);
-
+					InetSocketAddress remoteAddress = socket.getRemoteSocketAddress();
+					System.out.println(formatDate(Calendar.getInstance()) + " HTTP " + remoteAddress.toString().substring(1) + " " + requestType + "-request for: " + url);
+					//HTTPLogEntry
+					int nHostsKnown = hosts.size();
+					if (nHostsKnown > 0 && hosts.get(nHostsKnown - 1).getAddress().getAddress().equals(remoteAddress.getAddress()) == true)
+						hosts.get(nHostsKnown - 1).updateTimestamp(Calendar.getInstance());
+					else
+						hosts.add(new HTTPLogEntry(remoteAddress, Calendar.getInstance()));
+					if (nHostsKnown == config.getHttpRememberNHosts()) // it is actually one more due to the add in the previous line
+						hosts.remove(0);
 					webServerHits++;
 
 					if (url.equals("/") || url.equals("/index.html"))
@@ -624,6 +694,18 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_writeconfig_cgi(socket);
 					else if (url.equals("/cgi-bin/test-sound.cgi"))
 						sendReply_cgibin_testsound_cgi(socket);
+					else if (url.equals("/cgi-bin/log.cgi"))
+						sendReply_cgibin_log_cgi(socket);
+					else if (url.equals("/images/statistics.png"))
+						sendReply_images_statistics_png(socket);
+					else if (url.equals("/images/configure.png"))
+						sendReply_images_configure_png(socket);
+					else if (url.equals("/images/actions.png"))
+						sendReply_images_actions_png(socket);
+					else if (url.equals("/images/the_coffee_saint.jpg"))
+						sendReply_images_the_coffee_saint_jpg(socket);
+					else if (url.equals("/images/vanheusden02.jpg"))
+						sendReply_images_vanheusden02_jpg(socket);
 					else if (url.equals("/robots.txt"))
 						sendReply_robots_txt(socket);
 					else if (url.equals("/favicon.ico"))
@@ -634,8 +716,14 @@ class HTTPServer implements Runnable
 						webServer404++;
 					}
 				}
+				catch(SocketException se)
+				{
+					// don't care
+				}
 				catch(Exception e)
 				{
+					statistics.incExceptions();
+
 					System.err.println("Exception during command processing");
 					CoffeeSaint.showException(e);
 					socket.close();
@@ -644,6 +732,8 @@ class HTTPServer implements Runnable
 		}
 		catch(Exception e)
 		{
+			statistics.incExceptions();
+
 			System.err.println("Cannot create listen socket: " + e);
 			CoffeeSaint.showException(e);
 			System.exit(127);
