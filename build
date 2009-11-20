@@ -2,6 +2,6 @@
 
 find . -name \*class | xargs rm
 
-javac -Xlint:deprecation -d . *java
+javac -Xlint:deprecation -Xlint:unchecked -d . -source 1.5 -target 1.5 *java
 
 jar cmf manifest.txt CoffeeSaint.jar `find . -name \*.class -o -name favicon.ico` `find com/ -name \*.png -o -name \*.jpg -o -name \*.txt`
