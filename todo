@@ -2,3 +2,5 @@
 - font configurable per state
 - help bij config-scherm met de te gebruiken escapes
 - loadNagiosData 'synchronized' ?
+- realtime nagios servers toevoegen/verwijderen
+- priority problemen en non-prio problemen sorteren: reverse toevoegen
