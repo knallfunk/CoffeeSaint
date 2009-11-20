@@ -10,6 +10,7 @@ import java.io.FileWriter;
 import java.net.URL;
 import java.util.concurrent.Semaphore;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -44,12 +45,20 @@ public class Config
 	private String issueHost, issueService;
 	private boolean showHeader;
 	private int httpRememberNHosts;
+	private boolean sortNumeric;
+	private String sortOrder;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
 	String configFilename;
 	//
 	private List<ColorPair> colorPairs;
+	private List<String> sortFields;
+
+	public List<String> getSortFields()
+	{
+		return sortFields;
+	}
 
 	private void lock()
 	{
@@ -85,6 +94,8 @@ public class Config
 		issueService = "%HOSTNAME: %SERVICENAME";
 		showHeader = true;
 		httpRememberNHosts = 10;
+		sortNumeric = true;
+		sortOrder = "last_state_change";
 
 		unlock();
 	}
@@ -93,14 +104,43 @@ public class Config
 	{
 		setDefaultParameterValues();
 		initColors();
+		initSortFields();
 	}
 
 	public Config(String fileName) throws Exception
 	{
 		setDefaultParameterValues();
 		initColors();
+		initSortFields();
 
 		loadConfig(fileName);
+	}
+
+	private void initSortFields()
+	{
+		sortFields = new ArrayList<String>();
+		sortFields.add("current_state");
+		sortFields.add("last_check");
+		sortFields.add("last_state_change");
+		sortFields.add("problem_has_been_acknowledged");
+		sortFields.add("last_time_up");
+		sortFields.add("last_time_down");
+		sortFields.add("last_time_unreachable");
+		sortFields.add("last_notification");
+		sortFields.add("current_notification_number");
+		sortFields.add("notifications_enabled");
+		sortFields.add("event_handler_enabled");
+		sortFields.add("active_checks_enabled");
+		sortFields.add("flap_detection_enabled");
+		sortFields.add("is_flapping");
+		sortFields.add("percent_state_change");
+		sortFields.add("scheduled_downtime_depth");
+		sortFields.add("failure_prediction_enabled");
+		sortFields.add("process_performance_data");
+		sortFields.add("plugin_output");
+		sortFields.add("state_type");
+		sortFields.add("host_name");
+		Collections.sort(sortFields);
 	}
 
 	public void setConfigFilename(String fileName)
@@ -206,6 +246,10 @@ public class Config
 					addImageUrl(data);
 				else if (name.equals("prefer"))
 					loadPrefers(data);
+				else if (name.equals("sort-order"))
+					setSortOrder(data, false);
+				else if (name.equals("sort-order-numeric"))
+					setSortOrder(data, true);
 				else if (name.equals("always-notify"))
 					setAlwaysNotify(data.equalsIgnoreCase("true") ? true : false);
 				else if (name.equals("also-acknowledged"))
@@ -265,6 +309,10 @@ public class Config
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
+		if (getSortOrderNumeric())
+			writeLine(out, "sort-order-numeric = " + getSortOrder());
+		else
+			writeLine(out, "sort-order = " + getSortOrder());
 
 		for(NagiosDataSource dataSource : getNagiosDataSources())
 		{
@@ -342,6 +390,12 @@ public class Config
 		System.out.println("Known colors: ");
 		for(ColorPair currentColor : colorPairs)
 			System.out.println("    " + currentColor.getName());
+	}
+
+	public void listSortFields()
+	{
+		for(String current : sortFields)
+			System.out.println("    " + current);
 	}
 
 	public void setHostIssue(String string)
@@ -741,6 +795,31 @@ public class Config
 		unlock();
 	}
 
+	public void removeServer(int hash)
+	{
+		lock();
+		for(int index=0; index<ndsList.size(); index++)
+                {
+
+                        String parameters = "?";
+                        if (ndsList.get(index).getType() == NagiosDataSourceType.TCP)
+                                parameters = ndsList.get(index).getHost() + " " + ndsList.get(index).getPort();
+                        else if (ndsList.get(index).getType() == NagiosDataSourceType.HTTP)
+                                parameters = ndsList.get(index).getURL().toString();
+                        else if (ndsList.get(index).getType() == NagiosDataSourceType.FILE)
+                                parameters = ndsList.get(index).getFile();
+
+                        String serverString = parameters;
+
+			if (serverString.hashCode() == hash)
+			{
+				ndsList.remove(index);
+				break;
+			}
+                }
+		unlock();
+	}
+
 	public int getNImageUrls()
 	{
 		int n;
@@ -846,7 +925,6 @@ public class Config
 
 	public void setFontName(String fontName)
 	{
-		System.out.println("set font name: " + fontName);
 		lock();
 		this.fontName = fontName;
 		unlock();
@@ -857,6 +935,32 @@ public class Config
 		String copy;
 		lock();
 		copy = fontName;
+		unlock();
+		return copy;
+	}
+
+	public void setSortOrder(String order, boolean numeric)
+	{
+		lock();
+		this.sortOrder = order;
+		this.sortNumeric = numeric;
+		unlock();
+	}
+
+	public String getSortOrder()
+	{
+		String copy;
+		lock();
+		copy = sortOrder;
+		unlock();
+		return copy;
+	}
+
+	public boolean getSortOrderNumeric()
+	{
+		boolean copy;
+		lock();
+		copy = sortNumeric;
 		unlock();
 		return copy;
 	}
