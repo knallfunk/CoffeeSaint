@@ -43,6 +43,7 @@ public class MyHTTPServer
 		List<HTTPRequestData> request = new ArrayList<HTTPRequestData>();
 		for(;;)
 		{
+			// FIXME check for NULL
 			String line = inputStream.readLine();
 
 			if (line.equals(""))
