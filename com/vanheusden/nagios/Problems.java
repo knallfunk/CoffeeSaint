@@ -10,22 +10,24 @@ import java.util.regex.Pattern;
 public class Problems implements Comparator<Problem>
 {
 	String sortField;
-	boolean sortNumeric;
+	boolean sortNumeric, sortReverse;
 
-	public Problems(String field, boolean numeric)
+	public Problems(String field, boolean numeric, boolean reverse)
 	{
 		this.sortField   = field;
 		this.sortNumeric = numeric;
+		this.sortReverse = reverse;
 	}
 
 	public int compare(Problem a, Problem b)
 	{
+		int result = 0;
 		Problem pa = (Problem)a;
 		Problem pb = (Problem)b;
 
 		if (sortField.equals("host_name"))
 		{
-			return pa.getHost().getHostName().compareTo(pb.getHost().getHostName());
+			result = pa.getHost().getHostName().compareTo(pb.getHost().getHostName());
 		}
 		else
 		{
@@ -35,9 +37,9 @@ public class Problems implements Comparator<Problem>
 			if (pas != null && pbs != null)
 			{
 				if (sortNumeric)
-					return (int)(Long.valueOf(pbs.getParameter(sortField)) - Long.valueOf(pas.getParameter(sortField)));
-
-				return pas.getParameter(sortField).compareTo(pbs.getParameter(sortField));
+					result = (int)(Long.valueOf(pbs.getParameter(sortField)) - Long.valueOf(pas.getParameter(sortField)));
+				else
+					result = pas.getParameter(sortField).compareTo(pbs.getParameter(sortField));
 			}
 			else
 			{
@@ -45,16 +47,21 @@ public class Problems implements Comparator<Problem>
 				Host pbh = pb.getHost();
 
 				if (sortNumeric)
-					return (int)(Long.valueOf(pbh.getParameter(sortField)) - Long.valueOf(pah.getParameter(sortField)));
-
-				return pah.getParameter(sortField).compareTo(pbh.getParameter(sortField));
+					result = (int)(Long.valueOf(pbh.getParameter(sortField)) - Long.valueOf(pah.getParameter(sortField)));
+				else
+					result = pah.getParameter(sortField).compareTo(pbh.getParameter(sortField));
 			}
 		}
+
+		if (sortReverse)
+			result = -result;
+
+		return result;
 	}
 
-	public static void sortList(List<Problem> problems, String field, boolean numeric)
+	public static void sortList(List<Problem> problems, String field, boolean numeric, boolean reverse)
 	{
-		Collections.sort(problems, new Problems(field, numeric));
+		Collections.sort(problems, new Problems(field, numeric, reverse));
 	}
 
 	static void addProblem(List<Pattern> prioPatterns, List<Problem> problems, List<Problem> lessImportant, Host host, Service service, String state)

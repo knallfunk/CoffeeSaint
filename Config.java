@@ -45,7 +45,7 @@ public class Config
 	private String issueHost, issueService;
 	private boolean showHeader;
 	private int httpRememberNHosts;
-	private boolean sortNumeric;
+	private boolean sortNumeric, sortReverse;
 	private String sortOrder;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
@@ -95,6 +95,7 @@ public class Config
 		showHeader = true;
 		httpRememberNHosts = 10;
 		sortNumeric = true;
+		sortReverse = false;
 		sortOrder = "last_state_change";
 
 		unlock();
@@ -247,9 +248,21 @@ public class Config
 				else if (name.equals("prefer"))
 					loadPrefers(data);
 				else if (name.equals("sort-order"))
-					setSortOrder(data, false);
-				else if (name.equals("sort-order-numeric"))
-					setSortOrder(data, true);
+				{
+					String field = null;
+					boolean numeric = false, reverse = false;
+					String [] fields = data.split(" ");
+					for(int index=0; index<fields.length; index++)
+					{
+						if (fields[index].equals("numeric"))
+							numeric = true;
+						else if (fields[index].equals("reverse"))
+							reverse = true;
+						else
+							field = fields[index];
+					}
+					setSortOrder(field, numeric, reverse);
+				}
 				else if (name.equals("always-notify"))
 					setAlwaysNotify(data.equalsIgnoreCase("true") ? true : false);
 				else if (name.equals("also-acknowledged"))
@@ -309,10 +322,13 @@ public class Config
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
+		String sort = "";
 		if (getSortOrderNumeric())
-			writeLine(out, "sort-order-numeric = " + getSortOrder());
-		else
-			writeLine(out, "sort-order = " + getSortOrder());
+			sort += "numeric ";
+		if (getSortOrderReverse())
+			sort += "reverse ";
+		sort += getSortOrder();
+		writeLine(out, "sort-order = " + sort);
 
 		for(NagiosDataSource dataSource : getNagiosDataSources())
 		{
@@ -939,11 +955,12 @@ public class Config
 		return copy;
 	}
 
-	public void setSortOrder(String order, boolean numeric)
+	public void setSortOrder(String order, boolean numeric, boolean reverse)
 	{
 		lock();
 		this.sortOrder = order;
 		this.sortNumeric = numeric;
+		this.sortReverse = reverse;
 		unlock();
 	}
 
@@ -961,6 +978,15 @@ public class Config
 		boolean copy;
 		lock();
 		copy = sortNumeric;
+		unlock();
+		return copy;
+	}
+
+	public boolean getSortOrderReverse()
+	{
+		boolean copy;
+		lock();
+		copy = sortReverse;
 		unlock();
 		return copy;
 	}
