@@ -737,6 +737,8 @@ class HTTPServer implements Runnable
 			{
 				if (config.getNImageUrls() >= 1)
 					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER><IMG SRC=\"/image.jpg\" BORDER=\"0\"></TD></TR>\n");
+				else if (config.getNagiosDataSources().size() == 0)
+					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER>NO NAGIOS SERVERS SELECTED!</TD></TR>\n");
 				else
 					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER>All fine.</TD></TR>\n");
 			}

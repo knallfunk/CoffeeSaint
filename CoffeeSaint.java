@@ -236,7 +236,10 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 	public String getScreenHeader(JavNag javNag, Calendar rightNow)
 	{
-		return processStringWithEscapes(config.getHeader(), javNag, rightNow, null);
+		if (config.getNagiosDataSources().size() == 0)
+			return "No Nagios servers selected!";
+		else
+			return processStringWithEscapes(config.getHeader(), javNag, rightNow, null);
 	}
 
 	public Color stateToColor(String state)
@@ -640,11 +643,11 @@ System.out.println(ts + ": " + (seconds * 1000L));
 				}
 			}
 
-			if (config.getNagiosDataSources().size() == 0)
-			{
-				System.err.println("You need to select at least one Nagios data-source.");
-				System.exit(127);
-			}
+			// if (config.getNagiosDataSources().size() == 0)
+			// {
+			// 	System.err.println("You need to select at least one Nagios data-source.");
+			// 	System.exit(127);
+			// }
 
 			if (config.getBrainFileName() != null)
 			{
