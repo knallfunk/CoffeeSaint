@@ -135,7 +135,9 @@ public class Gui extends Frame
 			{
 				for(int x=0; x<config.getCamCols(); x++)
 				{
-					g.drawImage(imageParameters[nr++].getImage(), putX + x * newWidth, putY + y * newHeight, newWidth, newHeight, null);
+					if (imageParameters[nr] != null)
+						g.drawImage(imageParameters[nr].getImage(), putX + x * newWidth, putY + y * newHeight, newWidth, newHeight, null);
+					nr++;
 				}
 			}
 		}
