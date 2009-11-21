@@ -217,7 +217,7 @@ class HTTPServer implements Runnable
 		reply.add("<H2>General parameters</H2>\n");
 		reply.add("<TABLE BORDER=\"1\">\n");
 
-		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD></TR>\n");
+		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
 
 		reply.add("<TR><TD>Font:</TD><TD><SELECT NAME=\"font\">");
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -232,12 +232,12 @@ class HTTPServer implements Runnable
 
 			reply.add(line);
 		}
-		reply.add("</SELECT></TD></TR>");
-		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD></TR>\n");
+		reply.add("</SELECT></TD><TD></TD></TR>");
+		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD></TD></TR>\n");
 
-		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + (config.getAlwaysNotify() ? "CHECKED" : "") + "></TD></TR>\n");
-		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + (config.getAlsoAcknowledged() ? "CHECKED" : "") + "></TD></TR>\n");
-		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + (config.getCounter() ? "CHECKED" : "") + "></TD></TR>\n");
+		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + (config.getAlwaysNotify() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + (config.getAlsoAcknowledged() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + (config.getCounter() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Text color:</TD><TD><SELECT NAME=\"textColor\">\n");
 		for(ColorPair cp : config.getColors())
 		{
@@ -247,7 +247,7 @@ class HTTPServer implements Runnable
 			line += ">" + cp.getName() + "</OPTION>\n";
 			reply.add(line);
 		}
-		reply.add("</SELECT></TD></TR>");
+		reply.add("</SELECT></TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color:</TD><TD><SELECT NAME=\"backgroundColor\">\n");
 		for(ColorPair cp : config.getColors())
 		{
@@ -257,7 +257,7 @@ class HTTPServer implements Runnable
 			line += ">" + cp.getName() + "</OPTION>\n";
 			reply.add(line);
 		}
-		reply.add("</SELECT></TD></TR>");
+		reply.add("</SELECT></TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color OK-status:</TD><TD><SELECT NAME=\"bgColorOk\">\n");
 		for(ColorPair cp : config.getColors())
 		{
@@ -267,15 +267,16 @@ class HTTPServer implements Runnable
 			line += ">" + cp.getName() + "</OPTION>\n";
 			reply.add(line);
 		}
+		reply.add("</SELECT></TD><TD></TD></TR>");
 		for(String image : config.getImageUrls())
-			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
-		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
-		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + (config.getAdaptImageSize() ? "CHECKED" : "") + "></TD></TR>\n");
-		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + (config.getRandomWebcam() ? "CHECKED" : "") + "></TD></TR>\n");
-		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD></TR>\n");
-		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD></TR>\n");
-		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD></TR>\n");
-		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + (config.getShowHeader() ? "CHECKED" : "") + "></TD></TR>\n");
+			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + (config.getAdaptImageSize() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + (config.getRandomWebcam() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
+		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
+		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
+		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + (config.getShowHeader() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD><SELECT NAME=\"sort-order\">\n");
 		for(String current : config.getSortFields())
 		{
@@ -285,8 +286,9 @@ class HTTPServer implements Runnable
 			line += ">" + current + "</OPTION>\n";
 			reply.add(line);
 		}
-		reply.add("</SELECT></TD></TR>");
-		reply.add("<TR><TD>Sort numeric:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-numeric\" VALUE=\"on\" " + (config.getSortOrderNumeric() ? "CHECKED" : "") + "></TD></TR>\n");
+		reply.add("</SELECT></TD><TD></TD></TR>");
+		reply.add("<TR><TD>Sort numeric:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-numeric\" VALUE=\"on\" " + (config.getSortOrderNumeric() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Sort reverse:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-reverse\" VALUE=\"on\" " + (config.getSortOrderReverse() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 		reply.add("<H2>Nagios server(s)</H2>\n");
@@ -326,8 +328,8 @@ class HTTPServer implements Runnable
 		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\">3</OPTION></SELECT></TD>\n");
 		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"server-add-parameters\"></TD>\n");
 		reply.add("</TR>\n");
-		
 		reply.add("</TABLE>\n");
+		reply.add("TCP requires an ip-address followed by a space and a port-number in the parameters field.<BR>\n");
 		reply.add("<BR>\n");
 
 		reply.add("<H2>Submit changes</H2>\n");
@@ -461,15 +463,20 @@ class HTTPServer implements Runnable
 		else
 			config.setShowHeader(false);
 
-		boolean son = false;
+		boolean son = false, sor = false;
 		HTTPRequestData sort_order_numeric = socket.findRecord(requestData, "sort-order-numeric");
 		if (sort_order_numeric != null && sort_order_numeric.getData() != null)
 			son = true;
 		else
 			son = false;
+		HTTPRequestData sort_order_reverse = socket.findRecord(requestData, "sort-order-reverse");
+		if (sort_order_reverse != null && sort_order_reverse.getData() != null)
+			sor = true;
+		else
+			sor = false;
 		HTTPRequestData sort_order = socket.findRecord(requestData, "sort-order");
 		if (sort_order != null && sort_order.getData() != null)
-			config.setSortOrder(URLDecoder.decode(sort_order.getData(), "US-ASCII"), son);
+			config.setSortOrder(URLDecoder.decode(sort_order.getData(), "US-ASCII"), son, sor);
 
 		// add server
 		HTTPRequestData server_add_parameters = socket.findRecord(requestData, "server-add-parameters");
@@ -639,16 +646,16 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Links</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>CoffeeSaint website (for updates):</TD><TD><A HREF=\"http://vanheusden.com/java/CoffeeSaint/\">http://vanheusden.com/java/CoffeeSaint/</A></TD></TR>\n");
-								       reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
-														 reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
-																					    reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
-																												       reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
-																																			// reply.add("<TR><TD></TD><TD></TD></TR>\n");
-																																			reply.add("</TABLE>\n");
+		reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
+		reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
+		reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
+		reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
+		// reply.add("<TR><TD></TD><TD></TD></TR>\n");
+		reply.add("</TABLE>\n");
 
-																																			addPageTail(reply, true);
+		addPageTail(reply, true);
 
-																																			socket.sendReply(reply);
+		socket.sendReply(reply);
 	}
 	public void sendReply_cgibin_statistics_cgi(MyHTTPServer socket) throws Exception
 	{
@@ -841,6 +848,30 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+	public void sendReply_helpescapes_html(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		reply.add("<H2>Escapes</H2>\n");
+		reply.add("<PRE>\n");
+                reply.add("  %CRITICAL/%WARNING/%OK, %UP/%DOWN/%UNREACHABLE/%PENDING\n");
+                reply.add("  %H:%M       Current hour/minute\n");
+                reply.add("  %HOSTNAME/%SERVICENAME    host/service with problem\n");
+                reply.add("  %HOSTSTATE/%SERVICESTATE  host/service state\n");
+                reply.add("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem\n");
+                reply.add("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping\n");
+                reply.add("  %PREDICT/%HISTORICAL      \n");
+                reply.add("  %OUTPUT                   Plugin output\n");
+		reply.add("</PRE>\n");
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
 	public void sendReply_404(MyHTTPServer socket, String url) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -936,6 +967,8 @@ class HTTPServer implements Runnable
 						sendReply_favicon_ico(socket, isHeadRequest);
 					else if (url.equals("/links.html"))
 						sendReply_links_html(socket);
+					else if (url.equals("/help-escapes.html"))
+						sendReply_helpescapes_html(socket);
 					else
 					{
 						sendReply_404(socket, url);
