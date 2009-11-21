@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.4-beta002, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.5, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -259,56 +259,74 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		return Color.ORANGE;
 	}
 
-	public ImageParameters loadImage() throws Exception
+	public ImageParameters [] loadImage() throws Exception
 	{
-		imageSemaphore.acquireUninterruptibly();
+		int nr;
+		java.util.List<String> imageUrls = config.getImageUrls();
+		int nImages = imageUrls.size();
+		if (nImages == 0)
+			return null;
 
-		ImageParameters result = null;
-		int nImages = config.getNImageUrls();
+		int loadNImages = config.getCamRows() * config.getCamCols();
 
-		if (nImages > 0)
+		ImageParameters [] result = new ImageParameters[loadNImages];
+		int [] indexes = new int[loadNImages];
+
+		imageSemaphore.acquireUninterruptibly(); // lock around 'currentImageFile'
+		if (config.getRandomWebcam())
 		{
-			Image img;
-
-			if (config.getRandomWebcam())
+			for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
 			{
-				int newImg = 0;
-
+				boolean found;
 				do
 				{
-					newImg = random.nextInt(nImages);
+					found = false;
+					indexes[nr] = random.nextInt(nImages);
+					for(int searchIndex=0; searchIndex<nr; searchIndex++)
+					{
+						if (indexes[searchIndex] == indexes[nr])
+						{
+							found = true;
+							break;
+						}
+					}
 				}
-				while(newImg == currentImageFile && nImages != 1);
-				currentImageFile = newImg;
+				while(found);
 			}
-
-			String loadImage = config.getImageUrl(currentImageFile);
-			if (loadImage == null) // no images in list
-				return null;
-
-			System.out.println("Load image " + loadImage);
-
-			if (loadImage.substring(0, 7).equals("http://"))
-				img = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
-			else
-				img = Toolkit.getDefaultToolkit().createImage(loadImage);
-			new ImageIcon(img); //loads the image
-			Toolkit.getDefaultToolkit().sync();
-
-			int imgWidth = img.getWidth(null);
-			int imgHeight = img.getHeight(null);
-
-			if (!config.getRandomWebcam())
+		}
+		else
+		{
+			for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
 			{
-				currentImageFile++;
-				if (currentImageFile >= nImages)
+				indexes[nr] = currentImageFile++;
+				if (currentImageFile == nImages)
 					currentImageFile = 0;
 			}
+		}
+		imageSemaphore.release();
 
-			result = new ImageParameters(img, loadImage, imgWidth, imgHeight);
+		Image [] img = new Image[loadNImages];
+		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
+		{
+			String loadImage = imageUrls.get(indexes[nr]);
+			System.out.println("Load image " + loadImage);
+
+			if (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://"))
+				img[nr] = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
+			else
+				img[nr] = Toolkit.getDefaultToolkit().createImage(loadImage);
 		}
 
-		imageSemaphore.release();
+		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
+		{
+			new ImageIcon(img[nr]); //loads the image
+			Toolkit.getDefaultToolkit().sync();
+
+			int imgWidth = img[nr].getWidth(null);
+			int imgHeight = img[nr].getHeight(null);
+
+			result[nr] = new ImageParameters(img[nr], imageUrls.get(indexes[nr]), imgWidth, imgHeight);
+		}
 
 		return result;
 	}
@@ -491,6 +509,8 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("--no-header   Do not display the statistics line in the upper row.");
 		System.out.println("--sort-order [y] [z] x  Sort on field x. y and z can be 'numeric' and 'reverse'");
 		System.out.println("              E.g. --sort-order numeric last_state_change (= default)");
+		System.out.println("--cam-cols    Number of cams per row");
+		System.out.println("--cam-rows    Number of rows with cams");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -619,6 +639,10 @@ System.out.println(ts + ": " + (seconds * 1000L));
 					config.setSleepTime(Integer.valueOf(arg[++loop]));
 				else if (arg[loop].compareTo("--image") == 0)
 					config.addImageUrl(arg[++loop]);
+				else if (arg[loop].equals("--cam-rows"))
+					config.setCamRows(Integer.valueOf(arg[++loop]));
+				else if (arg[loop].equals("--cam-cols"))
+					config.setCamCols(Integer.valueOf(arg[++loop]));
 				else if (arg[loop].compareTo("--prefer") == 0)
 				{
 					System.out.println("Loading prefers from " + arg[++loop]);

@@ -1,3 +1,4 @@
 - fix font heights
 - font configurable per state
 - loadNagiosData 'synchronized' ?
+- timeout op laden image - in een aparte thread?

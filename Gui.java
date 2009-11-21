@@ -90,10 +90,23 @@ public class Gui extends Frame
 		g.drawString("" + currentCounter, startX, newHeight);
 	}
 
-	public void displayImage(ImageParameters imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
+	public void displayImage(ImageParameters [] imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
 	{
 		int headerOffset = config.getShowHeader() ? 1 : 0;
 		int curWindowHeight, offsetY;
+		int maxW = -1, maxH = -1, nr;
+
+		for(nr=0; nr<imageParameters.length; nr++)
+		{
+			if (imageParameters[nr] == null)
+				continue;
+
+			maxW = Math.max(maxW, imageParameters[nr].getWidth());
+			maxH = Math.max(maxH, imageParameters[nr].getHeight());
+		}
+
+		int totalWidth  = maxW * config.getCamCols();
+		int totalHeight = maxH * config.getCamRows();
 
 		if (adaptImgSize)
 		{
@@ -106,26 +119,24 @@ public class Gui extends Frame
 			offsetY = rowHeight * headerOffset;
 		}
 
-		if (imageParameters.getWidth() == -1 || imageParameters.getHeight() == -1)
+		if (curWindowHeight > 0)
 		{
-			g.setColor(Color.RED);
-			String msg = "Could not load image " + imageParameters.getFileName();
-			System.out.println(msg);
-			g.drawString(msg, 0, windowHeight - rowHeight);
-		}
-		else
-		{
-			if (curWindowHeight > 0)
-			{
-				double wMul = (double)windowWidth / (double)imageParameters.getWidth();
-				double hMul = (double)curWindowHeight / (double)imageParameters.getHeight();
-				double multiplier = Math.min(wMul, hMul);
-				int newWidth  = (int)((double)imageParameters.getWidth()  * multiplier);
-				int newHeight = (int)((double)imageParameters.getHeight() * multiplier);
-				int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2));
-				int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2)) + offsetY;
+			double wMul = (double)windowWidth / (double)totalWidth;
+			double hMul = (double)curWindowHeight / (double)totalHeight;
+			double multiplier = Math.min(wMul, hMul);
+			int newWidth  = (int)((double)maxW * multiplier);
+			int newHeight = (int)((double)maxH * multiplier);
 
-				g.drawImage(imageParameters.getImage(), putX, putY, newWidth, newHeight, null);
+			int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2) * config.getCamCols());
+			int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2) * config.getCamRows()) + offsetY;
+
+			nr = 0;
+			for(int y=0; y<config.getCamRows(); y++)
+			{
+				for(int x=0; x<config.getCamCols(); x++)
+				{
+					g.drawImage(imageParameters[nr++].getImage(), putX + x * newWidth, putY + y * newHeight, newWidth, newHeight, null);
+				}
 			}
 		}
 	}
@@ -158,7 +169,7 @@ public class Gui extends Frame
 			double took;
 
 			startLoadTs = System.currentTimeMillis();
-			ImageParameters imageParameters = coffeeSaint.loadImage();
+			ImageParameters [] imageParameters = coffeeSaint.loadImage();
 			endLoadTs = System.currentTimeMillis();
 
 			took = (double)(endLoadTs - startLoadTs) / 1000.0;

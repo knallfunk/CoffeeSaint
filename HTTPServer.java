@@ -194,7 +194,7 @@ class HTTPServer implements Runnable
 		try
 		{
 			socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/jpeg\r\n\r\n".getBytes());
-			Image img = coffeeSaint.loadImage().getImage();
+			Image img = coffeeSaint.loadImage()[0].getImage();
 			ImageIO.write(createBufferedImage(img), "jpg", socket.getOutputStream());
 			socket.close();
 		}
@@ -234,7 +234,6 @@ class HTTPServer implements Runnable
 		}
 		reply.add("</SELECT></TD><TD></TD></TR>");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD></TD></TR>\n");
-
 		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + (config.getAlwaysNotify() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + (config.getAlsoAcknowledged() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + (config.getCounter() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
@@ -268,11 +267,6 @@ class HTTPServer implements Runnable
 			reply.add(line);
 		}
 		reply.add("</SELECT></TD><TD></TD></TR>");
-		for(String image : config.getImageUrls())
-			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + (config.getAdaptImageSize() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + (config.getRandomWebcam() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
@@ -291,6 +285,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Sort reverse:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-reverse\" VALUE=\"on\" " + (config.getSortOrderReverse() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
+
 		reply.add("<H2>Nagios server(s)</H2>\n");
 		reply.add("<TABLE BORDER=\"1\">\n");
 		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD></TR>\n");
@@ -330,6 +325,18 @@ class HTTPServer implements Runnable
 		reply.add("</TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("TCP requires an ip-address followed by a space and a port-number in the parameters field.<BR>\n");
+		reply.add("<BR>\n");
+
+		reply.add("<H2>Webcams</H2\n");
+		reply.add("<TABLE BORDER=\"1\">\n");
+		for(String image : config.getImageUrls())
+			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
+		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
+		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + (config.getAdaptImageSize() ? "CHECKED" : "") + "> (fit below list of problems)</TD></TR>\n");
+		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + (config.getRandomWebcam() ? "CHECKED" : "") + "></TD></TR>\n");
+		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"cam-cols\" VALUE=\"" + config.getCamCols() + "\"></TD></TR>\n");
+		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"cam-rows\" VALUE=\"" + config.getCamRows() + "\"></TD></TR>\n");
+		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
 		reply.add("<H2>Submit changes</H2>\n");
@@ -554,6 +561,32 @@ class HTTPServer implements Runnable
 			}
 		}
 
+		HTTPRequestData cam_rows = socket.findRecord(requestData, "cam-rows");
+		if (cam_rows != null && cam_rows.getData() != null)
+		{
+			int camRows = Integer.valueOf(cam_rows.getData());
+			if (camRows < 1)
+				camRows = 1;
+			else if (camRows > 8)
+				camRows = 8;
+
+			System.out.println("Setting number of cam-rows to: " + camRows);
+				config.setCamRows(camRows);
+		}
+
+		HTTPRequestData cam_cols = socket.findRecord(requestData, "cam-cols");
+		if (cam_cols != null && cam_cols.getData() != null)
+		{
+			int camCols = Integer.valueOf(cam_cols.getData());
+			if (camCols < 1)
+				camCols = 1;
+			else if (camCols > 8)
+				camCols = 8;
+
+			System.out.println("Setting number of cam-cols to: " + camCols);
+				config.setCamCols(camCols);
+		}
+
 		reply.add("<BR>\n");
 		reply.add("Form processed.<BR>\n");
 
@@ -735,7 +768,7 @@ class HTTPServer implements Runnable
 
 			if (coffeeSaint.getProblems().size() == 0)
 			{
-				if (config.getNImageUrls() >= 1)
+				if (config.getImageUrls().size() >= 1)
 					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER><IMG SRC=\"/image.jpg\" BORDER=\"0\"></TD></TR>\n");
 				else if (config.getNagiosDataSources().size() == 0)
 					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER>NO NAGIOS SERVERS SELECTED!</TD></TR>\n");

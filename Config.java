@@ -47,6 +47,7 @@ public class Config
 	private int httpRememberNHosts;
 	private boolean sortNumeric, sortReverse;
 	private String sortOrder;
+	private int camRows, camCols;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -97,6 +98,8 @@ public class Config
 		sortNumeric = true;
 		sortReverse = false;
 		sortOrder = "last_state_change";
+		camRows = 1;
+		camCols = 1;
 
 		unlock();
 	}
@@ -245,6 +248,10 @@ public class Config
 					setSleepTime(Integer.valueOf(data));
 				else if (name.equals("image"))
 					addImageUrl(data);
+				else if (name.equals("cam-rows"))
+					setCamRows(Integer.valueOf(data));
+				else if (name.equals("cam-cols"))
+					setCamCols(Integer.valueOf(data));
 				else if (name.equals("prefer"))
 					loadPrefers(data);
 				else if (name.equals("sort-order"))
@@ -358,6 +365,9 @@ public class Config
 
 			writeLine(out, "source = " + type + " " + version + " " + parameters);
 		}
+
+		writeLine(out, "cam-rows = " + getCamRows());
+		writeLine(out, "cam-cols = " + getCamCols());
 
 		out.close();
 	}
@@ -836,32 +846,12 @@ public class Config
 		unlock();
 	}
 
-	public int getNImageUrls()
-	{
-		int n;
-		lock();
-		n = imageFiles.size();
-		unlock();
-		return n;
-	}
-
-	public String getImageUrl(int index)
-	{
-		String copy;
-		lock();
-		if (imageFiles.size() == 0)
-			copy = null;
-		else
-			copy = imageFiles.get(index % imageFiles.size());
-		unlock();
-		return copy;
-	}
-
 	public List<String> getImageUrls()
 	{
-		List<String> copy;
+		List<String> copy = new ArrayList<String>();
 		lock();
-		copy = imageFiles;
+		for(String current : imageFiles)
+			copy.add(current);
 		unlock();
 		return copy;
 	}
@@ -1004,6 +994,38 @@ public class Config
 		lock();
 		for(NagiosDataSource current : ndsList)
 			copy.add(current);
+		unlock();
+		return copy;
+	}
+
+	public void setCamRows(int rows)
+	{
+		lock();
+		this.camRows = rows;
+		unlock();
+	}
+
+	public int getCamRows()
+	{
+		int copy;
+		lock();
+		copy = camRows;
+		unlock();
+		return copy;
+	}
+
+	public void setCamCols(int cols)
+	{
+		lock();
+		this.camCols = cols;
+		unlock();
+	}
+
+	public int getCamCols()
+	{
+		int copy;
+		lock();
+		copy = camCols;
 		unlock();
 		return copy;
 	}
