@@ -37,7 +37,6 @@ public class Gui extends Frame
                 Rectangle r = gc[0].getBounds();
 
                 /* create frame to draw in */
-                CoffeeSaint frame = new CoffeeSaint();
                 setSize(r.width, r.height);
                 System.out.println("Initial paint");
 
@@ -58,8 +57,13 @@ public class Gui extends Frame
 		return newHeight;
 	}
 
-	void drawRow(Graphics g, int totalNRows, String msg, int row, String state, int windowWidth, int windowHeight, int rowHeight, Color bgColor)
+	void drawRow(Graphics g, String msg, int row, String state, Color bgColor)
 	{
+		final int totalNRows = config.getNRows();
+		final int windowWidth  = getSize().width;
+		final int windowHeight = getSize().height;
+		final int rowHeight = windowHeight / totalNRows;
+
 		g.setColor(coffeeSaint.stateToColor(state));
 
 		final int y = rowHeight * row;
@@ -169,9 +173,16 @@ public class Gui extends Frame
 			String loadImage = null;
 			long startLoadTs, endLoadTs;
 			double took;
+			Color bgColor = config.getBackgroundColor();
 
+			/* block in upper right to inform about load */
+			g.setColor(Color.BLUE);
+			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
+
+			if (config.getVerbose())
+				drawRow(g, "Loading image(s)", 0, "0", bgColor);
 			startLoadTs = System.currentTimeMillis();
-			ImageParameters [] imageParameters = coffeeSaint.loadImage();
+			ImageParameters [] imageParameters = coffeeSaint.loadImage(this, g);
 			endLoadTs = System.currentTimeMillis();
 
 			took = (double)(endLoadTs - startLoadTs) / 1000.0;
@@ -184,17 +195,14 @@ public class Gui extends Frame
 			final Font f = new Font(fontName, Font.PLAIN, characterSize);
 			g.setFont(f);
 
-			/* block in upper right to inform about load */
-			g.setColor(Color.BLUE);
-			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
-
 			/* find the problems in the nagios data */
+			if (config.getVerbose())
+				drawRow(g, "Loading Nagios data", 0, "0", bgColor);
 			coffeeSaint.lockProblems();
-			coffeeSaint.loadNagiosData();
+			coffeeSaint.loadNagiosData(this, g);
 			coffeeSaint.findProblems();
 			java.util.List<Problem> problems = coffeeSaint.getProblems();
 
-			Color bgColor = config.getBackgroundColor();
 			Calendar rightNow = Calendar.getInstance();
 
 			if (problems.size() == 0)
@@ -215,7 +223,7 @@ public class Gui extends Frame
 			if (config.getShowHeader())
 			{
 				String header = coffeeSaint.getScreenHeader(javNag, rightNow);
-				drawRow(g, config.getNRows(), header, curNRows++, problems.size() == 0 ? "0" : "255", windowWidth, windowHeight, rowHeight, bgColor);
+				drawRow(g, header, curNRows++, problems.size() == 0 ? "0" : "255", bgColor);
 			}
 
 			for(Problem currentProblem : problems)
@@ -229,7 +237,7 @@ public class Gui extends Frame
 
 				System.out.println(output);
 
-				drawRow(g, config.getNRows(), output, curNRows, currentProblem.getCurrent_state(), windowWidth, windowHeight, rowHeight, bgColor);
+				drawRow(g, output, curNRows, currentProblem.getCurrent_state(), bgColor);
 				curNRows++;
 
 				if (curNRows == config.getNRows())
@@ -312,6 +320,8 @@ public class Gui extends Frame
 
 	public void guiLoop() throws Exception
 	{
+		currentCounter = 1; // opening a window will force a full repaint anyway
+
 		for(;;)
 		{
 			System.out.println("Invoke paint");
