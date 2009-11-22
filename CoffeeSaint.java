@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.5, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.6-beta001, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -259,7 +259,13 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		return Color.ORANGE;
 	}
 
-	public ImageParameters [] loadImage() throws Exception
+	public void drawLoadStatus(Gui gui, Graphics g, String message)
+	{
+		if (config.getVerbose() && gui != null && g != null)
+			gui.drawRow(g, message, 0, "0", config.getBackgroundColor());
+	}
+
+	public ImageParameters [] loadImage(Gui gui, Graphics g) throws Exception
 	{
 		int nr;
 		java.util.List<String> imageUrls = config.getImageUrls();
@@ -309,7 +315,8 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
 		{
 			String loadImage = imageUrls.get(indexes[nr]);
-			System.out.println("Load image " + loadImage);
+			System.out.println("Load image(1) " + loadImage);
+			drawLoadStatus(gui, g, "Start load img " + loadImage);
 
 			if (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://"))
 				img[nr] = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
@@ -319,13 +326,16 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
 		{
+			String loadImage = imageUrls.get(indexes[nr]);
+			drawLoadStatus(gui, g, "Load image " + loadImage);
+
 			new ImageIcon(img[nr]); //loads the image
 			Toolkit.getDefaultToolkit().sync();
 
 			int imgWidth = img[nr].getWidth(null);
 			int imgHeight = img[nr].getHeight(null);
 
-			result[nr] = new ImageParameters(img[nr], imageUrls.get(indexes[nr]), imgWidth, imgHeight);
+			result[nr] = new ImageParameters(img[nr], loadImage, imgWidth, imgHeight);
 		}
 
 		return result;
@@ -381,7 +391,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		}
 	}
 
-	synchronized public void loadNagiosData() throws Exception
+	synchronized public void loadNagiosData(Gui gui, Graphics g) throws Exception
 	{
 		javNag = new JavNag();
 
@@ -392,17 +402,21 @@ System.out.println(ts + ": " + (seconds * 1000L));
 			System.out.print("Loading data from: ");
 			if (dataSource.getType() == NagiosDataSourceType.TCP)
 			{
-				System.out.print(dataSource.getHost() + " " + dataSource.getPort());
+				String source = dataSource.getHost() + " " + dataSource.getPort();
+				System.out.print(source);
+				drawLoadStatus(gui, g, "Load Nagios " + source);
 				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion());
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 			{
 				System.out.print(dataSource.getURL());
+				drawLoadStatus(gui, g, "Load Nagios " + dataSource.getURL());
 				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion());
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 			{
 				System.out.print(dataSource.getFile());
+				drawLoadStatus(gui, g, "Load Nagios " + dataSource.getFile());
 				javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion());
 			}
 			else
@@ -511,6 +525,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("              E.g. --sort-order numeric last_state_change (= default)");
 		System.out.println("--cam-cols    Number of cams per row");
 		System.out.println("--cam-rows    Number of rows with cams");
+		System.out.println("--verbose     Show what it is doing");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -618,6 +633,8 @@ System.out.println(ts + ": " + (seconds * 1000L));
 					config.setAdaptImageSize(true);
 				else if (arg[loop].compareTo("--counter") == 0)
 					config.setCounter(true);
+				else if (arg[loop].compareTo("--verbose") == 0)
+					config.setVerbose(true);
 				else if (arg[loop].compareTo("--sound") == 0)
 					config.setProblemSound(arg[++loop]);
 				else if (arg[loop].compareTo("--listen-port") == 0)

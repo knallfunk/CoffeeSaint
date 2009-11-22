@@ -194,7 +194,7 @@ class HTTPServer implements Runnable
 		try
 		{
 			socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/jpeg\r\n\r\n".getBytes());
-			Image img = coffeeSaint.loadImage()[0].getImage();
+			Image img = coffeeSaint.loadImage(null, null)[0].getImage();
 			ImageIO.write(createBufferedImage(img), "jpg", socket.getOutputStream());
 			socket.close();
 		}
@@ -237,6 +237,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + (config.getAlwaysNotify() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + (config.getAlsoAcknowledged() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + (config.getCounter() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + (config.getVerbose() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Text color:</TD><TD><SELECT NAME=\"textColor\">\n");
 		for(ColorPair cp : config.getColors())
 		{
@@ -484,6 +485,12 @@ class HTTPServer implements Runnable
 		HTTPRequestData sort_order = socket.findRecord(requestData, "sort-order");
 		if (sort_order != null && sort_order.getData() != null)
 			config.setSortOrder(URLDecoder.decode(sort_order.getData(), "US-ASCII"), son, sor);
+
+		HTTPRequestData verbose = socket.findRecord(requestData, "verbose");
+		if (verbose != null && verbose.getData() != null)
+			config.setVerbose(true);
+		else
+			config.setVerbose(false);
 
 		// add server
 		HTTPRequestData server_add_parameters = socket.findRecord(requestData, "server-add-parameters");
@@ -733,7 +740,7 @@ class HTTPServer implements Runnable
 			Calendar rightNow = Calendar.getInstance();
 
 			coffeeSaint.lockProblems();
-			coffeeSaint.loadNagiosData();
+			coffeeSaint.loadNagiosData(null, null);
 			coffeeSaint.findProblems();
 
 			JavNag javNag = coffeeSaint.getNagiosData();

@@ -48,6 +48,7 @@ public class Config
 	private boolean sortNumeric, sortReverse;
 	private String sortOrder;
 	private int camRows, camCols;
+	private boolean verbose;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -100,6 +101,7 @@ public class Config
 		sortOrder = "last_state_change";
 		camRows = 1;
 		camCols = 1;
+		verbose = false;
 
 		unlock();
 	}
@@ -230,6 +232,8 @@ public class Config
 					setServiceIssue(data);
 				else if (name.equals("counter"))
 					setCounter(data.equalsIgnoreCase("true") ? true : false);
+				else if (name.equals("verbose"))
+					setVerbose(data.equalsIgnoreCase("true") ? true : false);
 				else if (name.equals("sound"))
 					setProblemSound(data);
 				else if (name.equals("listen-port"))
@@ -323,6 +327,7 @@ public class Config
 		writeLine(out, "always-notify = " + (getAlwaysNotify() ? "true" : "false"));
 		writeLine(out, "also-acknowledged = " + (getAlsoAcknowledged() ? "true" : "false"));
 		writeLine(out, "font = " + getFontName());
+		writeLine(out, "verbose = " + (getVerbose() ? "true" : "false"));
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
 		if (getHeaderSet() == true)
 			writeLine(out, "header = " + getHeader());
@@ -1026,6 +1031,22 @@ public class Config
 		int copy;
 		lock();
 		copy = camCols;
+		unlock();
+		return copy;
+	}
+
+	public void setVerbose(boolean verbose)
+	{
+		lock();
+		this.verbose = verbose;
+		unlock();
+	}
+
+	public boolean getVerbose()
+	{
+		boolean copy;
+		lock();
+		copy = verbose;
 		unlock();
 		return copy;
 	}
