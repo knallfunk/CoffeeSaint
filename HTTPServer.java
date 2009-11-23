@@ -205,6 +205,55 @@ class HTTPServer implements Runnable
 		}
 	}
 
+	public String isChecked(boolean checked)
+	{
+		if (checked)
+			return "CHECKED";
+
+		return "";
+	}
+
+	public void colorSelectorHTML(List<String> reply, String name, String selectedColor)
+	{
+		reply.add("<SELECT NAME=\"" + name + "\">\n");
+		for(ColorPair cp : config.getColors())
+		{
+			String line = "<OPTION VALUE=\"" + cp.getName() + "\"";
+			if (selectedColor.equalsIgnoreCase(cp.getName()))
+				line += " SELECTED";
+			line += ">" + cp.getName() + "</OPTION>\n";
+			reply.add(line);
+		}
+		reply.add("</SELECT>");
+	}
+
+	public void stringSelectorHTML(List<String> reply, String name, List<String> list, String selected)
+	{
+		reply.add("<SELECT NAME=\"" + name + "\">\n");
+		for(String option : list)
+		{
+			String line = "<OPTION VALUE=\"" + option + "\"";
+
+			if (option.equalsIgnoreCase(selected))
+				line += " SELECTED";
+
+			line += ">" + option + "</OPTION>\n";
+
+			reply.add(line);
+		}
+		reply.add("</SELECT>\n");
+	}
+
+	public List<String> convertStringArrayToList(String [] array)
+	{
+		List<String> list = new ArrayList<String>();
+
+		for(int index=0; index<array.length; index++)
+			list.add(array[index]);
+
+		return list;
+	}
+
 	public void sendReply_cgibin_configmenu_cgi(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -219,71 +268,33 @@ class HTTPServer implements Runnable
 
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
 
-		reply.add("<TR><TD>Font:</TD><TD><SELECT NAME=\"font\">");
+		reply.add("<TR><TD>Font:</TD><TD>");
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		for(String fontName : lge.getAvailableFontFamilyNames())
-		{
-			String line = "<OPTION VALUE=\"" + fontName + "\"";
-
-			if (fontName.equalsIgnoreCase(config.getFontName()))
-				line += " SELECTED";
-
-			line += ">" + fontName + "</OPTION>\n";
-
-			reply.add(line);
-		}
-		reply.add("</SELECT></TD><TD></TD></TR>");
+		stringSelectorHTML(reply, "font", convertStringArrayToList(lge.getAvailableFontFamilyNames()), config.getFontName());
+		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + (config.getAlwaysNotify() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + (config.getAlsoAcknowledged() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + (config.getCounter() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + (config.getVerbose() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Text color:</TD><TD><SELECT NAME=\"textColor\">\n");
-		for(ColorPair cp : config.getColors())
-		{
-			String line = "<OPTION VALUE=\"" + cp.getName() + "\"";
-			if (config.getTextColorName().equalsIgnoreCase(cp.getName()))
-				line += " SELECTED";
-			line += ">" + cp.getName() + "</OPTION>\n";
-			reply.add(line);
-		}
-		reply.add("</SELECT></TD><TD></TD></TR>");
-		reply.add("<TR><TD>Background color:</TD><TD><SELECT NAME=\"backgroundColor\">\n");
-		for(ColorPair cp : config.getColors())
-		{
-			String line = "<OPTION VALUE=\"" + cp.getName() + "\"";
-			if (config.getBackgroundColorName().equalsIgnoreCase(cp.getName()))
-				line += " SELECTED";
-			line += ">" + cp.getName() + "</OPTION>\n";
-			reply.add(line);
-		}
-		reply.add("</SELECT></TD><TD></TD></TR>");
+		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + isChecked(config.getAlwaysNotify()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + isChecked(config.getAlsoAcknowledged()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Text color:</TD><TD>\n");
+		colorSelectorHTML(reply, "textColor", config.getTextColorName());
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Background color:</TD><TD>\n");
+		colorSelectorHTML(reply, "backgroundColor", config.getBackgroundColorName());
+		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color OK-status:</TD><TD><SELECT NAME=\"bgColorOk\">\n");
-		for(ColorPair cp : config.getColors())
-		{
-			String line = "<OPTION VALUE=\"" + cp.getName() + "\"";
-			if (config.getBackgroundColorOkStatusName().equalsIgnoreCase(cp.getName()))
-				line += " SELECTED";
-			line += ">" + cp.getName() + "</OPTION>\n";
-			reply.add(line);
-		}
-		reply.add("</SELECT></TD><TD></TD></TR>");
+		colorSelectorHTML(reply, "bgColorOk", config.getBackgroundColorOkStatusName());
+		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
-		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + (config.getShowHeader() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Sort order:</TD><TD><SELECT NAME=\"sort-order\">\n");
-		for(String current : config.getSortFields())
-		{
-			String line = "<OPTION VALUE=\"" + current + "\"";
-			if (config.getSortOrder().equalsIgnoreCase(current))
-				line += " SELECTED";
-			line += ">" + current + "</OPTION>\n";
-			reply.add(line);
-		}
-		reply.add("</SELECT></TD><TD></TD></TR>");
-		reply.add("<TR><TD>Sort numeric:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-numeric\" VALUE=\"on\" " + (config.getSortOrderNumeric() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Sort reverse:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-reverse\" VALUE=\"on\" " + (config.getSortOrderReverse() ? "CHECKED" : "") + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Sort order:</TD><TD>\n");
+		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder());
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Sort numeric:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-numeric\" VALUE=\"on\" " + isChecked(config.getSortOrderNumeric()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Sort reverse:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-reverse\" VALUE=\"on\" " + isChecked(config.getSortOrderReverse()) + "></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
@@ -333,8 +344,8 @@ class HTTPServer implements Runnable
 		for(String image : config.getImageUrls())
 			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
 		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
-		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + (config.getAdaptImageSize() ? "CHECKED" : "") + "> (fit below list of problems)</TD></TR>\n");
-		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + (config.getRandomWebcam() ? "CHECKED" : "") + "></TD></TR>\n");
+		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + isChecked(config.getAdaptImageSize()) + "> (fit below list of problems)</TD></TR>\n");
+		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + isChecked(config.getRandomWebcam()) + "></TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"cam-cols\" VALUE=\"" + config.getCamCols() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"cam-rows\" VALUE=\"" + config.getCamRows() + "\"></TD></TR>\n");
 		reply.add("</TABLE>\n");
@@ -349,6 +360,29 @@ class HTTPServer implements Runnable
 		addPageTail(reply, true);
 
 		socket.sendReply(reply);
+	}
+
+	public boolean getCheckBox(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName)
+	{
+		HTTPRequestData field = socket.findRecord(requestData, fieldName);
+		if (field != null && field.getData() != null)
+			return true;
+
+		return false;
+	}
+
+	public String getField(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName)
+	{
+		HTTPRequestData field = socket.findRecord(requestData, fieldName);
+		if (field != null && field.getData() != null)
+			return field.getData();
+
+		return "";
+	}
+
+	public String getFieldDecoded(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName) throws Exception
+	{
+		return URLDecoder.decode(getField(socket, requestData, fieldName), "US-ASCII");
 	}
 
 	public void sendReply_cgibin_configdo_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData) throws Exception
@@ -373,26 +407,18 @@ class HTTPServer implements Runnable
 			}
 		}
 
-		HTTPRequestData font = socket.findRecord(requestData, "font");
-		if (font != null && font.getData() != null)
-			config.setFontName(URLDecoder.decode(font.getData(), "US-ASCII"));
+		config.setFontName(getFieldDecoded(socket, requestData, "font"));
 
-		HTTPRequestData textColor = socket.findRecord(requestData, "textColor");
-		if (textColor != null && textColor.getData() != null)
-			config.setTextColor(textColor.getData());
+		config.setTextColor(getField(socket, requestData, "textColor"));
 
-		HTTPRequestData backgroundColor = socket.findRecord(requestData, "backgroundColor");
-		if (backgroundColor != null && backgroundColor.getData() != null)
-			config.setBackgroundColor(backgroundColor.getData());
+		config.setBackgroundColor(getField(socket, requestData, "backgroundColor"));
 
-		HTTPRequestData bgColorOk = socket.findRecord(requestData, "bgColorOk");
-		if (bgColorOk != null && bgColorOk.getData() != null)
-			config.setBackgroundColorOkStatus(bgColorOk.getData());
+		config.setBackgroundColorOkStatus(getField(socket, requestData, "bgColorOk"));
 
-		HTTPRequestData sleepTime = socket.findRecord(requestData, "sleepTime");
-		if (sleepTime != null && sleepTime.getData() != null)
+		String sleepTime = getField(socket, requestData, "sleepTime");
+		if (sleepTime.equals("") == false)
 		{
-			int newSleepTime = Integer.valueOf(sleepTime.getData());
+			int newSleepTime = Integer.valueOf(sleepTime);
 			if (newSleepTime < 1)
 				reply.add("New refresh interval is invalid, must be >= 1<BR>\n");
 			else
@@ -402,27 +428,13 @@ class HTTPServer implements Runnable
 			}
 		}
 
-		HTTPRequestData alwaysNotify = socket.findRecord(requestData, "always_notify");
-		if (alwaysNotify != null && alwaysNotify.getData() != null)
-			config.setAlwaysNotify(true);
-		else
-			config.setAlwaysNotify(false);
+		config.setAlwaysNotify(getCheckBox(socket, requestData, "always_notify"));
 
-		HTTPRequestData alsoAcknowledged = socket.findRecord(requestData, "also_acknowledged");
-		if (alsoAcknowledged != null && alsoAcknowledged.getData() != null)
-			config.setAlsoAcknowledged(true);
-		else
-			config.setAlsoAcknowledged(false);
+		config.setAlsoAcknowledged(getCheckBox(socket, requestData, "also_acknowledged"));
 
-		HTTPRequestData counter = socket.findRecord(requestData, "counter");
-		if (counter != null && counter.getData() != null)
-			config.setCounter(true);
-		else
-			config.setCounter(false);
+		config.setCounter(getCheckBox(socket, requestData, "counter"));
 
-		HTTPRequestData newWebcam = socket.findRecord(requestData, "newWebcam");
-		if (newWebcam != null && newWebcam.getData() != null && newWebcam.getData().equals("") == false)
-			config.addImageUrl(URLDecoder.decode(newWebcam.getData(), "US-ASCII"));
+		config.addImageUrl(getFieldDecoded(socket, requestData, "newWebcam"));
 
 		for(HTTPRequestData webcam : requestData)
 		{
@@ -441,92 +453,48 @@ class HTTPServer implements Runnable
 			}
 		}
 
-		HTTPRequestData adapt_img = socket.findRecord(requestData, "adapt-img");
-		if (adapt_img != null && adapt_img.getData() != null)
-			config.setAdaptImageSize(true);
-		else
-			config.setAdaptImageSize(false);
+		config.setAdaptImageSize(getCheckBox(socket, requestData, "adapt-img"));
 
-		HTTPRequestData randomize_img = socket.findRecord(requestData, "random-img");
-		if (randomize_img != null && randomize_img.getData() != null)
-			config.setRandomWebcam(true);
-		else
-			config.setRandomWebcam(false);
+		config.setRandomWebcam(getCheckBox(socket, requestData, "random-img"));
 
-		HTTPRequestData header = socket.findRecord(requestData, "header");
-		if (header != null && header.getData() != null)
-			config.setHeader(URLDecoder.decode(header.getData(), "US-ASCII"));
+		config.setHeader(getFieldDecoded(socket, requestData, "header"));
 
-		HTTPRequestData hostIssue = socket.findRecord(requestData, "host-issue");
-		if (hostIssue != null && hostIssue.getData() != null)
-			config.setHostIssue(URLDecoder.decode(hostIssue.getData(), "US-ASCII"));
+		config.setHostIssue(getFieldDecoded(socket, requestData, "host-issue"));
 
-		HTTPRequestData serviceIssue = socket.findRecord(requestData, "service-issue");
-		if (serviceIssue != null && serviceIssue.getData() != null)
-			config.setServiceIssue(URLDecoder.decode(serviceIssue.getData(), "US-ASCII"));
+		config.setServiceIssue(getFieldDecoded(socket, requestData, "service-issue"));
 
-		HTTPRequestData show_header = socket.findRecord(requestData, "show-header");
-		if (show_header != null && show_header.getData() != null)
-			config.setShowHeader(true);
-		else
-			config.setShowHeader(false);
+		config.setShowHeader(getCheckBox(socket, requestData, "show-header"));
 
-		boolean son = false, sor = false;
-		HTTPRequestData sort_order_numeric = socket.findRecord(requestData, "sort-order-numeric");
-		if (sort_order_numeric != null && sort_order_numeric.getData() != null)
-			son = true;
-		else
-			son = false;
-		HTTPRequestData sort_order_reverse = socket.findRecord(requestData, "sort-order-reverse");
-		if (sort_order_reverse != null && sort_order_reverse.getData() != null)
-			sor = true;
-		else
-			sor = false;
-		HTTPRequestData sort_order = socket.findRecord(requestData, "sort-order");
-		if (sort_order != null && sort_order.getData() != null)
-			config.setSortOrder(URLDecoder.decode(sort_order.getData(), "US-ASCII"), son, sor);
+		boolean son = getCheckBox(socket, requestData, "sort-order-numeric");
+		boolean sor = getCheckBox(socket, requestData, "sort-order-reverse");
+		config.setSortOrder(getFieldDecoded(socket, requestData, "sort-order"), son, sor);
 
-		HTTPRequestData verbose = socket.findRecord(requestData, "verbose");
-		if (verbose != null && verbose.getData() != null)
-			config.setVerbose(true);
-		else
-			config.setVerbose(false);
+		config.setVerbose(getCheckBox(socket, requestData, "verbose"));
 
 		// add server
-		HTTPRequestData server_add_parameters = socket.findRecord(requestData, "server-add-parameters");
-		if (server_add_parameters != null && server_add_parameters.getData() != null && server_add_parameters.getData().equals("") == false)
+		String server_add_parameters = getField(socket, requestData, "server-add-parameters");
+		if (server_add_parameters.equals("") == false)
 		{
 			NagiosDataSourceType ndst = null;
 			NagiosVersion nv = null;
-			String parametersStr = null;
 
-			HTTPRequestData type = socket.findRecord(requestData, "server-add-type");
-			if (type != null && type.getData() != null)
-			{
-				if (type.getData().equals("tcp"))
-					ndst = NagiosDataSourceType.TCP;
-				else if (type.getData().equals("http"))
-					ndst = NagiosDataSourceType.HTTP;
-				else if (type.getData().equals("file"))
-					ndst = NagiosDataSourceType.FILE;
-			}
+			String type = getField(socket, requestData, "server-add-type");
+			if (type.equals("tcp"))
+				ndst = NagiosDataSourceType.TCP;
+			else if (type.equals("http"))
+				ndst = NagiosDataSourceType.HTTP;
+			else if (type.equals("file"))
+				ndst = NagiosDataSourceType.FILE;
 
-			HTTPRequestData version = socket.findRecord(requestData, "server-add-version");
-			if (version != null && version.getData() != null)
-			{
-				if (version.getData().equals("1"))
-					nv = NagiosVersion.V1;
-				else if (version.getData().equals("2"))
-					nv = NagiosVersion.V2;
-				else if (version.getData().equals("3"))
-					nv = NagiosVersion.V3;
-			}
+			String version = getField(socket, requestData, "server-add-version");
+			if (version.equals("1"))
+				nv = NagiosVersion.V1;
+			else if (version.equals("2"))
+				nv = NagiosVersion.V2;
+			else if (version.equals("3"))
+				nv = NagiosVersion.V3;
 
-			HTTPRequestData parameters = socket.findRecord(requestData, "server-add-parameters");
-			if (parameters != null && parameters.getData() != null)
-				parametersStr = parameters.getData();
-
-			if (ndst == null && nv == null && parametersStr == null)
+			if (ndst == null && nv == null)
 			{
 				reply.add("Field missing or invalid data in field for server-add.<BR>\n");
 			}
@@ -535,19 +503,19 @@ class HTTPServer implements Runnable
 				if (ndst == NagiosDataSourceType.TCP)
 				{
 					int port = 33333;
-					int space = parametersStr.indexOf(" ");
+					int space = server_add_parameters.indexOf(" ");
 					if (space != -1)
 					{
-						port = Integer.valueOf(parametersStr.substring(space + 1).trim());
-						parametersStr = parametersStr.substring(0, space);
+						port = Integer.valueOf(server_add_parameters.substring(space + 1).trim());
+						server_add_parameters = server_add_parameters.substring(0, space);
 					}
 
-					config.addNagiosDataSource(new NagiosDataSource(parametersStr, port, nv));
+					config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, nv));
 				}
 				else if (ndst == NagiosDataSourceType.HTTP)
-					config.addNagiosDataSource(new NagiosDataSource(new URL(URLDecoder.decode(parametersStr, "US-ASCII")), nv));
+					config.addNagiosDataSource(new NagiosDataSource(new URL(URLDecoder.decode(server_add_parameters, "US-ASCII")), nv));
 				else if (ndst == NagiosDataSourceType.FILE)
-					config.addNagiosDataSource(new NagiosDataSource(parametersStr, nv));
+					config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, nv));
 			}
 		}
 
@@ -568,30 +536,30 @@ class HTTPServer implements Runnable
 			}
 		}
 
-		HTTPRequestData cam_rows = socket.findRecord(requestData, "cam-rows");
-		if (cam_rows != null && cam_rows.getData() != null)
+		String cam_rows = getField(socket, requestData, "cam-rows");
+		if (cam_rows.equals("") == false)
 		{
-			int camRows = Integer.valueOf(cam_rows.getData());
+			int camRows = Integer.valueOf(cam_rows);
 			if (camRows < 1)
 				camRows = 1;
 			else if (camRows > 8)
 				camRows = 8;
 
 			System.out.println("Setting number of cam-rows to: " + camRows);
-				config.setCamRows(camRows);
+			config.setCamRows(camRows);
 		}
 
-		HTTPRequestData cam_cols = socket.findRecord(requestData, "cam-cols");
-		if (cam_cols != null && cam_cols.getData() != null)
+		String cam_cols = getField(socket, requestData, "cam-cols");
+		if (cam_cols.equals("") == false)
 		{
-			int camCols = Integer.valueOf(cam_cols.getData());
+			int camCols = Integer.valueOf(cam_cols);
 			if (camCols < 1)
 				camCols = 1;
 			else if (camCols > 8)
 				camCols = 8;
 
 			System.out.println("Setting number of cam-cols to: " + camCols);
-				config.setCamCols(camCols);
+			config.setCamCols(camCols);
 		}
 
 		reply.add("<BR>\n");
@@ -686,16 +654,16 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Links</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>CoffeeSaint website (for updates):</TD><TD><A HREF=\"http://vanheusden.com/java/CoffeeSaint/\">http://vanheusden.com/java/CoffeeSaint/</A></TD></TR>\n");
-		reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
-		reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
-		reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
-		reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
-		// reply.add("<TR><TD></TD><TD></TD></TR>\n");
-		reply.add("</TABLE>\n");
+								       reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
+														 reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
+																					    reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
+																												       reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
+																																			// reply.add("<TR><TD></TD><TD></TD></TR>\n");
+																																			reply.add("</TABLE>\n");
 
-		addPageTail(reply, true);
+																																			addPageTail(reply, true);
 
-		socket.sendReply(reply);
+																																			socket.sendReply(reply);
 	}
 	public void sendReply_cgibin_statistics_cgi(MyHTTPServer socket) throws Exception
 	{
@@ -899,14 +867,14 @@ class HTTPServer implements Runnable
 
 		reply.add("<H2>Escapes</H2>\n");
 		reply.add("<PRE>\n");
-                reply.add("  %CRITICAL/%WARNING/%OK, %UP/%DOWN/%UNREACHABLE/%PENDING\n");
-                reply.add("  %H:%M       Current hour/minute\n");
-                reply.add("  %HOSTNAME/%SERVICENAME    host/service with problem\n");
-                reply.add("  %HOSTSTATE/%SERVICESTATE  host/service state\n");
-                reply.add("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem\n");
-                reply.add("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping\n");
-                reply.add("  %PREDICT/%HISTORICAL      \n");
-                reply.add("  %OUTPUT                   Plugin output\n");
+		reply.add("  %CRITICAL/%WARNING/%OK, %UP/%DOWN/%UNREACHABLE/%PENDING\n");
+		reply.add("  %H:%M       Current hour/minute\n");
+		reply.add("  %HOSTNAME/%SERVICENAME    host/service with problem\n");
+		reply.add("  %HOSTSTATE/%SERVICESTATE  host/service state\n");
+		reply.add("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem\n");
+		reply.add("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping\n");
+		reply.add("  %PREDICT/%HISTORICAL      \n");
+		reply.add("  %OUTPUT                   Plugin output\n");
 		reply.add("</PRE>\n");
 
 		addPageTail(reply, true);
