@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.6-beta001, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.6-beta004, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -195,6 +195,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 	public String processStringWithEscapes(String in, JavNag javNag, Calendar rightNow, Problem problem)
 	{
 		final Totals totals = javNag.calculateStatistics();
+		System.out.println("" + totals.getNHosts() + " hosts, " + totals.getNServices() + " services");
 		boolean loadingCmd = false;
 		String cmd = "", output = "";
 
@@ -498,7 +499,6 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
-		System.out.println("--version x   Set Nagios version of statusdata. Must be either 1, 2 or 3.");
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin.");
 		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems.");
 		System.out.println("--random-img  Randomize order of images shown");
