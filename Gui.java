@@ -20,6 +20,7 @@ public class Gui extends Frame
 	final Config config;
 	final CoffeeSaint coffeeSaint;
 	final Statistics statistics;
+	int windowWidth = -1, windowHeight = -1;
 
 	boolean lastState = false;	// false: no problems
 	int currentCounter = 0;
@@ -41,47 +42,45 @@ public class Gui extends Frame
                 System.out.println("Initial paint");
 
                 setVisible(true);
+		windowWidth  = getSize().width;
+		windowHeight = getSize().height;
 
                 addWindowListener(new FrameListener(config));
-	}
-
-	int setFont(Graphics g, int rowHeight)
-	{
-		Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
-		g.setFont(f);
-		int fullHeight = g.getFontMetrics().getHeight();
-		int newHeight = (int)((double)rowHeight * ((double)rowHeight / fullHeight));
-		f = new Font(config.getFontName(), Font.PLAIN, newHeight);
-		g.setFont(f);
-
-		return newHeight;
 	}
 
 	void drawRow(Graphics g, String msg, int row, String state, Color bgColor)
 	{
 		final int totalNRows = config.getNRows();
-		final int windowWidth  = getSize().width;
-		final int windowHeight = getSize().height;
 		final int rowHeight = windowHeight / totalNRows;
-
-		g.setColor(coffeeSaint.stateToColor(state));
 
 		final int y = rowHeight * row;
 
+		g.setColor(coffeeSaint.stateToColor(state));
 		g.fillRect(0, y, windowWidth, rowHeight);
 
 		g.setColor(config.getTextColor());
 
-		int newHeight = setFont(g, rowHeight);
+		// stuff to set the font-size and found out where to put it
+                Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
+                g.setFont(f);
+                FontMetrics fm = g.getFontMetrics();
+                double shrink = ((double)rowHeight / (double)fm.getHeight());
+                double newSize = (double)rowHeight * shrink;
+                double newAsc  = (double)fm.getAscent() * shrink;
+                f = f.deriveFont((float)newSize);
+                g.setFont(f);
 
-		g.drawString(msg, 0, y + newHeight);
+		g.drawString(msg, 0, y + (int)newAsc + fm.getLeading());
 	}
 
 	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
 	{
 		/* counter upto the next reload */
-		int newHeight = setFont(g, rowHeight);
-		Font f = new Font(config.getFontName(), Font.PLAIN, newHeight);
+		Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
+		g.setFont(f);
+		int fullHeight = g.getFontMetrics().getHeight();
+		int newHeight = (int)((double)rowHeight * ((double)rowHeight / fullHeight));
+		f = new Font(config.getFontName(), Font.PLAIN, newHeight);
 		String str = "" + config.getSleepTime();
 		Rectangle2D boundingRectangle = f.getStringBounds(str, 0, str.length(), new FontRenderContext(null, false, false));
 		g.setFont(f);
@@ -284,8 +283,6 @@ public class Gui extends Frame
 
 	public void paint(Graphics g)
 	{
-		final int windowWidth  = getSize().width;
-		final int windowHeight = getSize().height;
 		System.out.println("Window size: " + windowWidth + "x" + windowHeight);
 		final int rowHeight = windowHeight / config.getNRows();
 		final int characterSize = Math.max(10, rowHeight - 1);
@@ -298,8 +295,6 @@ public class Gui extends Frame
 
 	public void update(Graphics g)
 	{
-		final int windowWidth  = getSize().width;
-		final int windowHeight = getSize().height;
 		final int rowHeight = windowHeight / config.getNRows();
 		final int characterSize = rowHeight - 1;
 
