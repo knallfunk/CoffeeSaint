@@ -12,8 +12,9 @@ public class Totals
 {
 	int nCritical, nWarning, nOk;
 	int nUp, nDown, nUnreachable, nPending;
+	int nHosts, nServices;
 
-	public Totals(int nCritical, int nWarning, int nOk, int nUp, int nDown, int nUnreachable, int nPending)
+	public Totals(int nCritical, int nWarning, int nOk, int nUp, int nDown, int nUnreachable, int nPending, int nHosts, int nServices)
 	{
 		this.nCritical = nCritical;
 		this.nWarning = nWarning;
@@ -22,6 +23,8 @@ public class Totals
 		this.nDown = nDown;
 		this.nUnreachable = nUnreachable;
 		this.nPending = nPending;
+		this.nHosts = nHosts;
+		this.nServices = nServices;
 	}
 
 	public int getNCritical()
@@ -57,5 +60,15 @@ public class Totals
 	public int getNPending()
 	{
 		return nPending;
+	}
+
+	public int getNHosts()
+	{
+		return nHosts;
+	}
+
+	public int getNServices()
+	{
+		return nServices;
 	}
 }
