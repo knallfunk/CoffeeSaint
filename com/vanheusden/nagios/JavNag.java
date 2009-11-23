@@ -52,18 +52,24 @@ public class JavNag
 	{
 		for(String currentLine : fileDump)
 		{
+			if (currentLine.substring(0, 1).equals("#")) // only the first line should have this comment
+				continue;
+
 			String [] elements = currentLine.split(";");
-			if (elements.length != 21 && elements.length != 32 && elements.length != 31)
-				throw new Exception("Expecting either 21 or 32 elements per line, got " + elements.length + ": " + currentLine);
+			if (elements.length < 2)
+				continue;
 			int space = elements[0].indexOf(" ");
 			if (space == -1)
 				throw new Exception("Invalid line: first field should contain space");
-			String timeStamp = elements[0].substring(0, space);
 			String type = elements[0].substring(space + 1);
+			String timeStamp = elements[0].substring(0, space);
 			String hostName = elements[1];
 
 			if (type.equals("HOST"))
 			{
+				if (elements.length != 21)
+					throw new Exception("Expecting 21 for a HOST-line, got " + elements.length + ": " + currentLine);
+
 				Host host = addAndOrFindHost(hostName);
 				int current_state = 255;
 				if (elements[2].equals("UP") || elements[2].equals("OK"))
@@ -94,6 +100,9 @@ public class JavNag
 			}
 			else if (type.equals("SERVICE"))
 			{
+				if (elements.length != 31 && elements.length != 32)
+					throw new Exception("Expecting 21 for a SERVICE-line, got " + elements.length + ": " + currentLine);
+
 				Host host = addAndOrFindHost(hostName);
 				Service service = host.addAndOrFindService(elements[2]);
 				int current_state = 255;
@@ -239,6 +248,7 @@ public class JavNag
 	{
 		int nCritical = 0, nWarning = 0, nOk = 0;
 		int nUp = 0, nDown = 0, nUnreachable = 0, nPending = 0;
+		int nHosts = 0, nServices = 0;
 
 		for(Host currentHost : hosts)
 		{
@@ -253,6 +263,8 @@ public class JavNag
 			else if (current_state.equals("3"))
 				nPending++;
 
+			nHosts++;
+
 			for(Service currentService : currentHost.getServices())
 			{
 				current_state = currentService.getParameter("current_state");
@@ -263,10 +275,12 @@ public class JavNag
 					nWarning++;
 				else if (current_state.equals("2"))
 					nCritical++;
+
+				nServices++;
 			}
 		}
 
-		return new Totals(nCritical, nWarning, nOk, nUp, nDown, nUnreachable, nPending);
+		return new Totals(nCritical, nWarning, nOk, nUp, nDown, nUnreachable, nPending, nHosts, nServices);
 	}
 
 	/**
