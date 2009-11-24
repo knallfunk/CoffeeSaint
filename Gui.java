@@ -56,7 +56,7 @@ public class Gui extends JPanel
 		f = f.deriveFont((float)newSize);
 		g.setFont(f);
 
-		int plotY = y + (int)newAsc + fm.getLeading();
+		int plotY = y + (int)newAsc;
 		System.out.println("row " + row + ", " + newSize + "|" + newAsc + " -> " + plotY + " RH: " + rowHeight);
 		g.drawString(msg, 0, plotY);
 	}
