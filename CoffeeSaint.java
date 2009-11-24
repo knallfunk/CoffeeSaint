@@ -319,7 +319,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 			System.out.println("Load image(1) " + loadImage);
 			drawLoadStatus(gui, g, "Start load img " + loadImage);
 
-			if (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://"))
+			if (loadImage.length() >= 8 && (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://")))
 				img[nr] = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
 			else
 				img[nr] = Toolkit.getDefaultToolkit().createImage(loadImage);
