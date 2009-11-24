@@ -15,72 +15,53 @@ import java.awt.font.FontRenderContext;
 import java.io.FileNotFoundException;
 import java.util.concurrent.Semaphore;
 
-public class Gui extends Frame
+public class Gui extends JPanel
 {
 	final Config config;
 	final CoffeeSaint coffeeSaint;
 	final Statistics statistics;
-	int windowWidth = -1, windowHeight = -1, windowXOffset = -1, windowYOffset = -1;
 
 	boolean lastState = false;	// false: no problems
-	int currentCounter = 0;
+	// because making a frame visible already causes
+	// a call to paint() so no need to do that (again)
+	// at start
+	long lastRefresh = System.currentTimeMillis();
 
 	public Gui(Config config, CoffeeSaint coffeeSaint, Statistics statistics)
 	{
 		this.config = config;
 		this.coffeeSaint = coffeeSaint;
 		this.statistics = statistics;
-
-                /* retrieve max window size */
-                GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-                GraphicsDevice[] gs = ge.getScreenDevices();
-                GraphicsConfiguration [] gc = gs[0].getConfigurations();
-                Rectangle r = gc[0].getBounds();
-
-                /* create frame to draw in */
-                setSize(r.width, r.height);
-                System.out.println("Initial paint");
-
-                setVisible(true);
-
-		Rectangle useable = getBounds();
-		windowWidth  = useable.width;
-		windowHeight = useable.height;
-		windowXOffset = useable.x;
-		windowYOffset = useable.y;
-		System.out.println("" + windowXOffset + "," + windowYOffset);
-
-                addWindowListener(new FrameListener(config));
 	}
 
 	void drawRow(Graphics g, String msg, int row, String state, Color bgColor)
 	{
 		final int totalNRows = config.getNRows();
-		final int rowHeight = windowHeight / totalNRows;
+		final int rowHeight = getHeight() / totalNRows;
 
-		final int y = rowHeight * row + windowYOffset;
+		final int y = rowHeight * row;
 
 		g.setColor(coffeeSaint.stateToColor(state));
-		g.fillRect(0, y, windowWidth, rowHeight);
+		g.fillRect(0, y, getWidth(), rowHeight);
 
 		g.setColor(config.getTextColor());
 
 		// stuff to set the font-size and found out where to put it
-                Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
-                g.setFont(f);
-                FontMetrics fm = g.getFontMetrics();
-                double shrink = ((double)rowHeight / (double)fm.getHeight());
-                double newSize = (double)rowHeight * shrink;
-                double newAsc  = (double)fm.getAscent() * shrink;
-                f = f.deriveFont((float)newSize);
-                g.setFont(f);
+		Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
+		g.setFont(f);
+		FontMetrics fm = g.getFontMetrics();
+		double shrink = ((double)rowHeight / (double)fm.getHeight());
+		double newSize = (double)rowHeight * shrink;
+		double newAsc  = (double)fm.getAscent() * shrink;
+		f = f.deriveFont((float)newSize);
+		g.setFont(f);
 
 		int plotY = y + (int)newAsc + fm.getLeading();
 		System.out.println("row " + row + ", " + newSize + "|" + newAsc + " -> " + plotY + " RH: " + rowHeight);
 		g.drawString(msg, 0, plotY);
 	}
 
-	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
+	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize, int counter)
 	{
 		/* counter upto the next reload */
 		Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
@@ -93,11 +74,11 @@ public class Gui extends Frame
 		g.setFont(f);
 		g.setColor(config.getBackgroundColor());
 		int startX = windowWidth - (int)boundingRectangle.getWidth();
-		g.fillRect(startX, windowYOffset, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
+		g.fillRect(startX, 0, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
 		g.setColor(config.getTextColor());
 		f = new Font(config.getFontName(), Font.PLAIN, newHeight);
 		g.setFont(f);
-		g.drawString("" + currentCounter, startX, newHeight + windowYOffset);
+		g.drawString("" + counter, startX, newHeight);
 	}
 
 	public void displayImage(ImageParameters [] imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
@@ -290,56 +271,36 @@ public class Gui extends Frame
 
 	public void paint(Graphics g)
 	{
-		System.out.println("Window size: " + windowWidth + "x" + windowHeight);
-		final int rowHeight = windowHeight / config.getNRows();
+		System.out.println("Window size: " + getWidth() + "x" + getHeight());
+		final int rowHeight = getHeight() / config.getNRows();
 		final int characterSize = Math.max(10, rowHeight - 1);
 
-		System.out.println("*** Paint PROBLEMS " + currentCounter);
-		drawProblems(g, windowWidth, windowHeight, rowHeight, characterSize);
-		currentCounter = config.getSleepTime();
-		System.out.println("Sleep time: " + currentCounter);
-	}
-
-	public void update(Graphics g)
-	{
-		final int rowHeight = windowHeight / config.getNRows();
-		final int characterSize = rowHeight - 1;
-
-		if (currentCounter <= 0)
-		{
-			System.out.println("*** Update PROBLEMS " + currentCounter);
-			drawProblems(g, windowWidth, windowHeight, rowHeight, characterSize);
-			currentCounter = config.getSleepTime();
-		}
-		else if (config.getCounter())
-		{
-			System.out.println("*** update COUNTER " + currentCounter);
-			drawCounter(g, windowWidth, windowHeight, rowHeight, characterSize);
-		}
-
-		currentCounter--;
-	}
-
-	public void setIcon()
-	{
-		ClassLoader loader = getClass().getClassLoader();
-		URL fileLocation = loader.getResource("com/vanheusden/CoffeeSaint/programIcon.png");
-		Image img = Toolkit.getDefaultToolkit().getImage(fileLocation); 
-		setIconImage(img);
+		System.out.println("*** Paint PROBLEMS ");
+		drawProblems(g, getWidth(), getHeight(), rowHeight, characterSize);
 	}
 
 	public void guiLoop() throws Exception
 	{
-		currentCounter = 1; // opening a window will force a full repaint anyway
-
-		setTitle(CoffeeSaint.getVersion());
-		setIcon();
+		final Graphics g = getGraphics();
 
 		for(;;)
 		{
-			System.out.println("Invoke paint");
+			long now = System.currentTimeMillis();
+			long left = (long)config.getSleepTime() - ((now - lastRefresh) / 1000);
+			int rowHeight = getHeight() / config.getNRows();
+			int characterSize = rowHeight - 1;
 
-			repaint();
+			if (left <= 0)
+			{
+				lastRefresh = now;
+				System.out.println("*** Update PROBLEMS " + left);
+				drawProblems(g, getWidth(), getHeight(), rowHeight, characterSize);
+			}
+			else if (config.getCounter())
+			{
+				System.out.println("*** update COUNTER " + left);
+				drawCounter(g, getWidth(), getHeight(), rowHeight, characterSize, (int)left);
+			}
 
 			Thread.sleep(1000);
 		}

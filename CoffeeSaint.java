@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.6, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.7, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -486,6 +486,14 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		}
 	}
 
+	public static void setIcon(CoffeeSaint coffeeSaint, JFrame f)
+	{
+		ClassLoader loader = coffeeSaint.getClass().getClassLoader();
+		URL fileLocation = loader.getResource("com/vanheusden/CoffeeSaint/programIcon.png");
+		Image img = Toolkit.getDefaultToolkit().getImage(fileLocation); 
+		f.setIconImage(img);
+	}
+
 	public static void showHelp()
 	{
 		System.out.println("--source type version x  Source to retrieve from.");
@@ -499,6 +507,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
+		System.out.println("--fullscreen  Run in fullscreen mode, e.g. without any borders");
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin.");
 		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems.");
 		System.out.println("--random-img  Randomize order of images shown");
@@ -613,6 +622,8 @@ System.out.println(ts + ": " + (seconds * 1000L));
 				}
 				else if (arg[loop].compareTo("--no-header") == 0)
 					config.setShowHeader(false);
+				else if (arg[loop].compareTo("--fullscreen") == 0)
+					config.setFullscreen(true);
 				else if (arg[loop].compareTo("--header") == 0)
 					config.setHeader(arg[++loop]);
 				else if (arg[loop].compareTo("--service-issue") == 0)
@@ -710,7 +721,29 @@ System.out.println(ts + ": " + (seconds * 1000L));
 			if (config.getRunGui())
 			{
 				System.out.println("Start gui");
+
+				GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+				JFrame f = new JFrame();
+				if (config.getFullscreen())
+					f.setUndecorated(true);
+
 				gui = new Gui(config, coffeeSaint, statistics);
+
+				/* create frame to draw in */
+				Rectangle useable = ge.getMaximumWindowBounds();
+				f.setMaximizedBounds(useable);
+				f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+				f.setSize(useable.width, useable.height);
+				f.setContentPane(gui);
+
+				System.out.println("Initial paint");
+
+				f.setTitle(getVersion());
+				setIcon(coffeeSaint, f);
+
+				f.setVisible(true);
+
+				f.addWindowListener(new FrameListener(config));
 			}
 
 			if (config.getHTTPServerListenPort() != -1)

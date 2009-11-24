@@ -49,6 +49,7 @@ public class Config
 	private String sortOrder;
 	private int camRows, camCols;
 	private boolean verbose;
+	private boolean fullscreen = false;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -218,6 +219,8 @@ public class Config
 					setBrainFileName(data);
 				else if (name.equals("exec"))
 					setExec(data);
+				else if (name.equals("fullscreen"))
+					setFullscreen(true);
 				else if (name.equals("adapt-img"))
 					setAdaptImageSize(data.equalsIgnoreCase("true") ? true : false);
 				else if (name.equals("random-img"))
@@ -329,6 +332,7 @@ public class Config
 		writeLine(out, "font = " + getFontName());
 		writeLine(out, "verbose = " + (getVerbose() ? "true" : "false"));
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
+		writeLine(out, "fullscreen = " + (getFullscreen() ? "true" : "false"));
 		if (getHeaderSet() == true)
 			writeLine(out, "header = " + getHeader());
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
@@ -1047,6 +1051,22 @@ public class Config
 		boolean copy;
 		lock();
 		copy = verbose;
+		unlock();
+		return copy;
+	}
+
+	public void setFullscreen(boolean fullscreen)
+	{
+		lock();
+		this.fullscreen = fullscreen;
+		unlock();
+	}
+
+	public boolean getFullscreen()
+	{
+		boolean copy;
+		lock();
+		copy = fullscreen;
 		unlock();
 		return copy;
 	}
