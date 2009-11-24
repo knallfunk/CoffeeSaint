@@ -20,7 +20,7 @@ public class Gui extends Frame
 	final Config config;
 	final CoffeeSaint coffeeSaint;
 	final Statistics statistics;
-	int windowWidth = -1, windowHeight = -1;
+	int windowWidth = -1, windowHeight = -1, windowXOffset = -1, windowYOffset = -1;
 
 	boolean lastState = false;	// false: no problems
 	int currentCounter = 0;
@@ -42,8 +42,13 @@ public class Gui extends Frame
                 System.out.println("Initial paint");
 
                 setVisible(true);
-		windowWidth  = getSize().width;
-		windowHeight = getSize().height;
+
+		Rectangle useable = getBounds();
+		windowWidth  = useable.width;
+		windowHeight = useable.height;
+		windowXOffset = useable.x;
+		windowYOffset = useable.y;
+		System.out.println("" + windowXOffset + "," + windowYOffset);
 
                 addWindowListener(new FrameListener(config));
 	}
@@ -53,7 +58,7 @@ public class Gui extends Frame
 		final int totalNRows = config.getNRows();
 		final int rowHeight = windowHeight / totalNRows;
 
-		final int y = rowHeight * row;
+		final int y = rowHeight * row + windowYOffset;
 
 		g.setColor(coffeeSaint.stateToColor(state));
 		g.fillRect(0, y, windowWidth, rowHeight);
@@ -70,7 +75,9 @@ public class Gui extends Frame
                 f = f.deriveFont((float)newSize);
                 g.setFont(f);
 
-		g.drawString(msg, 0, y + (int)newAsc + fm.getLeading());
+		int plotY = y + (int)newAsc + fm.getLeading();
+		System.out.println("row " + row + ", " + newSize + "|" + newAsc + " -> " + plotY + " RH: " + rowHeight);
+		g.drawString(msg, 0, plotY);
 	}
 
 	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
@@ -86,11 +93,11 @@ public class Gui extends Frame
 		g.setFont(f);
 		g.setColor(config.getBackgroundColor());
 		int startX = windowWidth - (int)boundingRectangle.getWidth();
-		g.fillRect(startX, 0, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
+		g.fillRect(startX, windowYOffset, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
 		g.setColor(config.getTextColor());
 		f = new Font(config.getFontName(), Font.PLAIN, newHeight);
 		g.setFont(f);
-		g.drawString("" + currentCounter, startX, newHeight);
+		g.drawString("" + currentCounter, startX, newHeight + windowYOffset);
 	}
 
 	public void displayImage(ImageParameters [] imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
@@ -313,9 +320,20 @@ public class Gui extends Frame
 		currentCounter--;
 	}
 
+	public void setIcon()
+	{
+		ClassLoader loader = getClass().getClassLoader();
+		URL fileLocation = loader.getResource("com/vanheusden/CoffeeSaint/programIcon.png");
+		Image img = Toolkit.getDefaultToolkit().getImage(fileLocation); 
+		setIconImage(img);
+	}
+
 	public void guiLoop() throws Exception
 	{
 		currentCounter = 1; // opening a window will force a full repaint anyway
+
+		setTitle(CoffeeSaint.getVersion());
+		setIcon();
 
 		for(;;)
 		{
