@@ -249,10 +249,16 @@ public class JavNag
 		int nCritical = 0, nWarning = 0, nOk = 0;
 		int nUp = 0, nDown = 0, nUnreachable = 0, nPending = 0;
 		int nHosts = 0, nServices = 0;
+		int nStateUnknownHost = 0, nStateUnknownService = 0;
 
 		for(Host currentHost : hosts)
 		{
 			String current_state = currentHost.getParameter("current_state");
+			if (current_state == null)
+			{
+				nStateUnknownHost++;
+				continue;
+			}
 
 			if (current_state.equals("0"))
 				nUp++;
@@ -268,6 +274,11 @@ public class JavNag
 			for(Service currentService : currentHost.getServices())
 			{
 				current_state = currentService.getParameter("current_state");
+				if (current_state == null)
+				{
+					nStateUnknownService++;
+					continue;
+				}
 
 				if (current_state.equals("0"))
 					nOk++;
@@ -280,7 +291,7 @@ public class JavNag
 			}
 		}
 
-		return new Totals(nCritical, nWarning, nOk, nUp, nDown, nUnreachable, nPending, nHosts, nServices);
+		return new Totals(nCritical, nWarning, nOk, nUp, nDown, nUnreachable, nPending, nHosts, nServices, nStateUnknownHost, nStateUnknownService);
 	}
 
 	/**

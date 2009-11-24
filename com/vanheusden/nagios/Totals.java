@@ -13,8 +13,9 @@ public class Totals
 	int nCritical, nWarning, nOk;
 	int nUp, nDown, nUnreachable, nPending;
 	int nHosts, nServices;
+	int nStateUnknownHost, nStateUnknownService;
 
-	public Totals(int nCritical, int nWarning, int nOk, int nUp, int nDown, int nUnreachable, int nPending, int nHosts, int nServices)
+	public Totals(int nCritical, int nWarning, int nOk, int nUp, int nDown, int nUnreachable, int nPending, int nHosts, int nServices, int nStateUnknownHost, int nStateUnknownService)
 	{
 		this.nCritical = nCritical;
 		this.nWarning = nWarning;
@@ -25,6 +26,8 @@ public class Totals
 		this.nPending = nPending;
 		this.nHosts = nHosts;
 		this.nServices = nServices;
+		this.nStateUnknownHost = nStateUnknownHost;
+		this.nStateUnknownService = nStateUnknownService;
 	}
 
 	public int getNCritical()
