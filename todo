@@ -3,3 +3,5 @@
 - loadNagiosData 'synchronized' ?
 - timeout op laden image - in een aparte thread?
 - reduce text-width for width
+- die andere monitoring dinges, zabbix
+- tickertape in header?
