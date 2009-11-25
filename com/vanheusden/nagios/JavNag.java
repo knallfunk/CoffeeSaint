@@ -116,7 +116,14 @@ public class JavNag
 					current_state = 3;
 				addServiceEntry(service, "current_state", "" + current_state);
 				addServiceEntry(service, "retry_number", elements[4]);
-				addServiceEntry(service, "state_type", elements[5]);
+				String stateType = "0";
+				if (elements[5].equals("HARD"))
+					stateType = "1";
+				else if (elements[5].equals("SOFT"))
+					stateType = "0";
+				else
+					stateType = elements[5];
+				addServiceEntry(service, "state_type", stateType);
 				addServiceEntry(service, "last_check", elements[6]);
 				addServiceEntry(service, "next_check", elements[7]);
 				addServiceEntry(service, "check_type", elements[8]);
@@ -331,6 +338,9 @@ public class JavNag
 	 */
 	public boolean shouldIShowHost(Host host, boolean always_notify, boolean also_acknowledged)
 	{
+		if (host.getParameters().size() == 0)
+			return false;
+
 		if (host.getParameter("state_type").equals("0") == true) // if SOFT, do not show
 			return false;
 
