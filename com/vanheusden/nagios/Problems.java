@@ -77,7 +77,6 @@ public class Problems implements Comparator<Problem>
 				if (currentPattern.matcher(msg).matches())
 				{
 					important = true;
-					System.out.println("important: " + msg);
 					break;
 				}
 			}
