@@ -66,19 +66,23 @@ public class Gui extends JPanel
 		/* counter upto the next reload */
 		Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
 		g.setFont(f);
-		int fullHeight = g.getFontMetrics().getHeight();
-		int newHeight = (int)((double)rowHeight * ((double)rowHeight / fullHeight));
-		f = new Font(config.getFontName(), Font.PLAIN, newHeight);
+		FontMetrics fm = g.getFontMetrics();
+		double shrink = ((double)rowHeight / (double)fm.getHeight());
+		double newSize = (double)rowHeight * shrink;
+		double newAsc  = (double)fm.getAscent() * shrink;
+		f = f.deriveFont((float)newSize);
+		g.setFont(f);
+
 		String str = "" + config.getSleepTime();
 		Rectangle2D boundingRectangle = f.getStringBounds(str, 0, str.length(), new FontRenderContext(null, false, false));
-		g.setFont(f);
-		g.setColor(config.getBackgroundColor());
+
 		int startX = windowWidth - (int)boundingRectangle.getWidth();
+
+		g.setColor(config.getBackgroundColor());
 		g.fillRect(startX, 0, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
+
 		g.setColor(config.getTextColor());
-		f = new Font(config.getFontName(), Font.PLAIN, newHeight);
-		g.setFont(f);
-		g.drawString("" + counter, startX, newHeight);
+		g.drawString("" + counter, startX, (int)newAsc);
 	}
 
 	public void displayImage(ImageParameters [] imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
@@ -282,6 +286,7 @@ public class Gui extends JPanel
 	public void guiLoop() throws Exception
 	{
 		final Graphics g = getGraphics();
+		long lastLeft = -1;
 
 		for(;;)
 		{
@@ -296,11 +301,14 @@ public class Gui extends JPanel
 				System.out.println("*** Update PROBLEMS " + left);
 				drawProblems(g, getWidth(), getHeight(), rowHeight, characterSize);
 			}
-			else if (config.getCounter())
+			else if (config.getCounter() && lastLeft != left)
 			{
 				System.out.println("*** update COUNTER " + left);
 				drawCounter(g, getWidth(), getHeight(), rowHeight, characterSize, (int)left);
+				lastLeft = left;
 			}
+
+			// scroller FIXME
 
 			Thread.sleep(1000);
 		}
