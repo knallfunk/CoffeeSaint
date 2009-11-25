@@ -171,122 +171,135 @@ public class Config
 
 			String line;
 			int lineNr = 0;
-			while((line = in.readLine()) != null)
+			try
 			{
-				int is = line.indexOf("=");
-				lineNr++;
-				if (is == -1)
-					throw new Exception("Error on line " + lineNr + ": malformed line.");
-
-				String name = line.substring(0, is).trim();
-				String data = line.substring(is + 1).trim();
-
-				if (name.equals("config"))
-					loadConfig(data);
-				else if (name.equals("source"))
+				while((line = in.readLine()) != null)
 				{
-					String [] parameters = data.split(" ");
-					NagiosDataSource nds = null;
-					NagiosVersion nv = null;
-					String type = parameters[0];
-					String versionStr = parameters[1];
+					int is = line.indexOf("=");
+					lineNr++;
+					if (is == -1)
+						throw new Exception("Error on line " + lineNr + ": malformed line.");
 
-					if (versionStr.equals("1"))
-						nv = NagiosVersion.V1;
-					else if (versionStr.equals("2"))
-						nv = NagiosVersion.V2;
-					else if (versionStr.equals("3"))
-						nv = NagiosVersion.V3;
-					else
-						throw new Exception("Nagios version '" + versionStr + "' not known.");
+					String name = line.substring(0, is).trim();
+					String data = line.substring(is + 1).trim();
 
-					if (type.equalsIgnoreCase("http"))
-						nds = new NagiosDataSource(new URL(parameters[2]), nv);
-					else if (type.equalsIgnoreCase("file"))
-						nds = new NagiosDataSource(parameters[2], nv);
-					else if (type.equalsIgnoreCase("tcp"))
+					if (name.equals("config"))
+						loadConfig(data);
+					else if (name.equals("source"))
 					{
-						String host = parameters[2];
-						int port = Integer.valueOf(parameters[3]);
-						nds = new NagiosDataSource(host, port, nv);
-					}
-					else
-						throw new Exception("Data source-type '" + type + "' not understood.");
+						String [] parameters = data.split(" ");
+						NagiosDataSource nds = null;
+						NagiosVersion nv = null;
+						String type = parameters[0];
+						String versionStr = parameters[1];
 
-					addNagiosDataSource(nds);
-				}
-				else if (name.equals("predict"))
-					setBrainFileName(data);
-				else if (name.equals("exec"))
-					setExec(data);
-				else if (name.equals("fullscreen"))
-					setFullscreen(true);
-				else if (name.equals("adapt-img"))
-					setAdaptImageSize(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.equals("random-img"))
-					setRandomWebcam(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.equals("no-gui"))
-					setRunGui(!(data.equalsIgnoreCase("true") ? true : false));
-				else if (name.equals("header"))
-					setHeader(data);
-				else if (name.equals("host-issue"))
-					setHostIssue(data);
-				else if (name.equals("service-issue"))
-					setServiceIssue(data);
-				else if (name.equals("counter"))
-					setCounter(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.equals("verbose"))
-					setVerbose(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.equals("sound"))
-					setProblemSound(data);
-				else if (name.equals("listen-port"))
-					setHTTPServerListenPort(Integer.valueOf(data));
-				else if (name.equals("listen-adapter"))
-					setHTTPServerListenAdapter(data);
-				else if (name.equals("bgcolor"))
-					setBackgroundColor(data);
-				else if (name.equals("textcolor"))
-					setTextColor(data);
-				else if (name.equals("bgcolorok"))
-					setBackgroundColorOkStatus(data);
-				else if (name.equals("nrows"))
-					setNRows(Integer.valueOf(data));
-				else if (name.equals("interval"))
-					setSleepTime(Integer.valueOf(data));
-				else if (name.equals("image"))
-					addImageUrl(data);
-				else if (name.equals("cam-rows"))
-					setCamRows(Integer.valueOf(data));
-				else if (name.equals("cam-cols"))
-					setCamCols(Integer.valueOf(data));
-				else if (name.equals("prefer"))
-					loadPrefers(data);
-				else if (name.equals("sort-order"))
-				{
-					String field = null;
-					boolean numeric = false, reverse = false;
-					String [] fields = data.split(" ");
-					for(int index=0; index<fields.length; index++)
-					{
-						if (fields[index].equals("numeric"))
-							numeric = true;
-						else if (fields[index].equals("reverse"))
-							reverse = true;
+						if (versionStr.equals("1"))
+							nv = NagiosVersion.V1;
+						else if (versionStr.equals("2"))
+							nv = NagiosVersion.V2;
+						else if (versionStr.equals("3"))
+							nv = NagiosVersion.V3;
 						else
-							field = fields[index];
+							throw new Exception("Nagios version '" + versionStr + "' not known.");
+
+						if (type.equalsIgnoreCase("http"))
+							nds = new NagiosDataSource(new URL(parameters[2]), nv);
+						else if (type.equalsIgnoreCase("file"))
+							nds = new NagiosDataSource(parameters[2], nv);
+						else if (type.equalsIgnoreCase("tcp"))
+						{
+							String host = parameters[2];
+							int port = Integer.valueOf(parameters[3]);
+							nds = new NagiosDataSource(host, port, nv);
+						}
+						else
+							throw new Exception("Data source-type '" + type + "' not understood.");
+
+						addNagiosDataSource(nds);
 					}
-					setSortOrder(field, numeric, reverse);
+					else if (name.equals("predict"))
+						setBrainFileName(data);
+					else if (name.equals("exec"))
+						setExec(data);
+					else if (name.equals("fullscreen"))
+						setFullscreen(true);
+					else if (name.equals("adapt-img"))
+						setAdaptImageSize(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("random-img"))
+						setRandomWebcam(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("no-gui"))
+						setRunGui(!(data.equalsIgnoreCase("true") ? true : false));
+					else if (name.equals("header"))
+						setHeader(data);
+					else if (name.equals("host-issue"))
+						setHostIssue(data);
+					else if (name.equals("service-issue"))
+						setServiceIssue(data);
+					else if (name.equals("counter"))
+						setCounter(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("verbose"))
+						setVerbose(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("sound"))
+						setProblemSound(data);
+					else if (name.equals("listen-port"))
+						setHTTPServerListenPort(Integer.valueOf(data));
+					else if (name.equals("listen-adapter"))
+						setHTTPServerListenAdapter(data);
+					else if (name.equals("bgcolor"))
+						setBackgroundColor(data);
+					else if (name.equals("textcolor"))
+						setTextColor(data);
+					else if (name.equals("bgcolorok"))
+						setBackgroundColorOkStatus(data);
+					else if (name.equals("nrows"))
+						setNRows(Integer.valueOf(data));
+					else if (name.equals("interval"))
+						setSleepTime(Integer.valueOf(data));
+					else if (name.equals("image"))
+						addImageUrl(data);
+					else if (name.equals("cam-rows"))
+						setCamRows(Integer.valueOf(data));
+					else if (name.equals("cam-cols"))
+						setCamCols(Integer.valueOf(data));
+					else if (name.equals("prefer"))
+						loadPrefers(data);
+					else if (name.equals("sort-order"))
+					{
+						String field = null;
+						boolean numeric = false, reverse = false;
+						String [] fields = data.split(" ");
+						for(int index=0; index<fields.length; index++)
+						{
+							if (fields[index].equals("numeric"))
+								numeric = true;
+							else if (fields[index].equals("reverse"))
+								reverse = true;
+							else
+								field = fields[index];
+						}
+						setSortOrder(field, numeric, reverse);
+					}
+					else if (name.equals("always-notify"))
+						setAlwaysNotify(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("also-acknowledged"))
+						setAlsoAcknowledged(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("show-header"))
+						setShowHeader(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("font"))
+						setFontName(data);
+					else
+						throw new Exception("Unknown parameter on line " + lineNr);
 				}
-				else if (name.equals("always-notify"))
-					setAlwaysNotify(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.equals("also-acknowledged"))
-					setAlsoAcknowledged(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.equals("show-header"))
-					setShowHeader(data.equalsIgnoreCase("true") ? true : false);
-				else if (name.equals("font"))
-					setFontName(data);
-				else
-					throw new Exception("Unknown parameter on line " + lineNr);
+			}
+			catch(ArrayIndexOutOfBoundsException aioobe)
+			{
+				System.err.println("Please check line " + lineNr + " of configuration-file " + fileName + ": a parameter may be missing");
+				System.exit(127);
+			}
+			catch(NumberFormatException nfeGlobal)
+			{
+				System.err.println("Please check line " + lineNr + " of configuration-file " + fileName + ": one of the parameters ought to be a number");
+				System.exit(127);
 			}
 
 			in.close();
@@ -834,24 +847,24 @@ public class Config
 	{
 		lock();
 		for(int index=0; index<ndsList.size(); index++)
-                {
+		{
 
-                        String parameters = "?";
-                        if (ndsList.get(index).getType() == NagiosDataSourceType.TCP)
-                                parameters = ndsList.get(index).getHost() + " " + ndsList.get(index).getPort();
-                        else if (ndsList.get(index).getType() == NagiosDataSourceType.HTTP)
-                                parameters = ndsList.get(index).getURL().toString();
-                        else if (ndsList.get(index).getType() == NagiosDataSourceType.FILE)
-                                parameters = ndsList.get(index).getFile();
+			String parameters = "?";
+			if (ndsList.get(index).getType() == NagiosDataSourceType.TCP)
+				parameters = ndsList.get(index).getHost() + " " + ndsList.get(index).getPort();
+			else if (ndsList.get(index).getType() == NagiosDataSourceType.HTTP)
+				parameters = ndsList.get(index).getURL().toString();
+			else if (ndsList.get(index).getType() == NagiosDataSourceType.FILE)
+				parameters = ndsList.get(index).getFile();
 
-                        String serverString = parameters;
+			String serverString = parameters;
 
 			if (serverString.hashCode() == hash)
 			{
 				ndsList.remove(index);
 				break;
 			}
-                }
+		}
 		unlock();
 	}
 

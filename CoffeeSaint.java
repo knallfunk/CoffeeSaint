@@ -567,139 +567,172 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 			for(int loop=0; loop<arg.length; loop++)
 			{
-				if (arg[loop].compareTo("--create-config") == 0)
-				{
-					config.writeConfig(arg[++loop]);
-					config.setConfigFilename(arg[loop]);
-				}
-				else if (arg[loop].compareTo("--source") == 0)
-				{
-					NagiosDataSource nds = null;
-					NagiosVersion nv = null;
-					String type = arg[++loop];
-					String versionStr = arg[++loop];
+				String currentSwitch = arg[loop];
 
-					if (versionStr.equals("1"))
-						nv = NagiosVersion.V1;
-					else if (versionStr.equals("2"))
-						nv = NagiosVersion.V2;
-					else if (versionStr.equals("3"))
-						nv = NagiosVersion.V3;
-					else
-						throw new Exception("Nagios version '" + versionStr + "' not known.");
-
-					if (type.equalsIgnoreCase("http"))
-						nds = new NagiosDataSource(new URL(arg[++loop]), nv);
-					else if (type.equalsIgnoreCase("file"))
-						nds = new NagiosDataSource(arg[++loop], nv);
-					else if (type.equalsIgnoreCase("tcp"))
+				try
+				{
+					if (arg[loop].compareTo("--create-config") == 0)
 					{
-						String host = arg[++loop];
-						int port = Integer.valueOf(arg[++loop]);
-						nds = new NagiosDataSource(host, port, nv);
+						config.writeConfig(arg[++loop]);
+						config.setConfigFilename(arg[loop]);
 					}
-					else
-						throw new Exception("Data source-type '" + type + "' not understood.");
-
-					config.addNagiosDataSource(nds);
-				}
-				else if (arg[loop].compareTo("--sort-order") == 0)
-				{
-					boolean reverse = false, numeric = false;
-
-					for(;;)
+					else if (arg[loop].compareTo("--source") == 0)
 					{
-						++loop;
-						if (arg[loop].equals("reverse"))
-							reverse = true;
-						else if (arg[loop].equals("numeric"))
-							numeric = true;
+						NagiosDataSource nds = null;
+						NagiosVersion nv = null;
+						String type = arg[++loop];
+						String versionStr = arg[++loop];
+
+						if (versionStr.equals("1"))
+							nv = NagiosVersion.V1;
+						else if (versionStr.equals("2"))
+							nv = NagiosVersion.V2;
+						else if (versionStr.equals("3"))
+							nv = NagiosVersion.V3;
 						else
-							break;
-					}
+							throw new Exception("Nagios version '" + versionStr + "' not known.");
 
-					config.setSortOrder(arg[loop], numeric, reverse);
+						if (type.equalsIgnoreCase("http"))
+							nds = new NagiosDataSource(new URL(arg[++loop]), nv);
+						else if (type.equalsIgnoreCase("file"))
+							nds = new NagiosDataSource(arg[++loop], nv);
+						else if (type.equalsIgnoreCase("tcp"))
+						{
+							String host = arg[++loop];
+							int port;
+							try
+							{
+								port = Integer.valueOf(arg[++loop]);
+								nds = new NagiosDataSource(host, port, nv);
+							}
+							catch(NumberFormatException nfe)
+							{
+								System.err.println("--source: expecting a port-number but got '" + arg[loop] + "'");
+								System.exit(127);
+							}
+						}
+						else
+							throw new Exception("Data source-type '" + type + "' not understood.");
+
+						config.addNagiosDataSource(nds);
+					}
+					else if (arg[loop].compareTo("--sort-order") == 0)
+					{
+						boolean reverse = false, numeric = false;
+
+						for(;;)
+						{
+							++loop;
+							if (arg[loop].equals("reverse"))
+								reverse = true;
+							else if (arg[loop].equals("numeric"))
+								numeric = true;
+							else
+								break;
+						}
+
+						config.setSortOrder(arg[loop], numeric, reverse);
+					}
+					else if (arg[loop].compareTo("--no-header") == 0)
+						config.setShowHeader(false);
+					else if (arg[loop].compareTo("--fullscreen") == 0)
+						config.setFullscreen(true);
+					else if (arg[loop].compareTo("--header") == 0)
+						config.setHeader(arg[++loop]);
+					else if (arg[loop].compareTo("--service-issue") == 0)
+						config.setServiceIssue(arg[++loop]);
+					else if (arg[loop].compareTo("--host-issue") == 0)
+						config.setHostIssue(arg[++loop]);
+					else if (arg[loop].compareTo("--random-img") == 0)
+						config.setRandomWebcam(true);
+					else if (arg[loop].compareTo("--no-gui") == 0)
+						config.setRunGui(false);
+					else if (arg[loop].compareTo("--config") == 0)
+						config.loadConfig(arg[++loop]);
+					else if (arg[loop].compareTo("--predict") == 0)
+						config.setBrainFileName(arg[++loop]);
+					else if (arg[loop].compareTo("--exec") == 0)
+						config.setExec(arg[++loop]);
+					else if (arg[loop].compareTo("--adapt-img") == 0)
+						config.setAdaptImageSize(true);
+					else if (arg[loop].compareTo("--counter") == 0)
+						config.setCounter(true);
+					else if (arg[loop].compareTo("--verbose") == 0)
+						config.setVerbose(true);
+					else if (arg[loop].compareTo("--sound") == 0)
+						config.setProblemSound(arg[++loop]);
+					else if (arg[loop].compareTo("--listen-port") == 0)
+					{
+						try
+						{
+							config.setHTTPServerListenPort(Integer.valueOf(arg[++loop]));
+						}
+						catch(NumberFormatException nfe)
+						{
+							System.err.println("--listen-port: expecting a port-number but got '" + arg[loop] + "'");
+							System.exit(127);
+						}
+					}
+					else if (arg[loop].compareTo("--listen-adapter") == 0)
+						config.setHTTPServerListenAdapter(arg[++loop]);
+					else if (arg[loop].compareTo("--list-bgcolors") == 0)
+					{
+						config.listColors();
+						System.exit(0);
+					}
+					else if (arg[loop].compareTo("--bgcolor") == 0)
+						config.setBackgroundColor(arg[++loop]);
+					else if (arg[loop].compareTo("--textcolor") == 0)
+						config.setTextColor(arg[++loop]);
+					else if (arg[loop].compareTo("--nrows") == 0)
+						config.setNRows(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].compareTo("--interval") == 0)
+						config.setSleepTime(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].compareTo("--image") == 0)
+						config.addImageUrl(arg[++loop]);
+					else if (arg[loop].equals("--cam-rows"))
+						config.setCamRows(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--cam-cols"))
+						config.setCamCols(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].compareTo("--prefer") == 0)
+					{
+						System.out.println("Loading prefers from " + arg[++loop]);
+						config.loadPrefers(arg[loop]);
+					}
+					else if (arg[loop].compareTo("--always-notify") == 0)
+						config.setAlwaysNotify(true);
+					else if (arg[loop].compareTo("--also-acknowledged") == 0)
+						config.setAlsoAcknowledged(true);
+					else if (arg[loop].compareTo("--font") == 0)
+						config.setFontName(arg[++loop]);
+					else if (arg[loop].compareTo("--version") == 0 || arg[loop].compareTo("-version") == 0)
+					{
+						System.out.println(getVersion());
+						System.exit(0);
+					}
+					else if (arg[loop].compareTo("--help") == 0 || arg[loop].compareTo("--h") == 0 )
+					{
+						showHelp();
+						System.exit(0);
+					}
+					else
+					{
+						System.err.println("Parameter " + arg[loop] + " not understood.");
+						showHelp();
+						System.exit(127);
+					}
 				}
-				else if (arg[loop].compareTo("--no-header") == 0)
-					config.setShowHeader(false);
-				else if (arg[loop].compareTo("--fullscreen") == 0)
-					config.setFullscreen(true);
-				else if (arg[loop].compareTo("--header") == 0)
-					config.setHeader(arg[++loop]);
-				else if (arg[loop].compareTo("--service-issue") == 0)
-					config.setServiceIssue(arg[++loop]);
-				else if (arg[loop].compareTo("--host-issue") == 0)
-					config.setHostIssue(arg[++loop]);
-				else if (arg[loop].compareTo("--random-img") == 0)
-					config.setRandomWebcam(true);
-				else if (arg[loop].compareTo("--no-gui") == 0)
-					config.setRunGui(false);
-				else if (arg[loop].compareTo("--config") == 0)
-					config.loadConfig(arg[++loop]);
-				else if (arg[loop].compareTo("--predict") == 0)
-					config.setBrainFileName(arg[++loop]);
-				else if (arg[loop].compareTo("--exec") == 0)
-					config.setExec(arg[++loop]);
-				else if (arg[loop].compareTo("--adapt-img") == 0)
-					config.setAdaptImageSize(true);
-				else if (arg[loop].compareTo("--counter") == 0)
-					config.setCounter(true);
-				else if (arg[loop].compareTo("--verbose") == 0)
-					config.setVerbose(true);
-				else if (arg[loop].compareTo("--sound") == 0)
-					config.setProblemSound(arg[++loop]);
-				else if (arg[loop].compareTo("--listen-port") == 0)
-					config.setHTTPServerListenPort(Integer.valueOf(arg[++loop]));
-				else if (arg[loop].compareTo("--listen-adapter") == 0)
-					config.setHTTPServerListenAdapter(arg[++loop]);
-				else if (arg[loop].compareTo("--list-bgcolors") == 0)
+				catch(ArrayIndexOutOfBoundsException aioobe)
 				{
-					config.listColors();
-					System.exit(0);
+					System.err.println(currentSwitch + ": expects more parameters than currently given");
+					System.exit(127);
 				}
-				else if (arg[loop].compareTo("--bgcolor") == 0)
-					config.setBackgroundColor(arg[++loop]);
-				else if (arg[loop].compareTo("--textcolor") == 0)
-					config.setTextColor(arg[++loop]);
-				else if (arg[loop].compareTo("--nrows") == 0)
-					config.setNRows(Integer.valueOf(arg[++loop]));
-				else if (arg[loop].compareTo("--interval") == 0)
-					config.setSleepTime(Integer.valueOf(arg[++loop]));
-				else if (arg[loop].compareTo("--image") == 0)
-					config.addImageUrl(arg[++loop]);
-				else if (arg[loop].equals("--cam-rows"))
-					config.setCamRows(Integer.valueOf(arg[++loop]));
-				else if (arg[loop].equals("--cam-cols"))
-					config.setCamCols(Integer.valueOf(arg[++loop]));
-				else if (arg[loop].compareTo("--prefer") == 0)
+				catch(NumberFormatException nfeGlobal)
 				{
-					System.out.println("Loading prefers from " + arg[++loop]);
-					config.loadPrefers(arg[loop]);
-				}
-				else if (arg[loop].compareTo("--always-notify") == 0)
-					config.setAlwaysNotify(true);
-				else if (arg[loop].compareTo("--also-acknowledged") == 0)
-					config.setAlsoAcknowledged(true);
-				else if (arg[loop].compareTo("--font") == 0)
-					config.setFontName(arg[++loop]);
-				else if (arg[loop].compareTo("--help") == 0 || arg[loop].compareTo("--h") == 0 )
-				{
-					showHelp();
-					System.exit(0);
-				}
-				else
-				{
-					System.err.println("Parameter " + arg[loop] + " not understood.");
-					showHelp();
+					System.err.println(currentSwitch + ": one of the parameters given should've been a number");
 					System.exit(127);
 				}
 			}
-
-			// if (config.getNagiosDataSources().size() == 0)
-			// {
-			// 	System.err.println("You need to select at least one Nagios data-source.");
-			// 	System.exit(127);
-			// }
 
 			if (config.getBrainFileName() != null)
 			{
