@@ -91,7 +91,7 @@ public class Gui extends JPanel
 		int curWindowHeight, offsetY;
 		int maxW = -1, maxH = -1, nr;
 
-		for(nr=0; nr<imageParameters.length; nr++)
+		for(nr=0; nr<Math.min(config.getCamRows() * config.getCamCols(), imageParameters.length); nr++)
 		{
 			if (imageParameters[nr] == null)
 				continue;
@@ -119,19 +119,33 @@ public class Gui extends JPanel
 			double wMul = (double)windowWidth / (double)totalWidth;
 			double hMul = (double)curWindowHeight / (double)totalHeight;
 			double multiplier = Math.min(wMul, hMul);
-			int newWidth  = (int)((double)maxW * multiplier);
-			int newHeight = (int)((double)maxH * multiplier);
+			double spacingX = maxW * multiplier;
+			double spacingY = maxH * multiplier;
 
-			int putX = Math.max(0, (windowWidth / 2) - (newWidth / 2) * config.getCamCols());
-			int putY = Math.max(0, (curWindowHeight / 2) - (newHeight / 2) * config.getCamRows()) + offsetY;
+			int putX = Math.max(0, (windowWidth / 2) - ((int)spacingX / 2) * config.getCamCols());
+			int putY = Math.max(0, (curWindowHeight / 2) - ((int)spacingY / 2) * config.getCamRows()) + offsetY;
 
 			nr = 0;
 			for(int y=0; y<config.getCamRows(); y++)
 			{
 				for(int x=0; x<config.getCamCols(); x++)
 				{
+					int plotX = putX + (int)(x * spacingX);
+					int plotY = putY + (int)(y * spacingY);
+
 					if (imageParameters[nr] != null)
-						g.drawImage(imageParameters[nr].getImage(), putX + x * newWidth, putY + y * newHeight, newWidth, newHeight, null);
+					{
+						int newWidth  = (int)((double)imageParameters[nr].getWidth()  * multiplier);
+						int newHeight = (int)((double)imageParameters[nr].getHeight() * multiplier);
+						plotX += Math.max(0, spacingX - newWidth) / 2;
+						plotY += Math.max(0, spacingY - newHeight) / 2;
+						g.drawImage(imageParameters[nr].getImage(), plotX, plotY, newWidth, newHeight, null);
+					}
+					else
+					{
+						g.drawString("n/a", plotX, plotY);
+					}
+
 					nr++;
 				}
 			}
