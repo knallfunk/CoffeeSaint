@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.7, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.8-beta002, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -115,6 +115,18 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		return "" + then.get(Calendar.YEAR) + "/" + then.get(Calendar.MONTH) + "/" + then.get(Calendar.DAY_OF_MONTH) + " " + make2Digit("" + then.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + then.get(Calendar.MINUTE)) + ":" + make2Digit("" + then.get(Calendar.SECOND));
 	}
 
+	public String durationToString(long howLongInSecs)
+	{
+		String out = "";
+
+		if (howLongInSecs >= 86400)
+			out += "" + (howLongInSecs / 86400) + "d ";
+
+		out += "" + make2Digit("" + ((howLongInSecs / 3600) % 24)) + ":" + make2Digit("" + ((howLongInSecs / 60) % 10)) + ":" + make2Digit("" + (howLongInSecs % 60));
+
+		return out;
+	}
+
 	public String processStringEscapes(JavNag javNag, Totals totals, Calendar rightNow, Problem problem, String cmd)
 	{
 		if (cmd.equals("CRITICAL"))
@@ -164,6 +176,11 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 		if (cmd.equals("SERVICESTATE") && problem != null && problem.getService() != null)
 			return serviceState(problem.getService().getParameter("current_state"));
+
+		if (cmd.equals("HOSTDURATION"))
+			return "" + durationToString(System.currentTimeMillis() / 1000 - Long.valueOf(problem.getHost().getParameter("last_state_change")));
+		if (cmd.equals("SERVICEDURATION"))
+			return "" + durationToString(System.currentTimeMillis() / 1000 - Long.valueOf(problem.getService().getParameter("last_state_change")));
 
 		if (cmd.equals("HOSTSINCE") && problem != null && problem.getHost() != null)
 			return stringTsToDate(problem.getHost().getParameter("last_state_change"));
@@ -406,7 +423,14 @@ System.out.println(ts + ": " + (seconds * 1000L));
 				String source = dataSource.getHost() + " " + dataSource.getPort();
 				System.out.print(source);
 				drawLoadStatus(gui, g, "Load Nagios " + source);
-				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion());
+				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), false);
+			}
+			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
+			{
+				String source = dataSource.getHost() + " " + dataSource.getPort();
+				System.out.print(source);
+				drawLoadStatus(gui, g, "zLoad Nagios " + source);
+				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), true);
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 			{
@@ -500,6 +524,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("              Type can be: http, tcp, file");
 		System.out.println("              http expects an url like http://keetweej.vanheusden.com/status.dat");
 		System.out.println("              tcp expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
+		System.out.println("              ztcp also expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
 		System.out.println("              file expects a file-name, e.g. /var/cache/nagios3/status.dat");
 		System.out.println("              version selects the nagios-version. E.g. 1, 2 or 3.");
 		System.out.println("              You can add as many Nagios servers as you like.");
@@ -534,6 +559,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("              E.g. --sort-order numeric last_state_change (= default)");
 		System.out.println("--cam-cols    Number of cams per row");
 		System.out.println("--cam-rows    Number of rows with cams");
+		System.out.println("--ignore-aspect-ratio Grow/shrink all webcams with the same factor. In case you have webcams with different dimensions.");
 		System.out.println("--verbose     Show what it is doing");
 		System.out.println("");
 		System.out.print("Known colors:");
@@ -547,6 +573,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem");
 		System.out.println("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping");
 		System.out.println("  %PREDICT/%HISTORICAL      ");
+		System.out.println("  %HOSTDURATION/%SERVICEDURATION how long has a host/service been down");
 		System.out.println("  %OUTPUT                   Plugin output");
 		System.out.println("");
 		System.out.println("Sort-fields:");
@@ -571,12 +598,12 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 				try
 				{
-					if (arg[loop].compareTo("--create-config") == 0)
+					if (arg[loop].equals("--create-config"))
 					{
 						config.writeConfig(arg[++loop]);
 						config.setConfigFilename(arg[loop]);
 					}
-					else if (arg[loop].compareTo("--source") == 0)
+					else if (arg[loop].equals("--source"))
 					{
 						NagiosDataSource nds = null;
 						NagiosVersion nv = null;
@@ -596,14 +623,14 @@ System.out.println(ts + ": " + (seconds * 1000L));
 							nds = new NagiosDataSource(new URL(arg[++loop]), nv);
 						else if (type.equalsIgnoreCase("file"))
 							nds = new NagiosDataSource(arg[++loop], nv);
-						else if (type.equalsIgnoreCase("tcp"))
+						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
 						{
 							String host = arg[++loop];
 							int port;
 							try
 							{
 								port = Integer.valueOf(arg[++loop]);
-								nds = new NagiosDataSource(host, port, nv);
+								nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
 							}
 							catch(NumberFormatException nfe)
 							{
@@ -616,7 +643,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 						config.addNagiosDataSource(nds);
 					}
-					else if (arg[loop].compareTo("--sort-order") == 0)
+					else if (arg[loop].equals("--sort-order"))
 					{
 						boolean reverse = false, numeric = false;
 
@@ -633,35 +660,35 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 						config.setSortOrder(arg[loop], numeric, reverse);
 					}
-					else if (arg[loop].compareTo("--no-header") == 0)
+					else if (arg[loop].equals("--no-header"))
 						config.setShowHeader(false);
-					else if (arg[loop].compareTo("--fullscreen") == 0)
+					else if (arg[loop].equals("--fullscreen"))
 						config.setFullscreen(true);
-					else if (arg[loop].compareTo("--header") == 0)
+					else if (arg[loop].equals("--header"))
 						config.setHeader(arg[++loop]);
-					else if (arg[loop].compareTo("--service-issue") == 0)
+					else if (arg[loop].equals("--service-issue"))
 						config.setServiceIssue(arg[++loop]);
-					else if (arg[loop].compareTo("--host-issue") == 0)
+					else if (arg[loop].equals("--host-issue"))
 						config.setHostIssue(arg[++loop]);
-					else if (arg[loop].compareTo("--random-img") == 0)
+					else if (arg[loop].equals("--random-img"))
 						config.setRandomWebcam(true);
-					else if (arg[loop].compareTo("--no-gui") == 0)
+					else if (arg[loop].equals("--no-gui"))
 						config.setRunGui(false);
-					else if (arg[loop].compareTo("--config") == 0)
+					else if (arg[loop].equals("--config"))
 						config.loadConfig(arg[++loop]);
-					else if (arg[loop].compareTo("--predict") == 0)
+					else if (arg[loop].equals("--predict"))
 						config.setBrainFileName(arg[++loop]);
-					else if (arg[loop].compareTo("--exec") == 0)
+					else if (arg[loop].equals("--exec"))
 						config.setExec(arg[++loop]);
-					else if (arg[loop].compareTo("--adapt-img") == 0)
+					else if (arg[loop].equals("--adapt-img"))
 						config.setAdaptImageSize(true);
-					else if (arg[loop].compareTo("--counter") == 0)
+					else if (arg[loop].equals("--counter"))
 						config.setCounter(true);
-					else if (arg[loop].compareTo("--verbose") == 0)
+					else if (arg[loop].equals("--verbose"))
 						config.setVerbose(true);
-					else if (arg[loop].compareTo("--sound") == 0)
+					else if (arg[loop].equals("--sound"))
 						config.setProblemSound(arg[++loop]);
-					else if (arg[loop].compareTo("--listen-port") == 0)
+					else if (arg[loop].equals("--listen-port"))
 					{
 						try
 						{
@@ -673,44 +700,46 @@ System.out.println(ts + ": " + (seconds * 1000L));
 							System.exit(127);
 						}
 					}
-					else if (arg[loop].compareTo("--listen-adapter") == 0)
+					else if (arg[loop].equals("--listen-adapter"))
 						config.setHTTPServerListenAdapter(arg[++loop]);
-					else if (arg[loop].compareTo("--list-bgcolors") == 0)
+					else if (arg[loop].equals("--list-bgcolors"))
 					{
 						config.listColors();
 						System.exit(0);
 					}
-					else if (arg[loop].compareTo("--bgcolor") == 0)
+					else if (arg[loop].equals("--bgcolor"))
 						config.setBackgroundColor(arg[++loop]);
-					else if (arg[loop].compareTo("--textcolor") == 0)
+					else if (arg[loop].equals("--textcolor"))
 						config.setTextColor(arg[++loop]);
-					else if (arg[loop].compareTo("--nrows") == 0)
+					else if (arg[loop].equals("--nrows"))
 						config.setNRows(Integer.valueOf(arg[++loop]));
-					else if (arg[loop].compareTo("--interval") == 0)
+					else if (arg[loop].equals("--interval"))
 						config.setSleepTime(Integer.valueOf(arg[++loop]));
-					else if (arg[loop].compareTo("--image") == 0)
+					else if (arg[loop].equals("--image"))
 						config.addImageUrl(arg[++loop]);
 					else if (arg[loop].equals("--cam-rows"))
 						config.setCamRows(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--cam-cols"))
 						config.setCamCols(Integer.valueOf(arg[++loop]));
-					else if (arg[loop].compareTo("--prefer") == 0)
+					else if (arg[loop].equals("--prefer"))
 					{
 						System.out.println("Loading prefers from " + arg[++loop]);
 						config.loadPrefers(arg[loop]);
 					}
-					else if (arg[loop].compareTo("--always-notify") == 0)
+					else if (arg[loop].equals("--always-notify"))
 						config.setAlwaysNotify(true);
-					else if (arg[loop].compareTo("--also-acknowledged") == 0)
+					else if (arg[loop].equals("--also-acknowledged"))
 						config.setAlsoAcknowledged(true);
-					else if (arg[loop].compareTo("--font") == 0)
+					else if (arg[loop].equals("--font"))
 						config.setFontName(arg[++loop]);
-					else if (arg[loop].compareTo("--version") == 0 || arg[loop].compareTo("-version") == 0)
+					else if (arg[loop].equals("--ignore-aspect-ratio"))
+						config.setKeepAspectRatio(false);
+					else if (arg[loop].equals("--version") || arg[loop].equals("-version"))
 					{
 						System.out.println(getVersion());
 						System.exit(0);
 					}
-					else if (arg[loop].compareTo("--help") == 0 || arg[loop].compareTo("--h") == 0 )
+					else if (arg[loop].equals("--help") || arg[loop].equals("--h"))
 					{
 						showHelp();
 						System.exit(0);
