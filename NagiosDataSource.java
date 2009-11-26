@@ -12,9 +12,9 @@ public class NagiosDataSource
 	private URL url = null;
 	private String file = null;
 
-	public NagiosDataSource(String host, int port, NagiosVersion version)
+	public NagiosDataSource(String host, int port, NagiosVersion version, boolean compressed)
 	{
-		this.type = NagiosDataSourceType.TCP;
+		this.type = compressed ? NagiosDataSourceType.ZTCP : NagiosDataSourceType.TCP;
 		this.host = host;
 		this.port = port;
 		this.version = version;
@@ -41,13 +41,13 @@ public class NagiosDataSource
 
 	public String getHost()
 	{
-		assert type == NagiosDataSourceType.TCP;
+		assert type == NagiosDataSourceType.TCP || type == NagiosDataSourceType.ZTCP;
 		return host;
 	}
 
 	public int getPort()
 	{
-		assert type == NagiosDataSourceType.TCP;
+		assert type == NagiosDataSourceType.TCP || type == NagiosDataSourceType.ZTCP;
 		return port;
 	}
 

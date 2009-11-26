@@ -1,1 +1,1 @@
-public enum NagiosDataSourceType { TCP, HTTP, FILE, error }
+public enum NagiosDataSourceType { TCP, ZTCP, HTTP, FILE, error }

@@ -1,7 +1,6 @@
 /* Released under the GPL2. See license.txt for details. */
 package com.vanheusden.nagios;
 
-import java.util.*;
 import java.net.Socket;
 import java.net.URL;
 import java.io.InputStream;
@@ -10,6 +9,11 @@ import java.io.OutputStreamWriter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.FileReader;
+import java.net.HttpURLConnection;
+import java.util.*;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 /**
  * Class JavNag is the main class for obtaining and processing Nagios statusses.
@@ -422,13 +426,21 @@ public class JavNag
 		}
 	}
 
-	public void loadNagiosData(String host, int port, NagiosVersion nagiosVersion) throws Exception
+	public void loadNagiosData(String host, int port, NagiosVersion nagiosVersion, boolean compressed) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();
 		Socket socket = new Socket(host, port);
-		InputStreamReader inputStream = new InputStreamReader(socket.getInputStream());
-		BufferedReader in = new BufferedReader(inputStream);
+		BufferedReader in;
 		String line;
+
+		if (compressed)
+		{
+			in = new BufferedReader(new InputStreamReader(new GZIPInputStream(socket.getInputStream())));
+		}
+		else
+		{
+			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		}
 
 		while((line = in.readLine()) != null)
 			fileDump.add(line);
@@ -450,8 +462,33 @@ public class JavNag
 	public void loadNagiosData(URL url, NagiosVersion nagiosVersion) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();
-		InputStreamReader inputStream = new InputStreamReader(url.openStream());
-		BufferedReader in = new BufferedReader(inputStream);
+
+		HttpURLConnection HTTPConnection = (HttpURLConnection)url.openConnection();
+		HTTPConnection.setFollowRedirects(true);
+		HTTPConnection.setRequestProperty("Accept-Encoding", "gzip, deflate");
+		//establish connection, get response headers
+		HTTPConnection.connect();
+		//obtain the encoding returned by the server
+		String encoding = HTTPConnection.getContentEncoding();
+		InputStream inputStream;
+		//create the appropriate stream wrapper based on
+		//the encoding type
+		if (encoding != null && encoding.equalsIgnoreCase("gzip"))
+		{
+			System.out.println("GZIPed stream!");
+			inputStream = new GZIPInputStream(HTTPConnection.getInputStream());
+		}
+		else if (encoding != null && encoding.equalsIgnoreCase("deflate"))
+		{
+			System.out.println("Deflated stream!");
+			inputStream = new InflaterInputStream(HTTPConnection.getInputStream(), new Inflater(true));
+		}
+		else
+		{
+			inputStream = HTTPConnection.getInputStream();
+		}
+
+		BufferedReader in = new BufferedReader(new InputStreamReader(inputStream));
 		String line;
 
 		while((line = in.readLine()) != null)
@@ -493,9 +530,9 @@ public class JavNag
 	 * @param nagiosVersion	Nagios-version this file is from.
 	 * @see NagiosVersion
 	 */
-	public JavNag(String host, int port, NagiosVersion nagiosVersion) throws Exception
+	public JavNag(String host, int port, NagiosVersion nagiosVersion, boolean compressed) throws Exception
 	{
-		loadNagiosData(host, port, nagiosVersion);
+		loadNagiosData(host, port, nagiosVersion, compressed);
 	}
 
 	/**

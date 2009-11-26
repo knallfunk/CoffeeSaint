@@ -137,11 +137,16 @@ public class Gui extends JPanel
 					{
 						int curImgWidth = imageParameters[nr].getWidth();
 						int curImgHeight = imageParameters[nr].getHeight();
-						double curWMul = spacingX / curImgWidth;
-						double curHMul = spacingY / curImgHeight;
-						double curMultiplier = Math.min(curWMul, curHMul);
-						int newWidth  = (int)((double)curImgWidth  * curMultiplier);
-						int newHeight = (int)((double)curImgHeight * curMultiplier);
+						int newWidth  = (int)spacingX;
+						int newHeight = (int)spacingY;
+						if (config.getKeepAspectRatio())
+						{
+							double curWMul = spacingX / curImgWidth;
+							double curHMul = spacingY / curImgHeight;
+							double curMultiplier = Math.min(curWMul, curHMul);
+							newWidth  = (int)((double)curImgWidth  * curMultiplier);
+							newHeight = (int)((double)curImgHeight * curMultiplier);
+						}
 						plotX += Math.max(0, spacingX - newWidth) / 2;
 						plotY += Math.max(0, spacingY - newHeight) / 2;
 						g.drawImage(imageParameters[nr].getImage(), plotX, plotY, newWidth, newHeight, null);

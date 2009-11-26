@@ -306,6 +306,8 @@ class HTTPServer implements Runnable
 			String type = "?";
 			if (dataSource.getType() == NagiosDataSourceType.TCP)
 				type = "tcp";
+			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
+				type = "ztcp";
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 				type = "http";
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
@@ -320,7 +322,7 @@ class HTTPServer implements Runnable
 				version = "3";
 
 			String parameters = "?";
-			if (dataSource.getType() == NagiosDataSourceType.TCP)
+			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP)
 				parameters = dataSource.getHost() + " " + dataSource.getPort();
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 				parameters = dataSource.getURL().toString();
@@ -331,7 +333,7 @@ class HTTPServer implements Runnable
 			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD></TR>\n");
 		}
 		reply.add("<TR>\n");
-		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
+		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"ztcp\">compressed tcp</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
 		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\">3</OPTION></SELECT></TD>\n");
 		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"server-add-parameters\"></TD>\n");
 		reply.add("</TR>\n");
@@ -348,6 +350,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + isChecked(config.getRandomWebcam()) + "></TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"cam-cols\" VALUE=\"" + config.getCamCols() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"cam-rows\" VALUE=\"" + config.getCamRows() + "\"></TD></TR>\n");
+		reply.add("<TR><TD>Keep aspect ratio:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"keep-aspect-ratio\" VALUE=\"on\" " + isChecked(config.getKeepAspectRatio()) + "></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
@@ -472,7 +475,7 @@ class HTTPServer implements Runnable
 		config.setVerbose(getCheckBox(socket, requestData, "verbose"));
 
 		// add server
-		String server_add_parameters = getField(socket, requestData, "server-add-parameters");
+		String server_add_parameters = getFieldDecoded(socket, requestData, "server-add-parameters");
 		if (server_add_parameters.equals("") == false)
 		{
 			NagiosDataSourceType ndst = null;
@@ -481,6 +484,8 @@ class HTTPServer implements Runnable
 			String type = getField(socket, requestData, "server-add-type");
 			if (type.equals("tcp"))
 				ndst = NagiosDataSourceType.TCP;
+			else if (type.equals("ztcp"))
+				ndst = NagiosDataSourceType.ZTCP;
 			else if (type.equals("http"))
 				ndst = NagiosDataSourceType.HTTP;
 			else if (type.equals("file"))
@@ -500,7 +505,7 @@ class HTTPServer implements Runnable
 			}
 			else
 			{
-				if (ndst == NagiosDataSourceType.TCP)
+				if (ndst == NagiosDataSourceType.TCP || ndst == NagiosDataSourceType.ZTCP)
 				{
 					int port = 33333;
 					int space = server_add_parameters.indexOf(" ");
@@ -510,7 +515,7 @@ class HTTPServer implements Runnable
 						server_add_parameters = server_add_parameters.substring(0, space);
 					}
 
-					config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, nv));
+					config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, nv, ndst == NagiosDataSourceType.ZTCP));
 				}
 				else if (ndst == NagiosDataSourceType.HTTP)
 					config.addNagiosDataSource(new NagiosDataSource(new URL(URLDecoder.decode(server_add_parameters, "US-ASCII")), nv));
@@ -561,6 +566,8 @@ class HTTPServer implements Runnable
 			System.out.println("Setting number of cam-cols to: " + camCols);
 			config.setCamCols(camCols);
 		}
+
+		config.setKeepAspectRatio(getCheckBox(socket, requestData, "keep-aspect-ratio"));
 
 		reply.add("<BR>\n");
 		reply.add("Form processed.<BR>\n");

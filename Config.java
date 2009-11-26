@@ -50,6 +50,7 @@ public class Config
 	private int camRows, camCols;
 	private boolean verbose;
 	private boolean fullscreen = false;
+	private boolean keepAspectRatio;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -103,6 +104,7 @@ public class Config
 		camRows = 1;
 		camCols = 1;
 		verbose = false;
+		keepAspectRatio = true;
 
 		unlock();
 	}
@@ -206,11 +208,11 @@ public class Config
 							nds = new NagiosDataSource(new URL(parameters[2]), nv);
 						else if (type.equalsIgnoreCase("file"))
 							nds = new NagiosDataSource(parameters[2], nv);
-						else if (type.equalsIgnoreCase("tcp"))
+						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
 						{
 							String host = parameters[2];
 							int port = Integer.valueOf(parameters[3]);
-							nds = new NagiosDataSource(host, port, nv);
+							nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
 						}
 						else
 							throw new Exception("Data source-type '" + type + "' not understood.");
@@ -263,6 +265,8 @@ public class Config
 						setCamCols(Integer.valueOf(data));
 					else if (name.equals("prefer"))
 						loadPrefers(data);
+					else if (name.equals("ignore-aspect-ratio"))
+						setKeepAspectRatio(!(data.equalsIgnoreCase("true") ? true : false));
 					else if (name.equals("sort-order"))
 					{
 						String field = null;
@@ -364,6 +368,8 @@ public class Config
 			String type = "?";
 			if (dataSource.getType() == NagiosDataSourceType.TCP)
 				type = "tcp";
+			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
+				type = "ztcp";
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 				type = "http";
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
@@ -378,7 +384,7 @@ public class Config
 				version = "3";
 
 			String parameters = "?";
-			if (dataSource.getType() == NagiosDataSourceType.TCP)
+			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP)
 				parameters = dataSource.getHost() + " " + dataSource.getPort();
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 				parameters = dataSource.getURL().toString();
@@ -390,6 +396,7 @@ public class Config
 
 		writeLine(out, "cam-rows = " + getCamRows());
 		writeLine(out, "cam-cols = " + getCamCols());
+		writeLine(out, "ignore-aspect-ratio = " + (!getKeepAspectRatio() ? "true" : "false"));
 
 		out.close();
 	}
@@ -850,7 +857,7 @@ public class Config
 		{
 
 			String parameters = "?";
-			if (ndsList.get(index).getType() == NagiosDataSourceType.TCP)
+			if (ndsList.get(index).getType() == NagiosDataSourceType.TCP || ndsList.get(index).getType() == NagiosDataSourceType.ZTCP)
 				parameters = ndsList.get(index).getHost() + " " + ndsList.get(index).getPort();
 			else if (ndsList.get(index).getType() == NagiosDataSourceType.HTTP)
 				parameters = ndsList.get(index).getURL().toString();
@@ -1080,6 +1087,22 @@ public class Config
 		boolean copy;
 		lock();
 		copy = fullscreen;
+		unlock();
+		return copy;
+	}
+
+	public void setKeepAspectRatio(boolean kar)
+	{
+		lock();
+		this.keepAspectRatio = kar;
+		unlock();
+	}
+
+	public boolean getKeepAspectRatio()
+	{
+		boolean copy;
+		lock();
+		copy = keepAspectRatio;
 		unlock();
 		return copy;
 	}
