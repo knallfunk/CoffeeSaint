@@ -20,6 +20,7 @@ public class Gui extends JPanel
 	final Config config;
 	final CoffeeSaint coffeeSaint;
 	final Statistics statistics;
+	BufferedImage currentHeader;
 
 	boolean lastState = false;	// false: no problems
 	// because making a frame visible already causes
@@ -34,7 +35,7 @@ public class Gui extends JPanel
 		this.statistics = statistics;
 	}
 
-	void drawRow(Graphics g, String msg, int row, String state, Color bgColor)
+	void drawRow(Graphics g, int windowWidth, String msg, int row, String state, Color bgColor)
 	{
 		final int totalNRows = config.getNRows();
 		final int rowHeight = getHeight() / totalNRows;
@@ -42,7 +43,7 @@ public class Gui extends JPanel
 		final int y = rowHeight * row;
 
 		g.setColor(coffeeSaint.stateToColor(state));
-		g.fillRect(0, y, getWidth(), rowHeight);
+		g.fillRect(0, y, windowWidth, rowHeight);
 
 		g.setColor(config.getTextColor());
 
@@ -59,6 +60,18 @@ public class Gui extends JPanel
 		int plotY = y + (int)newAsc;
 		System.out.println("row " + row + ", " + newSize + "|" + newAsc + " -> " + plotY + " RH: " + rowHeight);
 		g.drawString(msg, 0, plotY);
+	}
+
+	public BufferedImage createHeaderImage(String header, String state, Color bgColor, int rowHeight)
+	{
+		BufferedImage dummy = new BufferedImage(65536, rowHeight, BufferedImage.TYPE_INT_RGB);
+		Graphics g2 = dummy.createGraphics();
+		int imageWidth = g2.getFontMetrics(new Font(config.getFontName(), Font.PLAIN, rowHeight)).stringWidth(header);
+		BufferedImage output = new BufferedImage(imageWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
+
+		drawRow(output.createGraphics(), imageWidth, header, 0, state, bgColor);
+
+		return output;
 	}
 
 	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize, int counter)
@@ -195,9 +208,9 @@ public class Gui extends JPanel
 			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
 
 			if (config.getVerbose())
-				drawRow(g, "Loading image(s)", 0, "0", bgColor);
+				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor);
 			startLoadTs = System.currentTimeMillis();
-			ImageParameters [] imageParameters = coffeeSaint.loadImage(this, g);
+			ImageParameters [] imageParameters = coffeeSaint.loadImage(this, windowWidth, g);
 			endLoadTs = System.currentTimeMillis();
 
 			took = (double)(endLoadTs - startLoadTs) / 1000.0;
@@ -212,9 +225,9 @@ public class Gui extends JPanel
 
 			/* find the problems in the nagios data */
 			if (config.getVerbose())
-				drawRow(g, "Loading Nagios data", 0, "0", bgColor);
+				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor);
 			coffeeSaint.lockProblems();
-			coffeeSaint.loadNagiosData(this, g);
+			coffeeSaint.loadNagiosData(this, windowWidth, g);
 			coffeeSaint.findProblems();
 			java.util.List<Problem> problems = coffeeSaint.getProblems();
 
@@ -238,7 +251,10 @@ public class Gui extends JPanel
 			if (config.getShowHeader())
 			{
 				String header = coffeeSaint.getScreenHeader(javNag, rightNow);
-				drawRow(g, header, curNRows++, problems.size() == 0 ? "0" : "255", bgColor);
+				if (config.getScrollingHeader())
+					currentHeader = createHeaderImage(header, problems.size() == 0 ? "0" : "255", bgColor, rowHeight);
+				else
+					drawRow(g, windowWidth, header, curNRows++, problems.size() == 0 ? "0" : "255", bgColor);
 			}
 
 			for(Problem currentProblem : problems)
@@ -252,7 +268,7 @@ public class Gui extends JPanel
 
 				System.out.println(output);
 
-				drawRow(g, output, curNRows, currentProblem.getCurrent_state(), bgColor);
+				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor);
 				curNRows++;
 
 				if (curNRows == config.getNRows())
@@ -311,6 +327,7 @@ public class Gui extends JPanel
 	{
 		final Graphics g = getGraphics();
 		long lastLeft = -1;
+		int headerScrollerX = 0;
 
 		for(;;)
 		{
@@ -325,16 +342,47 @@ public class Gui extends JPanel
 				System.out.println("*** Update PROBLEMS " + left);
 				drawProblems(g, getWidth(), getHeight(), rowHeight, characterSize);
 			}
-			else if (config.getCounter() && lastLeft != left)
+
+			if (currentHeader != null)
 			{
-				System.out.println("*** update COUNTER " + left);
+				Graphics g2d = (Graphics2D)g;
+				int imgWidth = currentHeader.getWidth();
+				int pixelsNeeded = getWidth() - 100;
+				int pixelsAvail = imgWidth - headerScrollerX;
+				int drawX = 0, sourceX = headerScrollerX;
+				while(pixelsNeeded > 0)
+				{
+					int plotN = Math.min(pixelsNeeded, pixelsAvail);
+
+					g2d.drawImage((Image)currentHeader, drawX, 0, drawX + pixelsAvail, rowHeight, sourceX, 0, sourceX + pixelsAvail, rowHeight, Color.GRAY, null);
+
+					pixelsNeeded -= plotN;
+					pixelsAvail -= plotN;
+					drawX += plotN;
+					sourceX += plotN;
+
+					if (pixelsAvail <= 0)
+					{
+						pixelsAvail = imgWidth;
+						sourceX = 0;
+					}
+				}
+
+				headerScrollerX += config.getScrollingHeaderPixelsPerSecond() / 25;
+				if (headerScrollerX >= imgWidth)
+					headerScrollerX -= imgWidth;
+			}
+
+			if (config.getCounter() && lastLeft != left && currentHeader == null)
+			{
 				drawCounter(g, getWidth(), getHeight(), rowHeight, characterSize, (int)left);
 				lastLeft = left;
 			}
 
-			// scroller FIXME
-
-			Thread.sleep(1000);
+			if (currentHeader != null)
+				Thread.sleep(40);
+			else
+				Thread.sleep(1000);
 		}
 	}
 }

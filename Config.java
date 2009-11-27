@@ -51,6 +51,8 @@ public class Config
 	private boolean verbose;
 	private boolean fullscreen = false;
 	private boolean keepAspectRatio;
+	private boolean scrollingHeader;
+	private int scrollingHeaderPixelsPerSecond;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -105,6 +107,8 @@ public class Config
 		camCols = 1;
 		verbose = false;
 		keepAspectRatio = true;
+		scrollingHeader = false;
+		scrollingHeaderPixelsPerSecond = 100;
 
 		unlock();
 	}
@@ -257,6 +261,10 @@ public class Config
 						setNRows(Integer.valueOf(data));
 					else if (name.equals("interval"))
 						setSleepTime(Integer.valueOf(data));
+					else if (name.equals("scrolling-header"))
+						setScrollingHeader(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("scroll-pixels-per-sec"))
+						setScrollingHeaderPixelsPerSecond(Integer.valueOf(data));
 					else if (name.equals("image"))
 						addImageUrl(data);
 					else if (name.equals("cam-rows"))
@@ -353,6 +361,8 @@ public class Config
 		if (getHeaderSet() == true)
 			writeLine(out, "header = " + getHeader());
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
+		writeLine(out, "scrolling-header = " + (getScrollingHeader() ? "true" : "false"));
+		writeLine(out, "scroll-pixels-per-sec = " + getScrollingHeaderPixelsPerSecond());
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
 		String sort = "";
@@ -1103,6 +1113,38 @@ public class Config
 		boolean copy;
 		lock();
 		copy = keepAspectRatio;
+		unlock();
+		return copy;
+	}
+
+	public void setScrollingHeader(boolean sh)
+	{
+		lock();
+		this.scrollingHeader = sh;
+		unlock();
+	}
+
+	public boolean getScrollingHeader()
+	{
+		boolean copy;
+		lock();
+		copy = scrollingHeader;
+		unlock();
+		return copy;
+	}
+
+	public void setScrollingHeaderPixelsPerSecond(int pps)
+	{
+		lock();
+		this.scrollingHeaderPixelsPerSecond = pps;
+		unlock();
+	}
+
+	public int getScrollingHeaderPixelsPerSecond()
+	{
+		int copy;
+		lock();
+		copy = scrollingHeaderPixelsPerSecond;
 		unlock();
 		return copy;
 	}
