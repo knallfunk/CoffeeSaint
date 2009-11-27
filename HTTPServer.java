@@ -194,7 +194,7 @@ class HTTPServer implements Runnable
 		try
 		{
 			socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/jpeg\r\n\r\n".getBytes());
-			Image img = coffeeSaint.loadImage(null, null)[0].getImage();
+			Image img = coffeeSaint.loadImage(null, -1, null)[0].getImage();
 			ImageIO.write(createBufferedImage(img), "jpg", socket.getOutputStream());
 			socket.close();
 		}
@@ -283,13 +283,15 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Background color:</TD><TD>\n");
 		colorSelectorHTML(reply, "backgroundColor", config.getBackgroundColorName());
 		reply.add("</TD><TD></TD></TR>");
-		reply.add("<TR><TD>Background color OK-status:</TD><TD><SELECT NAME=\"bgColorOk\">\n");
+		reply.add("<TR><TD>Background color OK-status:</TD><TD>\n");
 		colorSelectorHTML(reply, "bgColorOk", config.getBackgroundColorOkStatusName());
 		reply.add("</TD><TD></TD></TR>");
-		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
+		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingHeaderPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD>\n");
 		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder());
 		reply.add("</TD><TD></TD></TR>");
@@ -462,6 +464,18 @@ class HTTPServer implements Runnable
 
 		config.setHeader(getFieldDecoded(socket, requestData, "header"));
 
+		config.setScrollingHeader(getCheckBox(socket, requestData, "scrolling-header"));
+
+		String scrollSpeed = getField(socket, requestData, "scroll-pixels-per-sec");
+		if (scrollSpeed.equals("") == false)
+		{
+			int newScrollSpeed = Integer.valueOf(scrollSpeed);
+			if (newScrollSpeed < 1)
+				reply.add("New pixels/sec-value is invalid, must be >= 1<BR>\n");
+			else
+				config.setScrollingHeaderPixelsPerSecond(newScrollSpeed);
+		}
+
 		config.setHostIssue(getFieldDecoded(socket, requestData, "host-issue"));
 
 		config.setServiceIssue(getFieldDecoded(socket, requestData, "service-issue"));
@@ -584,6 +598,62 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+	public void sendReply_cgibin_listall_cgi(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TR><TD><B>Host</B></TD><TD><B>host status</B></TD><TD><B>Service</B></TD><TD><B>service status</B></TD></TR>\n");
+
+		try
+		{
+			coffeeSaint.lockProblems();
+			coffeeSaint.loadNagiosData(null, -1, null);
+			JavNag javNag = coffeeSaint.getNagiosData();
+
+			for(Host currentHost : javNag.getListOfHosts())
+			{
+				String hostState = currentHost.getParameter("state_type").equals("1") ? currentHost.getParameter("current_state") : "0";
+				String htmlHostStateColor = htmlColorString(coffeeSaint.stateToColor(hostState.equals("1") ? "2" : hostState));
+
+				reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD BGCOLOR=\"#" + htmlHostStateColor + "\">" + coffeeSaint.hostState(hostState) + "</TD>");
+
+				boolean first = true;
+				for(Service currentService : currentHost.getServices())
+				{
+					String serviceState = currentService.getParameter("state_type").equals("1") ? currentService.getParameter("current_state") : "0";
+					String htmlServiceStateColor = htmlColorString(coffeeSaint.stateToColor(serviceState));
+
+					if (first)
+					{
+						first = false;
+						reply.add("<TD>" + currentService.getServiceName() + "</TD><TD BGCOLOR=\"#" + htmlServiceStateColor + "\">" + coffeeSaint.serviceState(serviceState) + "</TD></TR>\n");
+					}
+					else
+					{
+						reply.add("<TR><TD></TD><TD></TD><TD>" + currentService.getServiceName() + "</TD><TD BGCOLOR=\"#" + htmlServiceStateColor + "\">" + coffeeSaint.serviceState(serviceState) + "</TD></TR>\n");
+					}
+				}
+			}
+		}
+		catch(Exception e)
+		{
+			throw e;
+		}
+		finally
+		{
+			coffeeSaint.unlockProblems();
+		}
+		reply.add("</TABLE>\n");
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
 	public void sendReply_root(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -594,8 +664,9 @@ class HTTPServer implements Runnable
 		reply.add("<TABLE BORDER=\"1\">\n");
 
 		// stats
-		reply.add("<TR><TH ROWSPAN=\"2\" BGCOLOR=\"#99a0FF\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99a0FF\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/log.cgi\">List of connecting hosts</A></TD></TR>\n");
+		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-all.cgi\">List of hosts/services</A></TD></TR>\n");
 
 		// configure
 		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99b0ff\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
@@ -661,16 +732,16 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Links</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>CoffeeSaint website (for updates):</TD><TD><A HREF=\"http://vanheusden.com/java/CoffeeSaint/\">http://vanheusden.com/java/CoffeeSaint/</A></TD></TR>\n");
-								       reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
-														 reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
-																					    reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
-																												       reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
-																																			// reply.add("<TR><TD></TD><TD></TD></TR>\n");
-																																			reply.add("</TABLE>\n");
+		reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
+		reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
+		reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
+		reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
+		// reply.add("<TR><TD></TD><TD></TD></TR>\n");
+		reply.add("</TABLE>\n");
 
-																																			addPageTail(reply, true);
+		addPageTail(reply, true);
 
-																																			socket.sendReply(reply);
+		socket.sendReply(reply);
 	}
 	public void sendReply_cgibin_statistics_cgi(MyHTTPServer socket) throws Exception
 	{
@@ -715,7 +786,7 @@ class HTTPServer implements Runnable
 			Calendar rightNow = Calendar.getInstance();
 
 			coffeeSaint.lockProblems();
-			coffeeSaint.loadNagiosData(null, null);
+			coffeeSaint.loadNagiosData(null, -1, null);
 			coffeeSaint.findProblems();
 
 			JavNag javNag = coffeeSaint.getNagiosData();
@@ -881,6 +952,7 @@ class HTTPServer implements Runnable
 		reply.add("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem\n");
 		reply.add("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping\n");
 		reply.add("  %PREDICT/%HISTORICAL      \n");
+		reply.add("  %HOSTDURATION/%SERVICEDURATION how long has a host/service been down\n");
 		reply.add("  %OUTPUT                   Plugin output\n");
 		reply.add("</PRE>\n");
 
@@ -986,6 +1058,8 @@ class HTTPServer implements Runnable
 						sendReply_links_html(socket);
 					else if (url.equals("/help-escapes.html"))
 						sendReply_helpescapes_html(socket);
+					else if (url.equals("/cgi-bin/list-all.cgi"))
+						sendReply_cgibin_listall_cgi(socket);
 					else
 					{
 						sendReply_404(socket, url);
