@@ -175,26 +175,18 @@ public class Gui extends JPanel
 		}
 	}
 
-	public void showCoffeeSaintProblem(Exception e, Graphics g, int windowWidth, int characterSize, int rowHeight)
+	public void showCoffeeSaintProblem(Exception e, Graphics g, int windowWidth, int rowHeight)
 	{
 		System.out.println("Graphics: " + g);
 
 		/* block in upper right to inform about error */
 		g.setColor(Color.RED);
-		g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
+		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
-		final String msg = "Error: " + e;
-		final int characterSizeError = Math.max(10, windowWidth / msg.length());
-		final Font f = new Font(config.getFontName(), Font.PLAIN, characterSizeError);
-		g.setFont(f);
-		final int y = rowHeight * (config.getNRows() - 1);
-		g.setColor(Color.RED);
-		g.fillRect(0, y, windowWidth, rowHeight);
-		g.setColor(Color.BLACK);
-		g.drawString(msg, 0, y + characterSizeError);
+		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY);
 	}
 
-	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize)
+	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
 	{
 		try
 		{
@@ -205,7 +197,7 @@ public class Gui extends JPanel
 
 			/* block in upper right to inform about load */
 			g.setColor(Color.BLUE);
-			g.fillRect(windowWidth - characterSize, 0, characterSize, characterSize);
+			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
 			if (config.getVerbose())
 				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor);
@@ -218,9 +210,7 @@ public class Gui extends JPanel
 			statistics.addToTotalImageLoadTime(took);
 
 			String fontName = config.getFontName();
-			System.out.println("Current font name: " + fontName);
-			System.out.println("Current character size: " + characterSize);
-			final Font f = new Font(fontName, Font.PLAIN, characterSize);
+			final Font f = new Font(fontName, Font.PLAIN, rowHeight);
 			g.setFont(f);
 
 			/* find the problems in the nagios data */
@@ -309,7 +299,7 @@ public class Gui extends JPanel
 			CoffeeSaint.showException(e);
 
 			if (g != null)
-				showCoffeeSaintProblem(e, g, windowWidth, characterSize, rowHeight);
+				showCoffeeSaintProblem(e, g, windowWidth, rowHeight);
 		}
 	}
 
@@ -320,7 +310,7 @@ public class Gui extends JPanel
 		final int characterSize = Math.max(10, rowHeight - 1);
 
 		System.out.println("*** Paint PROBLEMS ");
-		drawProblems(g, getWidth(), getHeight(), rowHeight, characterSize);
+		drawProblems(g, getWidth(), getHeight(), rowHeight);
 	}
 
 	public void guiLoop() throws Exception
@@ -340,10 +330,10 @@ public class Gui extends JPanel
 			{
 				lastRefresh = now;
 				System.out.println("*** Update PROBLEMS " + left);
-				drawProblems(g, getWidth(), getHeight(), rowHeight, characterSize);
+				drawProblems(g, getWidth(), getHeight(), rowHeight);
 			}
 
-			if (currentHeader != null)
+			if (currentHeader != null && config.getScrollingHeader())
 			{
 				Graphics g2d = (Graphics2D)g;
 				int imgWidth = currentHeader.getWidth();
@@ -379,7 +369,7 @@ public class Gui extends JPanel
 				lastLeft = left;
 			}
 
-			if (currentHeader != null)
+			if (currentHeader != null && config.getScrollingHeader())
 				Thread.sleep(40);
 			else
 				Thread.sleep(1000);
