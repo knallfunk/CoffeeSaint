@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.8-beta002, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.8-beta003, (C) 2009 by folkert@vanheusden.com";
 
 	static Config config;
 
@@ -277,13 +277,13 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		return Color.ORANGE;
 	}
 
-	public void drawLoadStatus(Gui gui, Graphics g, String message)
+	public void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.drawRow(g, message, 0, "0", config.getBackgroundColor());
+			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor());
 	}
 
-	public ImageParameters [] loadImage(Gui gui, Graphics g) throws Exception
+	public ImageParameters [] loadImage(Gui gui, int windowWidth, Graphics g) throws Exception
 	{
 		int nr;
 		java.util.List<String> imageUrls = config.getImageUrls();
@@ -334,7 +334,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		{
 			String loadImage = imageUrls.get(indexes[nr]);
 			System.out.println("Load image(1) " + loadImage);
-			drawLoadStatus(gui, g, "Start load img " + loadImage);
+			drawLoadStatus(gui, windowWidth, g, "Start load img " + loadImage);
 
 			if (loadImage.length() >= 8 && (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://")))
 				img[nr] = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
@@ -345,7 +345,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
 		{
 			String loadImage = imageUrls.get(indexes[nr]);
-			drawLoadStatus(gui, g, "Load image " + loadImage);
+			drawLoadStatus(gui, windowWidth, g, "Load image " + loadImage);
 
 			new ImageIcon(img[nr]); //loads the image
 			Toolkit.getDefaultToolkit().sync();
@@ -409,7 +409,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		}
 	}
 
-	synchronized public void loadNagiosData(Gui gui, Graphics g) throws Exception
+	synchronized public void loadNagiosData(Gui gui, int windowWidth, Graphics g) throws Exception
 	{
 		javNag = new JavNag();
 
@@ -422,26 +422,26 @@ System.out.println(ts + ": " + (seconds * 1000L));
 			{
 				String source = dataSource.getHost() + " " + dataSource.getPort();
 				System.out.print(source);
-				drawLoadStatus(gui, g, "Load Nagios " + source);
+				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
 				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), false);
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
 			{
 				String source = dataSource.getHost() + " " + dataSource.getPort();
 				System.out.print(source);
-				drawLoadStatus(gui, g, "zLoad Nagios " + source);
+				drawLoadStatus(gui, windowWidth, g, "zLoad Nagios " + source);
 				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), true);
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 			{
 				System.out.print(dataSource.getURL());
-				drawLoadStatus(gui, g, "Load Nagios " + dataSource.getURL());
+				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getURL());
 				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion());
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 			{
 				System.out.print(dataSource.getFile());
-				drawLoadStatus(gui, g, "Load Nagios " + dataSource.getFile());
+				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getFile());
 				javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion());
 			}
 			else
@@ -560,6 +560,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		System.out.println("--cam-cols    Number of cams per row");
 		System.out.println("--cam-rows    Number of rows with cams");
 		System.out.println("--ignore-aspect-ratio Grow/shrink all webcams with the same factor. In case you have webcams with different dimensions.");
+		System.out.println("--scrolling-header  In case there's more information to put into it than what fits on the screen.");
 		System.out.println("--verbose     Show what it is doing");
 		System.out.println("");
 		System.out.print("Known colors:");
@@ -662,6 +663,8 @@ System.out.println(ts + ": " + (seconds * 1000L));
 					}
 					else if (arg[loop].equals("--no-header"))
 						config.setShowHeader(false);
+					else if (arg[loop].equals("--scrolling-header"))
+						config.setScrollingHeader(true);
 					else if (arg[loop].equals("--fullscreen"))
 						config.setFullscreen(true);
 					else if (arg[loop].equals("--header"))
