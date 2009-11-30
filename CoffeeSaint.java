@@ -17,7 +17,9 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.8-beta003, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.8, (C) 2009 by folkert@vanheusden.com";
+
+	public static Log log = new Log(250);
 
 	static Config config;
 
@@ -51,17 +53,16 @@ public class CoffeeSaint
 
 	public static void showException(Exception e)
 	{
-		System.err.println("Exception: " + e);
-		System.err.println("Details: " + e.getMessage());
-		System.err.println("Stack-trace:");
+		log.add("Exception: " + e);
+		log.add("Details: " + e.getMessage());
+		log.add("Stack-trace:");
 		for(StackTraceElement ste: e.getStackTrace())
 		{
-			System.err.println(" " + ste.getClassName() + ", "
-					+ ste.getFileName() + ", "
-					+ ste.getLineNumber() + ", "
-					+ ste.getMethodName() + ", "
-					+ (ste.isNativeMethod() ?
-						"is native method" : "NOT a native method"));
+			log.add(" " + ste.getClassName() + ", "
+				+ ste.getFileName() + ", "
+				+ ste.getLineNumber() + ", "
+				+ ste.getMethodName() + ", "
+				+ (ste.isNativeMethod() ? "is native method" : "NOT a native method"));
 		}
 	}
 
@@ -110,7 +111,6 @@ public class CoffeeSaint
 
 		Calendar then = Calendar.getInstance();
 		then.setTimeInMillis(seconds * 1000L);
-System.out.println(ts + ": " + (seconds * 1000L));
 
 		return "" + then.get(Calendar.YEAR) + "/" + then.get(Calendar.MONTH) + "/" + then.get(Calendar.DAY_OF_MONTH) + " " + make2Digit("" + then.get(Calendar.HOUR_OF_DAY)) + ":" + make2Digit("" + then.get(Calendar.MINUTE)) + ":" + make2Digit("" + then.get(Calendar.SECOND));
 	}
@@ -212,7 +212,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 	public String processStringWithEscapes(String in, JavNag javNag, Calendar rightNow, Problem problem)
 	{
 		final Totals totals = javNag.calculateStatistics();
-		System.out.println("" + totals.getNHosts() + " hosts, " + totals.getNServices() + " services");
+		log.add("" + totals.getNHosts() + " hosts, " + totals.getNServices() + " services");
 		boolean loadingCmd = false;
 		String cmd = "", output = "";
 
@@ -273,7 +273,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		else if (state.equals("255") == true)
 			return config.getBackgroundColor();
 
-		System.out.println("Unknown state: " + state);
+		log.add("Unknown state: " + state);
 		return Color.ORANGE;
 	}
 
@@ -333,7 +333,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
 		{
 			String loadImage = imageUrls.get(indexes[nr]);
-			System.out.println("Load image(1) " + loadImage);
+			log.add("Load image(1) " + loadImage);
 			drawLoadStatus(gui, windowWidth, g, "Start load img " + loadImage);
 
 			if (loadImage.length() >= 8 && (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://")))
@@ -368,7 +368,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 		if (value != null)
 			value = Math.ceil(value * 10.0) / 10.0;
 
-		System.out.println("Prediction value: " + value);
+		log.add("Prediction value: " + value);
 
 		return value;
 	}
@@ -382,7 +382,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 			Double value = predictProblemCount(rightNow);
 			if (value != null && value != 0.0)
 			{
-				System.out.println("Expecting " + value + " problems after next interval");
+				log.add("Expecting " + value + " problems after next interval");
 				int red = 100 + (int)(value * (100.0 / (double)config.getNRows()));
 				if (red < 0)
 					red = 0;
@@ -401,7 +401,7 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 		if ((System.currentTimeMillis() - lastPredictorDump)  > 1800000)
 		{
-			System.out.println("Dumping brain to " + config.getBrainFileName());
+			log.add("Dumping brain to " + config.getBrainFileName());
 
 			predictor.dumpBrainToFile(config.getBrainFileName());
 
@@ -417,43 +417,44 @@ System.out.println(ts + ": " + (seconds * 1000L));
 
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
 		{
-			System.out.print("Loading data from: ");
+			String logStr = "Loading data from: ";
 			if (dataSource.getType() == NagiosDataSourceType.TCP)
 			{
 				String source = dataSource.getHost() + " " + dataSource.getPort();
-				System.out.print(source);
+				logStr += source;
 				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
 				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), false);
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
 			{
 				String source = dataSource.getHost() + " " + dataSource.getPort();
-				System.out.print(source);
+				logStr += source;
 				drawLoadStatus(gui, windowWidth, g, "zLoad Nagios " + source);
 				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), true);
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 			{
-				System.out.print(dataSource.getURL());
+				logStr += dataSource.getURL();
 				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getURL());
 				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion());
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 			{
-				System.out.print(dataSource.getFile());
+				logStr += dataSource.getFile();
 				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getFile());
 				javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion());
 			}
 			else
 				throw new Exception("Unknown data-source type: " + dataSource.getType());
 
-			System.out.println(" - done.");
+			logStr += " - done.";
+			log.add(logStr);
 		}
 
 		long endLoadTs = System.currentTimeMillis();
 
 		double took = (double)(endLoadTs - startLoadTs) / 1000.0;
-		System.out.println("Took " + took + "s to load status data");
+		log.add("Took " + took + "s to load status data");
 
 		statistics.addToTotalRefreshTime(took);
 		statistics.addToNRefreshes(1);

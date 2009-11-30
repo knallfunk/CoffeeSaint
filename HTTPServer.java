@@ -129,7 +129,7 @@ class HTTPServer implements Runnable
 			{
 				InputStream is = getClass().getClassLoader().getResourceAsStream(fileName);
 				int length = is.available();
-				System.out.println("Sending " + fileName + " which is " + length + " bytes long and of type " + mimeType + ".");
+				CoffeeSaint.log.add("Sending " + fileName + " which is " + length + " bytes long and of type " + mimeType + ".");
 				byte [] icon = new byte[length];
 				while(length > 0)
 				{
@@ -380,7 +380,7 @@ class HTTPServer implements Runnable
 	{
 		HTTPRequestData field = socket.findRecord(requestData, fieldName);
 		if (field != null && field.getData() != null)
-			return field.getData();
+			return field.getData().trim();
 
 		return "";
 	}
@@ -407,7 +407,7 @@ class HTTPServer implements Runnable
 				reply.add("New number of rows invalid, must be >= 3.<BR>\n");
 			else
 			{
-				System.out.println("Setting new # rows to: " + newNRows);
+				CoffeeSaint.log.add("Setting new # rows to: " + newNRows);
 				config.setNRows(newNRows);
 			}
 		}
@@ -428,7 +428,7 @@ class HTTPServer implements Runnable
 				reply.add("New refresh interval is invalid, must be >= 1<BR>\n");
 			else
 			{
-				System.out.println("Setting sleep interval to: " + newSleepTime);
+				CoffeeSaint.log.add("Setting sleep interval to: " + newSleepTime);
 				config.setSleepTime(newSleepTime);
 			}
 		}
@@ -439,7 +439,9 @@ class HTTPServer implements Runnable
 
 		config.setCounter(getCheckBox(socket, requestData, "counter"));
 
-		config.addImageUrl(getFieldDecoded(socket, requestData, "newWebcam"));
+		String newWebcam = getFieldDecoded(socket, requestData, "newWebcam");
+		if (newWebcam.equals("") == false)
+			config.addImageUrl(newWebcam);
 
 		for(HTTPRequestData webcam : requestData)
 		{
@@ -564,7 +566,7 @@ class HTTPServer implements Runnable
 			else if (camRows > 8)
 				camRows = 8;
 
-			System.out.println("Setting number of cam-rows to: " + camRows);
+			CoffeeSaint.log.add("Setting number of cam-rows to: " + camRows);
 			config.setCamRows(camRows);
 		}
 
@@ -577,7 +579,7 @@ class HTTPServer implements Runnable
 			else if (camCols > 8)
 				camCols = 8;
 
-			System.out.println("Setting number of cam-cols to: " + camCols);
+			CoffeeSaint.log.add("Setting number of cam-cols to: " + camCols);
 			config.setCamCols(camCols);
 		}
 
@@ -594,6 +596,25 @@ class HTTPServer implements Runnable
 		// in case the number of rows has changed or so
 		if (config.getRunGui())
 			gui.paint(gui.getGraphics());
+
+		socket.sendReply(reply);
+	}
+
+	public void sendReply_cgibin_listlog_cgi(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		reply.add("<H2>Log</H2>");
+		reply.add("<PRE>\n");
+		List<String> log = CoffeeSaint.log.get();
+		for(int index=log.size()-1; index>=0; index--)
+			reply.add(log.get(index) + "\n");
+		reply.add("</PRE>\n");
+
+		addPageTail(reply, true);
 
 		socket.sendReply(reply);
 	}
@@ -664,9 +685,10 @@ class HTTPServer implements Runnable
 		reply.add("<TABLE BORDER=\"1\">\n");
 
 		// stats
-		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99a0FF\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"4\" BGCOLOR=\"#99a0FF\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/log.cgi\">List of connecting hosts</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-all.cgi\">List of hosts/services</A></TD></TR>\n");
+		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-log.cgi\">Show log</A></TD></TR>\n");
 
 		// configure
 		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99b0ff\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
@@ -982,12 +1004,12 @@ class HTTPServer implements Runnable
 
 		try
 		{
-			System.out.println("Listening on " + adapter + ":" + port);
+			CoffeeSaint.log.add("Listening on " + adapter + ":" + port);
 			socket = new MyHTTPServer(adapter, port);
 
 			for(;;)
 			{
-				System.out.println("Waiting for connection");
+				CoffeeSaint.log.add("Waiting for connection");
 				try
 				{
 					List<HTTPRequestData> request = socket.acceptConnectionGetRequest();
@@ -998,7 +1020,7 @@ class HTTPServer implements Runnable
 						url = url.substring(0, space);
 
 					InetSocketAddress remoteAddress = socket.getRemoteSocketAddress();
-					System.out.println(formatDate(Calendar.getInstance()) + " HTTP " + remoteAddress.toString().substring(1) + " " + requestType + "-request for: " + url);
+					CoffeeSaint.log.add(formatDate(Calendar.getInstance()) + " HTTP " + remoteAddress.toString().substring(1) + " " + requestType + "-request for: " + url);
 					//HTTPLogEntry
 					int nHostsKnown = hosts.size();
 					if (nHostsKnown > 0 && hosts.get(nHostsKnown - 1).getAddress().getAddress().equals(remoteAddress.getAddress()) == true)
@@ -1060,6 +1082,8 @@ class HTTPServer implements Runnable
 						sendReply_helpescapes_html(socket);
 					else if (url.equals("/cgi-bin/list-all.cgi"))
 						sendReply_cgibin_listall_cgi(socket);
+					else if (url.equals("/cgi-bin/list-log.cgi"))
+						sendReply_cgibin_listlog_cgi(socket);
 					else
 					{
 						sendReply_404(socket, url);
@@ -1074,7 +1098,7 @@ class HTTPServer implements Runnable
 				{
 					statistics.incExceptions();
 
-					System.err.println("Exception during command processing");
+					CoffeeSaint.log.add("Exception during command processing");
 					CoffeeSaint.showException(e);
 					socket.close();
 				}

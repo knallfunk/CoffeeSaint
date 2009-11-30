@@ -44,20 +44,20 @@ class Predictor
 		String line = in.readLine();
 		if (line.equals(brainDumpVersion) == false)
 		{
-			System.err.println("Predictor brain dump of unsupported version (expected: " + brainDumpVersion + ", got: " + line + ")");
+			CoffeeSaint.log.add("Predictor brain dump of unsupported version (expected: " + brainDumpVersion + ", got: " + line + ")");
 			return;
 		}
 
-		System.out.println("Brain dump version: " + line);
+		CoffeeSaint.log.add("Brain dump version: " + line);
 
 		line = in.readLine();
 		if (line.equals("" + interval) == false)
 		{
-			System.err.println("Expected interval " + interval + " but the file has " + line + ".");
+			CoffeeSaint.log.add("Expected interval " + interval + " but the file has " + line + ".");
 			return;
 		}
 
-		System.out.println("Brain interval: " + line);
+		CoffeeSaint.log.add("Brain interval: " + line);
 
 		for(int index=0; index<getElementCountMonth(); index++)
 		{
@@ -82,13 +82,13 @@ class Predictor
 		{
 			if (!trailer.equals("END"))
 			{
-				System.err.println("Expected 'END', got " + trailer);
+				CoffeeSaint.log.add("Expected 'END', got " + trailer);
 				nagiosErrorCountMonth = new double[getElementCountMonth()];
 				nagiosErrorCountWeek  = new double[getElementCountWeek()];
 				nagiosErrorCountDay   = new double[getElementCountDay ()];
 			}
 			else
-				System.out.println("END found");
+				CoffeeSaint.log.add("END found");
 		}
 
                 in.close();
@@ -237,11 +237,11 @@ class Predictor
 		double dayPredictionLSE   = predictWithLeastSquaresEstimate(intervalNrDayNow,   nagiosErrorCountDay,   getElementCountDay(),   nIndexesIntoTheFutre);
 		double weekPredictionLSE  = predictWithLeastSquaresEstimate(intervalNrWeekNow,  nagiosErrorCountWeek,  getElementCountWeek(),  nIndexesIntoTheFutre);
 		double monthPredictionLSE = predictWithLeastSquaresEstimate(intervalNrMonthNow, nagiosErrorCountMonth, getElementCountMonth(), nIndexesIntoTheFutre);
-		System.out.println("LSE, day: " + dayPredictionLSE + ", week: " + weekPredictionLSE + ", month: " + monthPredictionLSE);
+		CoffeeSaint.log.add("LSE, day: " + dayPredictionLSE + ", week: " + weekPredictionLSE + ", month: " + monthPredictionLSE);
 
 		value = (dayPredictionLSE * 1.0 + weekPredictionLSE * 2.0 + monthPredictionLSE * 3.0 +
 			getHistorical(intervalNrDayThen, intervalNrWeekThen, intervalNrMonthThen)) / 7.0;
-		System.out.println("predict return: " + value);
+		CoffeeSaint.log.add("predict return: " + value);
 
 		return value;
 	}

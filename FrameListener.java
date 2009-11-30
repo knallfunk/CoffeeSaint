@@ -17,7 +17,7 @@ class FrameListener extends WindowAdapter
 		{
 			if (CoffeeSaint.getPredictor() != null)
 			{
-				System.out.println("Storing brain to file " + config.getBrainFileName());
+				CoffeeSaint.log.add("Storing brain to file " + config.getBrainFileName());
 				CoffeeSaint.predictor.dumpBrainToFile(config.getBrainFileName());
 			}
 		}

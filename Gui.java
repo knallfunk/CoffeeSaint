@@ -15,7 +15,7 @@ import java.awt.font.FontRenderContext;
 import java.io.FileNotFoundException;
 import java.util.concurrent.Semaphore;
 
-public class Gui extends JPanel
+public class Gui extends JPanel implements ImageObserver
 {
 	final Config config;
 	final CoffeeSaint coffeeSaint;
@@ -27,6 +27,22 @@ public class Gui extends JPanel
 	// a call to paint() so no need to do that (again)
 	// at start
 	long lastRefresh = System.currentTimeMillis();
+
+	public boolean imageUpdate(Image img, int flags, int x, int y, int width, int height)
+	{
+		String add = ", img: " + img + ", flags: " + flags + ", x/y: " + x + "," + y + ", width: " + width + ", height: " + height;
+		if ((flags & ABORT) != 0)
+			CoffeeSaint.log.add("Image aborted" + add);
+		else if ((flags & ERROR) != 0)
+			CoffeeSaint.log.add("Image error" + add);
+		else if ((flags & ALLBITS) != 0)
+			CoffeeSaint.log.add("Image complete" + add);
+		else
+			CoffeeSaint.log.add("Image ???" + add);
+
+		// If status is not COMPLETE then we need more updates.
+		return (flags & (ALLBITS|ABORT)) == 0;
+	}
 
 	public Gui(Config config, CoffeeSaint coffeeSaint, Statistics statistics)
 	{
@@ -58,7 +74,7 @@ public class Gui extends JPanel
 		g.setFont(f);
 
 		int plotY = y + (int)newAsc;
-		System.out.println("row " + row + ", " + newSize + "|" + newAsc + " -> " + plotY + " RH: " + rowHeight);
+		CoffeeSaint.log.add("row " + row + ", " + newSize + "|" + newAsc + " -> " + plotY + " RH: " + rowHeight);
 		g.drawString(msg, 0, plotY);
 	}
 
@@ -162,7 +178,9 @@ public class Gui extends JPanel
 						}
 						plotX += Math.max(0, spacingX - newWidth) / 2;
 						plotY += Math.max(0, spacingY - newHeight) / 2;
-						g.drawImage(imageParameters[nr].getImage(), plotX, plotY, newWidth, newHeight, null);
+						CoffeeSaint.log.add("Draw image: " + imageParameters[nr].getImage() + " (" + imageParameters[nr].getFileName() + ")");
+						if (g.drawImage(imageParameters[nr].getImage(), plotX, plotY, newWidth, newHeight, this) == false)
+							CoffeeSaint.log.add("drawImage " + imageParameters[nr].getImage() + " returns false");
 					}
 					else
 					{
@@ -177,7 +195,7 @@ public class Gui extends JPanel
 
 	public void showCoffeeSaintProblem(Exception e, Graphics g, int windowWidth, int rowHeight)
 	{
-		System.out.println("Graphics: " + g);
+		CoffeeSaint.log.add("Graphics: " + g);
 
 		/* block in upper right to inform about error */
 		g.setColor(Color.RED);
@@ -234,7 +252,6 @@ public class Gui extends JPanel
 				displayImage(imageParameters, problems.size(), g, rowHeight, config.getAdaptImageSize(), windowWidth, windowHeight);
 
 			JavNag javNag = coffeeSaint.getNagiosData();
-			System.out.println("JavNag: " + javNag);
 
 			int curNRows = 0;
 
@@ -244,7 +261,8 @@ public class Gui extends JPanel
 				if (config.getScrollingHeader())
 					currentHeader = createHeaderImage(header, problems.size() == 0 ? "0" : "255", bgColor, rowHeight);
 				else
-					drawRow(g, windowWidth, header, curNRows++, problems.size() == 0 ? "0" : "255", bgColor);
+					drawRow(g, windowWidth, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor);
+				curNRows++;
 			}
 
 			for(Problem currentProblem : problems)
@@ -256,7 +274,7 @@ public class Gui extends JPanel
 					escapeString = config.getServiceIssue();
 				String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem);
 
-				System.out.println(output);
+				CoffeeSaint.log.add(output);
 
 				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor);
 				curNRows++;
@@ -271,13 +289,13 @@ public class Gui extends JPanel
 				{
 					if (config.getProblemSound() != null)
 					{
-						System.out.println("Playing sound " + config.getProblemSound());
+						CoffeeSaint.log.add("Playing sound " + config.getProblemSound());
 						new PlayWav(config.getProblemSound());
 					}
 
 					if (config.getExec() != null)
 					{
-						System.out.println("Invoking " + config.getExec());
+						CoffeeSaint.log.add("Invoking " + config.getExec());
 						Runtime.getRuntime().exec(config.getExec());
 					}
 				}
@@ -290,7 +308,7 @@ public class Gui extends JPanel
 			}
 			coffeeSaint.unlockProblems();
 
-			System.out.println("Memory usage: " + ((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024)) + "MB");
+			CoffeeSaint.log.add("Memory usage: " + ((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024)) + "MB");
 		}
 		catch(Exception e)
 		{
@@ -305,11 +323,11 @@ public class Gui extends JPanel
 
 	public void paint(Graphics g)
 	{
-		System.out.println("Window size: " + getWidth() + "x" + getHeight());
+		CoffeeSaint.log.add("Window size: " + getWidth() + "x" + getHeight());
 		final int rowHeight = getHeight() / config.getNRows();
 		final int characterSize = Math.max(10, rowHeight - 1);
 
-		System.out.println("*** Paint PROBLEMS ");
+		CoffeeSaint.log.add("*** Paint PROBLEMS ");
 		drawProblems(g, getWidth(), getHeight(), rowHeight);
 	}
 
@@ -329,7 +347,7 @@ public class Gui extends JPanel
 			if (left <= 0)
 			{
 				lastRefresh = now;
-				System.out.println("*** Update PROBLEMS " + left);
+				CoffeeSaint.log.add("*** Update PROBLEMS " + left);
 				drawProblems(g, getWidth(), getHeight(), rowHeight);
 			}
 
