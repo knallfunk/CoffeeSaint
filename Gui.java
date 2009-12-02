@@ -63,11 +63,23 @@ public class Gui extends JPanel implements ImageObserver
 
 		g.setColor(config.getTextColor());
 
+		String font = config.getFontName();
+		if (state.equals("1"))
+			font = config.getWarningFontName();
+		else if (state.equals("2"))
+			font = config.getCriticalFontName();
+
 		// stuff to set the font-size and found out where to put it
-		Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
+		Font f = new Font(font, Font.PLAIN, rowHeight);
 		g.setFont(f);
 		FontMetrics fm = g.getFontMetrics();
 		double shrink = ((double)rowHeight / (double)fm.getHeight());
+		if (config.getReduceTextWidth())
+		{
+			Rectangle2D boundingRectangle = f.getStringBounds(msg, 0, msg.length(), new FontRenderContext(null, false, false));
+
+			shrink = Math.min(shrink, (double)windowWidth / (double)boundingRectangle.getWidth());
+		}
 		double newSize = (double)rowHeight * shrink;
 		double newAsc  = (double)fm.getAscent() * shrink;
 		f = f.deriveFont((float)newSize);

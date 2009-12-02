@@ -268,11 +268,19 @@ class HTTPServer implements Runnable
 
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
 
-		reply.add("<TR><TD>Font:</TD><TD>");
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		stringSelectorHTML(reply, "font", convertStringArrayToList(lge.getAvailableFontFamilyNames()), config.getFontName());
+		List<String> fontNames = convertStringArrayToList(lge.getAvailableFontFamilyNames());
+		reply.add("<TR><TD>Font:</TD><TD>");
+		stringSelectorHTML(reply, "font", fontNames, config.getFontName());
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Warning font:</TD><TD>");
+		stringSelectorHTML(reply, "warning-font", fontNames, config.getWarningFontName());
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Critical font:</TD><TD>");
+		stringSelectorHTML(reply, "critical-font", fontNames, config.getCriticalFontName());
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Reduce text width to fit to screen:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"reduce-textwidth\" VALUE=\"on\" " + isChecked(config.getReduceTextWidth()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + isChecked(config.getAlwaysNotify()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + isChecked(config.getAlsoAcknowledged()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
@@ -414,6 +422,10 @@ class HTTPServer implements Runnable
 
 		config.setFontName(getFieldDecoded(socket, requestData, "font"));
 
+		config.setWarningFontName(getFieldDecoded(socket, requestData, "warning-font"));
+
+		config.setCriticalFontName(getFieldDecoded(socket, requestData, "critical-font"));
+
 		config.setTextColor(getField(socket, requestData, "textColor"));
 
 		config.setBackgroundColor(getField(socket, requestData, "backgroundColor"));
@@ -463,6 +475,8 @@ class HTTPServer implements Runnable
 		config.setAdaptImageSize(getCheckBox(socket, requestData, "adapt-img"));
 
 		config.setRandomWebcam(getCheckBox(socket, requestData, "random-img"));
+
+		config.setReduceTextWidth(getCheckBox(socket, requestData, "reduce-textwidth"));
 
 		config.setHeader(getFieldDecoded(socket, requestData, "header"));
 

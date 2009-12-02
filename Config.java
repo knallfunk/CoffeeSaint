@@ -20,7 +20,7 @@ public class Config
 	private java.util.List<NagiosDataSource> ndsList = new ArrayList<NagiosDataSource>();
 	private int nRows;
 	private int sleepTime;
-	private String fontName;
+	private String fontName, criticalFontName, warningFontName;
 	private String listenAdapter = "0.0.0.0";
 	private int listenPort = -1;
 	private java.util.List<Pattern> prioPatterns;
@@ -53,6 +53,7 @@ public class Config
 	private boolean keepAspectRatio;
 	private boolean scrollingHeader;
 	private int scrollingHeaderPixelsPerSecond;
+	private boolean reduceTextWidth;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -83,6 +84,8 @@ public class Config
 		nRows = 10;
 		sleepTime = 30;
 		fontName = "Arial";
+		criticalFontName = "Arial";
+		warningFontName = "Arial";
 		always_notify = false;
 		also_acknowledged = false;
 		backgroundColor = Color.GRAY;
@@ -109,6 +112,7 @@ public class Config
 		keepAspectRatio = true;
 		scrollingHeader = false;
 		scrollingHeaderPixelsPerSecond = 100;
+		reduceTextWidth = false;
 
 		unlock();
 	}
@@ -253,6 +257,8 @@ public class Config
 						setHTTPServerListenAdapter(data);
 					else if (name.equals("bgcolor"))
 						setBackgroundColor(data);
+					else if (name.equals("reduce-textwidth"))
+						setReduceTextWidth(data.equalsIgnoreCase("true") ? true : false);
 					else if (name.equals("textcolor"))
 						setTextColor(data);
 					else if (name.equals("bgcolorok"))
@@ -299,6 +305,10 @@ public class Config
 						setShowHeader(data.equalsIgnoreCase("true") ? true : false);
 					else if (name.equals("font"))
 						setFontName(data);
+					else if (name.equals("critical-font"))
+						setCriticalFontName(data);
+					else if (name.equals("warning-font"))
+						setWarningFontName(data);
 					else
 						throw new Exception("Unknown parameter on line " + lineNr);
 				}
@@ -355,9 +365,12 @@ public class Config
 		writeLine(out, "always-notify = " + (getAlwaysNotify() ? "true" : "false"));
 		writeLine(out, "also-acknowledged = " + (getAlsoAcknowledged() ? "true" : "false"));
 		writeLine(out, "font = " + getFontName());
+		writeLine(out, "critical-font = " + getCriticalFontName());
+		writeLine(out, "warning-font = " + getWarningFontName());
 		writeLine(out, "verbose = " + (getVerbose() ? "true" : "false"));
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
 		writeLine(out, "fullscreen = " + (getFullscreen() ? "true" : "false"));
+		writeLine(out, "reduce-textwidth = " + (getReduceTextWidth() ? "true" : "false"));
 		if (getHeaderSet() == true)
 			writeLine(out, "header = " + getHeader());
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
@@ -984,6 +997,38 @@ public class Config
 		return copy;
 	}
 
+	public void setCriticalFontName(String fontName)
+	{
+		lock();
+		this.criticalFontName = fontName;
+		unlock();
+	}
+
+	public String getCriticalFontName()
+	{
+		String copy;
+		lock();
+		copy = criticalFontName;
+		unlock();
+		return copy;
+	}
+
+	public void setWarningFontName(String fontName)
+	{
+		lock();
+		this.warningFontName = fontName;
+		unlock();
+	}
+
+	public String getWarningFontName()
+	{
+		String copy;
+		lock();
+		copy = warningFontName;
+		unlock();
+		return copy;
+	}
+
 	public void setSortOrder(String order, boolean numeric, boolean reverse)
 	{
 		lock();
@@ -1145,6 +1190,22 @@ public class Config
 		int copy;
 		lock();
 		copy = scrollingHeaderPixelsPerSecond;
+		unlock();
+		return copy;
+	}
+
+	public void setReduceTextWidth(boolean rtw)
+	{
+		lock();
+		this.reduceTextWidth = rtw;
+		unlock();
+	}
+
+	public boolean getReduceTextWidth()
+	{
+		boolean copy;
+		lock();
+		copy = reduceTextWidth;
 		unlock();
 		return copy;
 	}
