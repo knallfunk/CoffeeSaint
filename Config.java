@@ -28,8 +28,8 @@ public class Config
 	private boolean always_notify, also_acknowledged;
 	private Color backgroundColor;
 	private String backgroundColorName;
-	private Color fontColor;
-	private String fontColorName;
+	private Color textColor, warningTextColor, criticalTextColor;
+	private String textColorName, warningTextColorName, criticalTextColorName;
 	private String bgColorOkStatusName;
 	private Color bgColorOkStatus;
 	private String problemSound = null;
@@ -90,8 +90,12 @@ public class Config
 		also_acknowledged = false;
 		backgroundColor = Color.GRAY;
 		backgroundColorName = "GRAY";
-		fontColor = Color.BLACK;
-		fontColorName = "BLACK";
+		textColor = Color.BLACK;
+		textColorName = "BLACK";
+		warningTextColor = Color.BLACK;
+		warningTextColorName = "BLACK";
+		criticalTextColor = Color.BLACK;
+		criticalTextColorName = "BLACK";
 		counter = false;
 		adaptImgSize = false;
 		randomWebcam = false;
@@ -261,6 +265,10 @@ public class Config
 						setReduceTextWidth(data.equalsIgnoreCase("true") ? true : false);
 					else if (name.equals("textcolor"))
 						setTextColor(data);
+					else if (name.equals("warning-textcolor"))
+						setWarningTextColor(data);
+					else if (name.equals("critical-textcolor"))
+						setCriticalTextColor(data);
 					else if (name.equals("bgcolorok"))
 						setBackgroundColorOkStatus(data);
 					else if (name.equals("nrows"))
@@ -355,6 +363,8 @@ public class Config
 		writeLine(out, "listen-adapter = " + getHTTPServerListenAdapter());
 		writeLine(out, "bgcolor = " + getBackgroundColorName());
 		writeLine(out, "textcolor = " + getTextColorName());
+		writeLine(out, "warning-textcolor = " + getWarningTextColorName());
+		writeLine(out, "critical-textcolor = " + getCriticalTextColorName());
 		writeLine(out, "bgcolorok = " + getBackgroundColorOkStatusName());
 		writeLine(out, "nrows = " + getNRows());
 		writeLine(out, "interval = " + getSleepTime());
@@ -778,8 +788,8 @@ public class Config
 		if (color == null)
 			throw new Exception("Color " + colorName + " is not known.");
 		lock();
-		fontColor = color;
-		fontColorName = colorName;
+		textColor = color;
+		textColorName = colorName;
 		unlock();
 	}
 
@@ -787,7 +797,7 @@ public class Config
 	{
 		Color copy;
 		lock();
-		copy = fontColor;
+		copy = textColor;
 		unlock();
 		return copy;
 	}
@@ -796,7 +806,7 @@ public class Config
 	{
 		String copy;
 		lock();
-		copy = fontColorName;
+		copy = textColorName;
 		unlock();
 		return copy;
 	}
@@ -1206,6 +1216,64 @@ public class Config
 		boolean copy;
 		lock();
 		copy = reduceTextWidth;
+		unlock();
+		return copy;
+	}
+
+	public void setWarningTextColor(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		warningTextColor = color;
+		warningTextColorName = colorName;
+		unlock();
+	}
+
+	public Color getWarningTextColor()
+	{
+		Color copy;
+		lock();
+		copy = warningTextColor;
+		unlock();
+		return copy;
+	}
+
+	public String getWarningTextColorName()
+	{
+		String copy;
+		lock();
+		copy = warningTextColorName;
+		unlock();
+		return copy;
+	}
+
+	public void setCriticalTextColor(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		criticalTextColor = color;
+		criticalTextColorName = colorName;
+		unlock();
+	}
+
+	public Color getCriticalTextColor()
+	{
+		Color copy;
+		lock();
+		copy = criticalTextColor;
+		unlock();
+		return copy;
+	}
+
+	public String getCriticalTextColorName()
+	{
+		String copy;
+		lock();
+		copy = criticalTextColorName;
 		unlock();
 		return copy;
 	}

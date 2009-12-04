@@ -537,7 +537,10 @@ public class CoffeeSaint
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin.");
 		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems.");
 		System.out.println("--random-img  Randomize order of images shown");
-		System.out.println("--font x      Font to use. Default is 'Courier'.");
+		System.out.println("--font x      Font to use. Default is 'Arial'.");
+		System.out.println("--critical-font x  Font to use for critical problems.");
+		System.out.println("--warning-font x   Font to use for warning problems.");
+		System.out.println("----reduce-textwidth Try to fit text to the window width");
 		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others).");
 		System.out.println("--also-acknowledged Display acknowledged problems as well.");
 		System.out.println("--always-notify	Also display problems for which notifications are disabled.");
@@ -725,6 +728,8 @@ public class CoffeeSaint
 						config.setCamRows(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--cam-cols"))
 						config.setCamCols(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--reduce-textwidth"))
+						config.setReduceTextWidth(true);
 					else if (arg[loop].equals("--prefer"))
 					{
 						System.out.println("Loading prefers from " + arg[++loop]);
@@ -736,6 +741,10 @@ public class CoffeeSaint
 						config.setAlsoAcknowledged(true);
 					else if (arg[loop].equals("--font"))
 						config.setFontName(arg[++loop]);
+					else if (arg[loop].equals("--critical-font"))
+						config.setCriticalFontName(arg[++loop]);
+					else if (arg[loop].equals("--warning-font"))
+						config.setWarningFontName(arg[++loop]);
 					else if (arg[loop].equals("--ignore-aspect-ratio"))
 						config.setKeepAspectRatio(false);
 					else if (arg[loop].equals("--version") || arg[loop].equals("-version"))
