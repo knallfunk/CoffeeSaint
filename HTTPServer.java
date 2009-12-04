@@ -288,6 +288,12 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Text color:</TD><TD>\n");
 		colorSelectorHTML(reply, "textColor", config.getTextColorName());
 		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Warning text color:</TD><TD>\n");
+		colorSelectorHTML(reply, "warningTextColor", config.getWarningTextColorName());
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Critical text color:</TD><TD>\n");
+		colorSelectorHTML(reply, "criticalTextColor", config.getCriticalTextColorName());
+		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color:</TD><TD>\n");
 		colorSelectorHTML(reply, "backgroundColor", config.getBackgroundColorName());
 		reply.add("</TD><TD></TD></TR>");
@@ -427,6 +433,8 @@ class HTTPServer implements Runnable
 		config.setCriticalFontName(getFieldDecoded(socket, requestData, "critical-font"));
 
 		config.setTextColor(getField(socket, requestData, "textColor"));
+		config.setWarningTextColor(getField(socket, requestData, "warningTextColor"));
+		config.setCriticalTextColor(getField(socket, requestData, "criticalTextColor"));
 
 		config.setBackgroundColor(getField(socket, requestData, "backgroundColor"));
 
@@ -1014,18 +1022,22 @@ class HTTPServer implements Runnable
 
 	public void run()
 	{
-		MyHTTPServer socket;
+		MyHTTPServer socket = null;
 
 		try
 		{
-			CoffeeSaint.log.add("Listening on " + adapter + ":" + port);
-			socket = new MyHTTPServer(adapter, port);
-
 			for(;;)
 			{
 				CoffeeSaint.log.add("Waiting for connection");
 				try
 				{
+					if (socket == null)
+					{
+						CoffeeSaint.log.add("Listening on " + adapter + ":" + port);
+
+						socket = new MyHTTPServer(adapter, port);
+					}
+
 					List<HTTPRequestData> request = socket.acceptConnectionGetRequest();
 					String requestType = request.get(0).getName();
 					String url = request.get(0).getData().trim();
@@ -1034,7 +1046,7 @@ class HTTPServer implements Runnable
 						url = url.substring(0, space);
 
 					InetSocketAddress remoteAddress = socket.getRemoteSocketAddress();
-					CoffeeSaint.log.add(formatDate(Calendar.getInstance()) + " HTTP " + remoteAddress.toString().substring(1) + " " + requestType + "-request for: " + url);
+					CoffeeSaint.log.add("HTTP " + remoteAddress.toString().substring(1) + " " + requestType + "-request for: " + url);
 					//HTTPLogEntry
 					int nHostsKnown = hosts.size();
 					if (nHostsKnown > 0 && hosts.get(nHostsKnown - 1).getAddress().getAddress().equals(remoteAddress.getAddress()) == true)
@@ -1104,17 +1116,18 @@ class HTTPServer implements Runnable
 						webServer404++;
 					}
 				}
-				catch(SocketException se)
-				{
-					// don't care
-				}
 				catch(Exception e)
 				{
-					statistics.incExceptions();
+					if (!(e instanceof SocketException))
+						statistics.incExceptions();
 
 					CoffeeSaint.log.add("Exception during command processing");
 					CoffeeSaint.showException(e);
-					socket.close();
+					if (socket != null)
+					{
+						socket.close();
+						socket = null;
+					}
 				}
 			}
 		}
