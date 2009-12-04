@@ -348,6 +348,7 @@ public class Gui extends JPanel implements ImageObserver
 		final Graphics g = getGraphics();
 		long lastLeft = -1;
 		int headerScrollerX = 0;
+		double scrollTs = (double)System.currentTimeMillis() / 1000.0;
 
 		for(;;)
 		{
@@ -388,9 +389,14 @@ public class Gui extends JPanel implements ImageObserver
 					}
 				}
 
-				headerScrollerX += config.getScrollingHeaderPixelsPerSecond() / 25;
-				if (headerScrollerX >= imgWidth)
+				double scrollTsNow = (double)System.currentTimeMillis() / 1000.0;
+				double scrollMultiplier = (scrollTsNow - scrollTs) / (40.0 / 1000.0);
+
+				headerScrollerX += (int)((double)(config.getScrollingHeaderPixelsPerSecond() / 25) * scrollMultiplier);
+				while(headerScrollerX >= imgWidth)
 					headerScrollerX -= imgWidth;
+
+				scrollTs = scrollTsNow;
 			}
 
 			if (config.getCounter() && lastLeft != left && currentHeader == null)
