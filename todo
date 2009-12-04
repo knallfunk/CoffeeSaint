@@ -2,4 +2,3 @@
 - timeout op laden image - in een aparte thread?
 - die andere monitoring dinges, zabbix
 - toggle fullscreen @ runtime
-- opschuiven van de scroller afhankelijk van de werkelijke delay behalve bij redraw
