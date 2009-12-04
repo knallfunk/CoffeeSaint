@@ -88,6 +88,13 @@ public class Gui extends JPanel implements ImageObserver
 		int plotY = y + (int)newAsc;
 		CoffeeSaint.log.add("row " + row + ", " + newSize + "|" + newAsc + " -> " + plotY + " RH: " + rowHeight);
 		g.drawString(msg, 0, plotY);
+
+		if (config.getRowBorder())
+		{
+			int drawY = y + rowHeight - 1;
+			g.setColor(config.getRowBorderColor());
+			g.drawLine(0, drawY, windowWidth, drawY);
+		}
 	}
 
 	public BufferedImage createHeaderImage(String header, String state, Color bgColor, int rowHeight)
@@ -335,17 +342,21 @@ public class Gui extends JPanel implements ImageObserver
 
 	public void paint(Graphics g)
 	{
+		final Graphics2D g2d = (Graphics2D)g;
 		CoffeeSaint.log.add("Window size: " + getWidth() + "x" + getHeight());
 		final int rowHeight = getHeight() / config.getNRows();
 		final int characterSize = Math.max(10, rowHeight - 1);
 
 		CoffeeSaint.log.add("*** Paint PROBLEMS ");
+		if (config.getAntiAlias())
+			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		drawProblems(g, getWidth(), getHeight(), rowHeight);
 	}
 
 	public void guiLoop() throws Exception
 	{
 		final Graphics g = getGraphics();
+		final Graphics2D g2d = (Graphics2D)g;
 		long lastLeft = -1;
 		int headerScrollerX = 0;
 		double scrollTs = (double)System.currentTimeMillis() / 1000.0;
@@ -357,6 +368,9 @@ public class Gui extends JPanel implements ImageObserver
 			int rowHeight = getHeight() / config.getNRows();
 			int characterSize = rowHeight - 1;
 
+			if (config.getAntiAlias())
+				g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
 			if (left <= 0)
 			{
 				lastRefresh = now;
@@ -366,7 +380,6 @@ public class Gui extends JPanel implements ImageObserver
 
 			if (currentHeader != null && config.getScrollingHeader())
 			{
-				Graphics g2d = (Graphics2D)g;
 				int imgWidth = currentHeader.getWidth();
 				int pixelsNeeded = getWidth() - 100;
 				int pixelsAvail = imgWidth - headerScrollerX;
@@ -392,7 +405,7 @@ public class Gui extends JPanel implements ImageObserver
 				double scrollTsNow = (double)System.currentTimeMillis() / 1000.0;
 				double scrollMultiplier = (scrollTsNow - scrollTs) / (40.0 / 1000.0);
 
-				headerScrollerX += (int)((double)(config.getScrollingHeaderPixelsPerSecond() / 25) * scrollMultiplier);
+				headerScrollerX += (int)(((double)config.getScrollingHeaderPixelsPerSecond() / 25.0) * scrollMultiplier);
 				while(headerScrollerX >= imgWidth)
 					headerScrollerX -= imgWidth;
 

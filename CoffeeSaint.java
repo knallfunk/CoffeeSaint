@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.9-beta001, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v1.9-beta002, (C) 2009 by folkert@vanheusden.com";
 
 	public static Log log = new Log(250);
 
@@ -521,50 +521,54 @@ public class CoffeeSaint
 
 	public static void showHelp()
 	{
-		System.out.println("--source type version x  Source to retrieve from.");
+		System.out.println("--source type version x  Source to retrieve from");
 		System.out.println("              Type can be: http, tcp, file");
 		System.out.println("              http expects an url like http://keetweej.vanheusden.com/status.dat");
 		System.out.println("              tcp expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
 		System.out.println("              ztcp also expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
 		System.out.println("              file expects a file-name, e.g. /var/cache/nagios3/status.dat");
-		System.out.println("              version selects the nagios-version. E.g. 1, 2 or 3.");
-		System.out.println("              You can add as many Nagios servers as you like.");
+		System.out.println("              version selects the nagios-version. E.g. 1, 2 or 3");
+		System.out.println("              You can add as many Nagios servers as you like");
 		System.out.println("              Example: --source file 3 /var/cache/nagios3/status.dat");
 		System.out.println("");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--fullscreen  Run in fullscreen mode, e.g. without any borders");
-		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin.");
-		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems.");
+		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin");
+		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems");
 		System.out.println("--random-img  Randomize order of images shown");
-		System.out.println("--font x      Font to use. Default is 'Arial'.");
-		System.out.println("--critical-font x  Font to use for critical problems.");
-		System.out.println("--warning-font x   Font to use for warning problems.");
-		System.out.println("----reduce-textwidth Try to fit text to the window width");
-		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others).");
-		System.out.println("--also-acknowledged Display acknowledged problems as well.");
-		System.out.println("--always-notify	Also display problems for which notifications are disabled.");
-		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray.");
-		System.out.println("--list-bgcolors     Show a list of available colors.");
-		System.out.println("--textcolor   Text color.");
-		System.out.println("--sound x     Play sound when a warning/error state starts.");
-		System.out.println("--counter     Show counter decreasing upto the point that a refresh will happen.");
-		System.out.println("--exec x      Execute program when one or more errors are shown.");
-		System.out.println("--predict x   File to write brain-dump to (and read from).");
-		System.out.println("--config x    Load configuration from file x. This overrides all configurationsettings set previously.");
-		System.out.println("--create-config x    Create new configuration file with filename x.");
-		System.out.println("--listen-port Port to listen for the internal webserver.");
-		System.out.println("--listen-adapter Network interface to listen for the internal webserver.");
-		System.out.println("--header x    String to display in header. Can contain escapes, see below.");
-		System.out.println("--host-issue x  String defining how to format host-issues.");
-		System.out.println("--service-issue x  String defining how to format service-issues.");
-		System.out.println("--no-header   Do not display the statistics line in the upper row.");
+		System.out.println("--font x      Font to use. Default is 'Arial'");
+		System.out.println("--critical-font x  Font to use for critical problems");
+		System.out.println("--warning-font x   Font to use for warning problems");
+		System.out.println("--reduce-textwidth Try to fit text to the window width");
+		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others)");
+		System.out.println("--also-acknowledged Display acknowledged problems as well");
+		System.out.println("--always-notify	Also display problems for which notifications are disabled");
+		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray");
+		System.out.println("--list-bgcolors     Show a list of available colors");
+		System.out.println("--textcolor   Text color (header and such)");
+		System.out.println("--warning-textcolor Text color of warning-problems");
+		System.out.println("--critical-textcolor Text color of critical-problems");
+		System.out.println("--sound x     Play sound when a warning/error state starts");
+		System.out.println("--counter     Show counter decreasing upto the point that a refresh will happen");
+		System.out.println("--exec x      Execute program when one or more errors are shown");
+		System.out.println("--predict x   File to write brain-dump to (and read from)");
+		System.out.println("--config x    Load configuration from file x. This overrides all configurationsettings set previously");
+		System.out.println("--create-config x    Create new configuration file with filename x");
+		System.out.println("--listen-port Port to listen for the internal webserver");
+		System.out.println("--listen-adapter Network interface to listen for the internal webserver");
+		System.out.println("--header x    String to display in header. Can contain escapes, see below");
+		System.out.println("--host-issue x  String defining how to format host-issues");
+		System.out.println("--service-issue x  String defining how to format service-issues");
+		System.out.println("--no-header   Do not display the statistics line in the upper row");
+		System.out.println("--row-border  Draw a line between each row");
 		System.out.println("--sort-order [y] [z] x  Sort on field x. y and z can be 'numeric' and 'reverse'");
 		System.out.println("              E.g. --sort-order numeric last_state_change (= default)");
 		System.out.println("--cam-cols    Number of cams per row");
 		System.out.println("--cam-rows    Number of rows with cams");
-		System.out.println("--ignore-aspect-ratio Grow/shrink all webcams with the same factor. In case you have webcams with different dimensions.");
-		System.out.println("--scrolling-header  In case there's more information to put into it than what fits on the screen.");
+		System.out.println("--ignore-aspect-ratio Grow/shrink all webcams with the same factor. In case you have webcams with different dimensions");
+		System.out.println("--scrolling-header  In case there's more information to put into it than what fits on the screen");
+		System.out.println("--anti-alias  Anti-alias graphics");
 		System.out.println("--verbose     Show what it is doing");
 		System.out.println("");
 		System.out.print("Known colors:");
@@ -622,7 +626,7 @@ public class CoffeeSaint
 						else if (versionStr.equals("3"))
 							nv = NagiosVersion.V3;
 						else
-							throw new Exception("Nagios version '" + versionStr + "' not known.");
+							throw new Exception("Nagios version '" + versionStr + "' not known");
 
 						if (type.equalsIgnoreCase("http"))
 							nds = new NagiosDataSource(new URL(arg[++loop]), nv);
@@ -667,12 +671,16 @@ public class CoffeeSaint
 					}
 					else if (arg[loop].equals("--no-header"))
 						config.setShowHeader(false);
+					else if (arg[loop].equals("--anti-alias"))
+						config.setAntiAlias(true);
 					else if (arg[loop].equals("--scrolling-header"))
 						config.setScrollingHeader(true);
 					else if (arg[loop].equals("--fullscreen"))
 						config.setFullscreen(true);
 					else if (arg[loop].equals("--header"))
 						config.setHeader(arg[++loop]);
+					else if (arg[loop].equals("--row-border"))
+						config.setRowBorder(true);
 					else if (arg[loop].equals("--service-issue"))
 						config.setServiceIssue(arg[++loop]);
 					else if (arg[loop].equals("--host-issue"))
@@ -745,6 +753,10 @@ public class CoffeeSaint
 						config.setCriticalFontName(arg[++loop]);
 					else if (arg[loop].equals("--warning-font"))
 						config.setWarningFontName(arg[++loop]);
+					else if (arg[loop].equals("--warning-textcolor"))
+						config.setWarningTextColor(arg[++loop]);
+					else if (arg[loop].equals("--critical-textcolor"))
+						config.setCriticalTextColor(arg[++loop]);
 					else if (arg[loop].equals("--ignore-aspect-ratio"))
 						config.setKeepAspectRatio(false);
 					else if (arg[loop].equals("--version") || arg[loop].equals("-version"))

@@ -263,7 +263,14 @@ class HTTPServer implements Runnable
 
 		reply.add("<FORM ACTION=\"/cgi-bin/config-do.cgi\" METHOD=\"POST\">\n");
 
-		reply.add("<H2>General parameters</H2>\n");
+		reply.add("<H2>Nagios handling parameters</H2>\n");
+		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + isChecked(config.getAlwaysNotify()) + "></TD></TR>\n");
+		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + isChecked(config.getAlsoAcknowledged()) + "></TD></TR>\n");
+		reply.add("</TABLE>\n");
+		reply.add("<BR>\n");
+
+		reply.add("<H2>Look and feel parameters</H2>\n");
 		reply.add("<TABLE BORDER=\"1\">\n");
 
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
@@ -281,10 +288,13 @@ class HTTPServer implements Runnable
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Reduce text width to fit to screen:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"reduce-textwidth\" VALUE=\"on\" " + isChecked(config.getReduceTextWidth()) + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + isChecked(config.getAlwaysNotify()) + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + isChecked(config.getAlsoAcknowledged()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Anti-alias:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"anti-alias\" VALUE=\"on\" " + isChecked(config.getAntiAlias()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Row border color:</TD><TD>\n");
+		colorSelectorHTML(reply, "row-border-color", config.getRowBorderColorName());
+		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Text color:</TD><TD>\n");
 		colorSelectorHTML(reply, "textColor", config.getTextColorName());
 		reply.add("</TD><TD></TD></TR>");
@@ -482,6 +492,8 @@ class HTTPServer implements Runnable
 
 		config.setAdaptImageSize(getCheckBox(socket, requestData, "adapt-img"));
 
+		config.setAntiAlias(getCheckBox(socket, requestData, "anti-alias"));
+
 		config.setRandomWebcam(getCheckBox(socket, requestData, "random-img"));
 
 		config.setReduceTextWidth(getCheckBox(socket, requestData, "reduce-textwidth"));
@@ -511,6 +523,9 @@ class HTTPServer implements Runnable
 		config.setSortOrder(getFieldDecoded(socket, requestData, "sort-order"), son, sor);
 
 		config.setVerbose(getCheckBox(socket, requestData, "verbose"));
+
+		config.setRowBorder(getCheckBox(socket, requestData, "row-border"));
+		config.setRowBorderColor(getField(socket, requestData, "row-border-color"));
 
 		// add server
 		String server_add_parameters = getFieldDecoded(socket, requestData, "server-add-parameters");

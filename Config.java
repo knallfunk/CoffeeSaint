@@ -54,6 +54,10 @@ public class Config
 	private boolean scrollingHeader;
 	private int scrollingHeaderPixelsPerSecond;
 	private boolean reduceTextWidth;
+	private boolean rowBorder;
+	private Color rowBorderColor;
+	private String rowBorderColorName;
+	private boolean antiAlias;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -117,6 +121,10 @@ public class Config
 		scrollingHeader = false;
 		scrollingHeaderPixelsPerSecond = 100;
 		reduceTextWidth = false;
+		rowBorder = false;
+		rowBorderColor = Color.BLACK;
+		rowBorderColorName = "BLACK";
+		antiAlias = false;
 
 		unlock();
 	}
@@ -253,6 +261,12 @@ public class Config
 						setCounter(data.equalsIgnoreCase("true") ? true : false);
 					else if (name.equals("verbose"))
 						setVerbose(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("row-border"))
+						setRowBorder(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("anti-alias"))
+						setAntiAlias(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("row-border-color"))
+						setRowBorderColor(data);
 					else if (name.equals("sound"))
 						setProblemSound(data);
 					else if (name.equals("listen-port"))
@@ -378,6 +392,9 @@ public class Config
 		writeLine(out, "critical-font = " + getCriticalFontName());
 		writeLine(out, "warning-font = " + getWarningFontName());
 		writeLine(out, "verbose = " + (getVerbose() ? "true" : "false"));
+		writeLine(out, "anti-alias = " + (getAntiAlias() ? "true" : "false"));
+		writeLine(out, "row-border = " + (getRowBorder() ? "true" : "false"));
+		writeLine(out, "row-border-color = " + getRowBorderColorName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
 		writeLine(out, "fullscreen = " + (getFullscreen() ? "true" : "false"));
 		writeLine(out, "reduce-textwidth = " + (getReduceTextWidth() ? "true" : "false"));
@@ -1274,6 +1291,67 @@ public class Config
 		String copy;
 		lock();
 		copy = criticalTextColorName;
+		unlock();
+		return copy;
+	}
+
+	public void setRowBorder(boolean rb)
+	{
+		lock();
+		this.rowBorder = rb;
+		unlock();
+	}
+
+	public boolean getRowBorder()
+	{
+		boolean copy;
+		lock();
+		copy = rowBorder;
+		unlock();
+		return copy;
+	}
+
+	public void setRowBorderColor(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		rowBorderColor = color;
+		rowBorderColorName = colorName;
+		unlock();
+	}
+
+	public Color getRowBorderColor()
+	{
+		Color copy;
+		lock();
+		copy = rowBorderColor;
+		unlock();
+		return copy;
+	}
+
+	public String getRowBorderColorName()
+	{
+		String copy;
+		lock();
+		copy = rowBorderColorName;
+		unlock();
+		return copy;
+	}
+
+	public void setAntiAlias(boolean aa)
+	{
+		lock();
+		this.antiAlias = aa;
+		unlock();
+	}
+
+	public boolean getAntiAlias()
+	{
+		boolean copy;
+		lock();
+		copy = antiAlias;
 		unlock();
 		return copy;
 	}
