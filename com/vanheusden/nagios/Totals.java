@@ -74,4 +74,14 @@ public class Totals
 	{
 		return nServices;
 	}
+
+	public int getNStateUnknownHost()
+	{
+		return nStateUnknownHost;
+	}
+
+	public int getNStateUnknownService()
+	{
+		return nStateUnknownService;
+	}
 }

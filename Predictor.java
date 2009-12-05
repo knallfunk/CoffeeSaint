@@ -45,6 +45,7 @@ class Predictor
 		if (line.equals(brainDumpVersion) == false)
 		{
 			CoffeeSaint.log.add("Predictor brain dump of unsupported version (expected: " + brainDumpVersion + ", got: " + line + ")");
+			in.close();
 			return;
 		}
 
@@ -54,6 +55,7 @@ class Predictor
 		if (line.equals("" + interval) == false)
 		{
 			CoffeeSaint.log.add("Expected interval " + interval + " but the file has " + line + ".");
+			in.close();
 			return;
 		}
 
@@ -92,7 +94,6 @@ class Predictor
 		}
 
                 in.close();
-
 	}
 
 	void writeLine(BufferedWriter out, String line) throws Exception

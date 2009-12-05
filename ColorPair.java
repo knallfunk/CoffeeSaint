@@ -20,6 +20,8 @@ class ColorPair
 	public boolean equals(Object o)
 	{
 		String str = (String)o;
+		if (str == null)
+			return false;
 
 		return str.equalsIgnoreCase(name);
 	}

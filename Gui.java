@@ -345,7 +345,6 @@ public class Gui extends JPanel implements ImageObserver
 		final Graphics2D g2d = (Graphics2D)g;
 		CoffeeSaint.log.add("Window size: " + getWidth() + "x" + getHeight());
 		final int rowHeight = getHeight() / config.getNRows();
-		final int characterSize = Math.max(10, rowHeight - 1);
 
 		CoffeeSaint.log.add("*** Paint PROBLEMS ");
 		if (config.getAntiAlias())

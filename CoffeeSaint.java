@@ -19,9 +19,9 @@ public class CoffeeSaint
 {
 	static String version = "CoffeeSaint v1.9-beta002, (C) 2009 by folkert@vanheusden.com";
 
-	public static Log log = new Log(250);
+	final public static Log log = new Log(250);
 
-	static Config config;
+	volatile static Config config;
 
 	static Predictor predictor;
 	static long lastPredictorDump = 0;

@@ -46,7 +46,7 @@ public class MyHTTPServer
 			// FIXME check for NULL
 			String line = inputStream.readLine();
 
-			if (line.equals(""))
+			if (line == null || line.equals(""))
 				break;
 
 			int space = line.indexOf(" ");
@@ -115,8 +115,8 @@ public class MyHTTPServer
 			return null;
 
 		char [] data = new char[nBytes];
-		inputStream.read(data, 0, nBytes);
-		String dataStr = new String(data);
+		int nRead = inputStream.read(data, 0, nBytes);
+		String dataStr = new String(data, 0, nRead);
 
 		System.out.println("request data: " + dataStr);
 
