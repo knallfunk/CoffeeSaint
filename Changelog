@@ -1,0 +1,8 @@
+- more configurable parameters (fonts for warning/critical)
+- made http server handle exceptions better
+- smoother scrolling
+- all text colors configurable
+- anti alias graphics
+- row border
+- added filters: also_scheduled_downtime, also_soft_State, also_disabled_active_checks, show-services-for-host-with-problems
+- multiple columns
