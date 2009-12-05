@@ -466,7 +466,7 @@ public class CoffeeSaint
 		problems = new ArrayList<Problem>();
 
 		// collect problems
-		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged());
+		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems());
 		// sort problems
 		Problems.sortList(problems, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
 		Problems.sortList(lessImportant, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
@@ -544,6 +544,10 @@ public class CoffeeSaint
 		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others)");
 		System.out.println("--also-acknowledged Display acknowledged problems as well");
 		System.out.println("--always-notify	Also display problems for which notifications are disabled");
+		System.out.println("--also-scheduled-downtime Also display problems for which downtime has been scheduled");
+		System.out.println("--also-soft-state   Also display problems that are not yet in hard state");
+		System.out.println("--also-disabled-active-checks Also display problems for which active checks have been disabled");
+		System.out.println("--show-services-for-host-with-problems");
 		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray");
 		System.out.println("--list-bgcolors     Show a list of available colors");
 		System.out.println("--textcolor   Text color (header and such)");
@@ -759,6 +763,14 @@ public class CoffeeSaint
 						config.setCriticalTextColor(arg[++loop]);
 					else if (arg[loop].equals("--ignore-aspect-ratio"))
 						config.setKeepAspectRatio(false);
+					else if (arg[loop].equals("--also-scheduled-downtime"))
+						config.setAlsoScheduledDowntime(true);
+					else if (arg[loop].equals("--show-services-for-host-with-problems"))
+						config.setShowServicesForHostWithProblems(true);
+					else if (arg[loop].equals("--also-soft-state"))
+						config.setAlsoSoftState(true);
+					else if (arg[loop].equals("--also-disabled-active-checks"))
+						config.setAlsoDisabledActiveChecks(true);
 					else if (arg[loop].equals("--version") || arg[loop].equals("-version"))
 					{
 						System.out.println(getVersion());

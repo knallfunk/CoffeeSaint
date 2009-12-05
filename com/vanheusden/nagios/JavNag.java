@@ -340,23 +340,23 @@ public class JavNag
 	 * @param also_acknowledged	Also return true when the problem has been acknowledged in Nagios.
 	 * @return 			true/false
 	 */
-	public boolean shouldIShowHost(Host host, boolean always_notify, boolean also_acknowledged)
+	public boolean shouldIShowHost(Host host, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks)
 	{
 		if (host.getParameters().size() == 0)
 			return false;
 
-		if (host.getParameter("state_type").equals("0") == true) // if SOFT, do not show
+		if (!also_soft_state && host.getParameter("state_type").equals("0") == true) // if SOFT, do not show
 			return false;
 
 		if (host.getParameter("current_state").equals("0") == true) // if OK do not show
 			return false;
 
 		// if active_checks are not enabled and passive checks neither, do not show
-		if (host.getParameter("active_checks_enabled").equals("0") == true && host.getParameter("passive_checks_enabled").equals("0") == true)
+		if (!also_disabled_active_checks && host.getParameter("active_checks_enabled").equals("0") == true && host.getParameter("passive_checks_enabled").equals("0") == true)
 			return false;
 
 		// downtime_depth == 0, do not show
-		if (Double.valueOf(host.getParameter("scheduled_downtime_depth")) != 0.0)
+		if (!also_scheduled_downtime && Double.valueOf(host.getParameter("scheduled_downtime_depth")) != 0.0)
 		{
 			System.out.println("scheduled_downtime_depth " + host.getParameter("scheduled_downtime_depth"));
 			return false;
@@ -382,18 +382,18 @@ public class JavNag
 	 * @param also_acknowledged	Also return true when the problem has been acknowledged in Nagios.
 	 * @return 			true/false
 	 */
-	public boolean shouldIShowService(Service service, boolean always_notify, boolean also_acknowledged)
+	public boolean shouldIShowService(Service service, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks)
 	{
-		if (service.getParameter("state_type").equals("1") == false)
+		if (!also_soft_state && service.getParameter("state_type").equals("1") == false)
 			return false;
 
 		if (service.getParameter("current_state").equals("0") == true)
 			return false;
 
-		if (service.getParameter("active_checks_enabled").equals("0") == true && service.getParameter("passive_checks_enabled").equals("0") == true)
+		if (!also_disabled_active_checks && service.getParameter("active_checks_enabled").equals("0") == true && service.getParameter("passive_checks_enabled").equals("0") == true)
 			return false;
 
-		if (Double.valueOf(service.getParameter("scheduled_downtime_depth")) != 0.0)
+		if (!also_scheduled_downtime && Double.valueOf(service.getParameter("scheduled_downtime_depth")) != 0.0)
 			return false;
 
 		if (!always_notify && service.getParameter("notifications_enabled").equals("0") == true)

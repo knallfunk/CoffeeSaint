@@ -58,6 +58,10 @@ public class Config
 	private Color rowBorderColor;
 	private String rowBorderColorName;
 	private boolean antiAlias;
+	private boolean alsoScheduledDowntime;
+	private boolean alsoSoftState;
+	private boolean alsoDisabledActiveChecks;
+	private boolean showProblemHostServices;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -125,6 +129,10 @@ public class Config
 		rowBorderColor = Color.BLACK;
 		rowBorderColorName = "BLACK";
 		antiAlias = false;
+		alsoScheduledDowntime = false;
+		alsoSoftState = false;
+		alsoDisabledActiveChecks = false;
+		showProblemHostServices = false;
 
 		unlock();
 	}
@@ -277,6 +285,14 @@ public class Config
 						setBackgroundColor(data);
 					else if (name.equals("reduce-textwidth"))
 						setReduceTextWidth(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("also-scheduled-downtime"))
+						setAlsoScheduledDowntime(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("also-soft-state"))
+						setAlsoSoftState(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("also-disabled-active-checks"))
+						setAlsoDisabledActiveChecks(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("show-services-for-host-with-problems"))
+						setShowServicesForHostWithProblems(data.equalsIgnoreCase("true") ? true : false);
 					else if (name.equals("textcolor"))
 						setTextColor(data);
 					else if (name.equals("warning-textcolor"))
@@ -412,6 +428,10 @@ public class Config
 			sort += "reverse ";
 		sort += getSortOrder();
 		writeLine(out, "sort-order = " + sort);
+		writeLine(out, "also-scheduled-downtime = " + (getAlsoScheduledDowntime() ? "true" : "false"));
+		writeLine(out, "also-soft-state = " + (getAlsoSoftState() ? "true" : "false"));
+		writeLine(out, "also-disabled-active-checks = " + (getAlsoDisabledActiveChecks() ? "true" : "false"));
+		writeLine(out, "show-services-for-host-with-problems = " + (getShowServicesForHostWithProblems() ? "true" : "false"));
 
 		for(NagiosDataSource dataSource : getNagiosDataSources())
 		{
@@ -1354,5 +1374,69 @@ public class Config
 		copy = antiAlias;
 		unlock();
 		return copy;
+	}
+
+	public boolean getAlsoScheduledDowntime()
+	{
+		boolean copy;
+		lock();
+		copy = alsoScheduledDowntime;
+		unlock();
+		return copy;
+	}
+
+	public void setAlsoScheduledDowntime(boolean asd)
+	{
+		lock();
+		alsoScheduledDowntime = asd;
+		unlock();
+	}
+
+	public boolean getAlsoSoftState()
+	{
+		boolean copy;
+		lock();
+		copy = alsoSoftState;
+		unlock();
+		return copy;
+	}
+
+	public void setAlsoSoftState(boolean ass)
+	{
+		lock();
+		alsoSoftState = ass;
+		unlock();
+	}
+
+	public boolean getAlsoDisabledActiveChecks()
+	{
+		boolean copy;
+		lock();
+		copy = alsoDisabledActiveChecks;
+		unlock();
+		return copy;
+	}
+
+	public void setAlsoDisabledActiveChecks(boolean adas)
+	{
+		lock();
+		alsoDisabledActiveChecks = adas;
+		unlock();
+	}
+
+	public boolean getShowServicesForHostWithProblems()
+	{
+		boolean copy;
+		lock();
+		copy = showProblemHostServices;
+		unlock();
+		return copy;
+	}
+
+	public void setShowServicesForHostWithProblems(boolean ssfhwp)
+	{
+		lock();
+		showProblemHostServices = ssfhwp;
+		unlock();
 	}
 }
