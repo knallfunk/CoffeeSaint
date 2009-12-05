@@ -55,7 +55,7 @@ class HTTPServer implements Runnable
 
 	public void addPageHeader(List<String> whereTo, String head)
 	{
-		whereTo.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD>" + head + "<link rel=\"shortcut icon\" href=\"/favicon.ico\" type=\"image/x-icon\" /></HEAD><BODY><table width=\"100%\" bgcolor=\"#000000\" cellpadding=\"0\" cellspacing=\"0\"><tr><td><A HREF=\"/\"><img src=\"/images/vanheusden02.jpg\" BORDER=\"0\"></A></td></tr></table><BR>\n");
+		whereTo.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD>" + head + "<link rel=\"shortcut icon\" href=\"/favicon.ico\" type=\"image/x-icon\" /><link href=\"/stylesheet.css\" rel=\"stylesheet\" media=\"screen\"></HEAD><BODY><table width=\"100%\" bgcolor=\"#000000\" cellpadding=\"0\" cellspacing=\"0\"><tr><td><A HREF=\"/\"><img src=\"/images/vanheusden02.jpg\" BORDER=\"0\"></A></td></tr></table><BR>\n");
 		whereTo.add("<TABLE><TR VALIGN=TOP><TD VALIGN=TOP ALIGN=LEFT WIDTH=225><IMG SRC=\"/images/the_coffee_saint.jpg\" BORDER=\"0\" ALT=\"logo (C) Bas Schuiling\"></TD><TD ALIGN=LEFT>\n");
 
 		whereTo.add("<BR><H1>" + CoffeeSaint.getVersion() + "</H1><BR><BR>");
@@ -157,6 +157,11 @@ class HTTPServer implements Runnable
 	public void sendReply_images_configure_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
 		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_configure.png", "image/png", headRequest);
+	}
+
+	public void sendReply_stylesheet_css(MyHTTPServer socket, boolean headRequest) throws Exception
+	{
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/stylesheet.css", "text/css", headRequest);
 	}
 
 	public void sendReply_images_statistics_png(MyHTTPServer socket, boolean headRequest) throws Exception
@@ -264,7 +269,7 @@ class HTTPServer implements Runnable
 		reply.add("<FORM ACTION=\"/cgi-bin/config-do.cgi\" METHOD=\"POST\">\n");
 
 		reply.add("<H2>Nagios handling parameters</H2>\n");
-		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
 		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + isChecked(config.getAlwaysNotify()) + "></TD><TD>Also display when notifications are disabled</TD></TR>\n");
 		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + isChecked(config.getAlsoAcknowledged()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also scheduled downtime</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_scheduled_downtime\" VALUE=\"on\" " + isChecked(config.getAlsoScheduledDowntime()) + "></TD><TD>Also display problems for which downtime has been scheduled</TD></TR>\n");
@@ -275,7 +280,7 @@ class HTTPServer implements Runnable
 		reply.add("<BR>\n");
 
 		reply.add("<H2>Look and feel parameters</H2>\n");
-		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
 
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
 
@@ -329,7 +334,7 @@ class HTTPServer implements Runnable
 		reply.add("<BR>\n");
 
 		reply.add("<H2>Nagios server(s)</H2>\n");
-		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
 		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD></TR>\n");
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
 		{
@@ -372,7 +377,7 @@ class HTTPServer implements Runnable
 		reply.add("<BR>\n");
 
 		reply.add("<H2>Webcams</H2\n");
-		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
 		for(String image : config.getImageUrls())
 			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
 		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
@@ -675,7 +680,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
 		reply.add("<TR><TD><B>Host</B></TD><TD><B>host status</B></TD><TD><B>Service</B></TD><TD><B>service status</B></TD></TR>\n");
 
 		try
@@ -731,16 +736,16 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<TABLE BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
 
 		// stats
-		reply.add("<TR><TH ROWSPAN=\"4\" BGCOLOR=\"#99a0FF\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"4\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/log.cgi\">List of connecting hosts</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-all.cgi\">List of hosts/services</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-log.cgi\">Show log</A></TD></TR>\n");
 
 		// configure
-		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99b0ff\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"3\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/reload-config.cgi\">Reload configuration</A></TD></TR>\n");
 		if (config.getConfigFilename() == null)
 			reply.add("<TR><TD>No configuration-file selected (use --config), save configuration disabled</TD></TR>\n");
@@ -754,7 +759,7 @@ class HTTPServer implements Runnable
 		}
 
 		// actions
-		reply.add("<TR><TH ROWSPAN=\"3\" BGCOLOR=\"#99c0ff\"><IMG SRC=\"/images/actions.png\" ALT=\"Actions\"></TH>");
+		reply.add("<TR><TH ROWSPAN=\"3\"><IMG SRC=\"/images/actions.png\" ALT=\"Actions\"></TH>");
 		if (config.getRunGui())
 			reply.add("<TD><A HREF=\"/cgi-bin/force_reload.cgi\">Force reload</A></TD>\n");
 		else
@@ -768,7 +773,7 @@ class HTTPServer implements Runnable
 			reply.add("<TR><TD>No sound selected</TD></TR>\n");
 
 		// links
-		reply.add("<TR><TH ROWSPAN=\"1\" BGCOLOR=\"#99d0ff\"><IMG SRC=\"/images/links.png\" ALT=\"Links\"></TH><TD><A HREF=\"/links.html\">Links relevant to this program</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"1\"><IMG SRC=\"/images/links.png\" ALT=\"Links\"></TH><TD><A HREF=\"/links.html\">Links relevant to this program</A></TD></TR>\n");
 
 		//
 		reply.add("</TABLE>\n");
@@ -801,12 +806,13 @@ class HTTPServer implements Runnable
 		addPageHeader(reply, "");
 
 		reply.add("<H1>Links</H1>\n");
-		reply.add("<TABLE>\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
 		reply.add("<TR><TD>CoffeeSaint website (for updates):</TD><TD><A HREF=\"http://vanheusden.com/java/CoffeeSaint/\">http://vanheusden.com/java/CoffeeSaint/</A></TD></TR>\n");
 		reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
 		reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
 		reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
 		reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
+		reply.add("<TR><TD>Stylesheet generator:</TD><TD><A HREF=\"http://www.somacon.com/p141.php\">http://www.somacon.com/p141.php</A></TD></TR>\n");
 		// reply.add("<TR><TD></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 
@@ -821,7 +827,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<TABLE>\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
 		int nRefreshes = statistics.getNRefreshes();
 		reply.add("<TR><TD>Total number of refreshes:</TD><TD>" + nRefreshes + "</TD></TR>\n");
 		reply.add("<TR><TD>Total refresh time:</TD><TD>" + statistics.getTotalRefreshTime() + "</TD></TR>\n");
@@ -874,7 +880,7 @@ class HTTPServer implements Runnable
 			else
 				bgColor = coffeeSaint.predictWithColor(rightNow);
 
-			reply.add("<TABLE WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
+			reply.add("<TABLE CLASS=\"b\" WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
 
 			for(Problem currentProblem : coffeeSaint.getProblems())
 			{
@@ -996,7 +1002,7 @@ class HTTPServer implements Runnable
 		addPageHeader(reply, "");
 
 		reply.add("Last connected hosts:<BR>");
-		reply.add("<TABLE>");
+		reply.add("<TABLE CLASS=\"b\">");
 		reply.add("<TR><TD><B>host</B></TD><TD><B>when</B></TD></TR>");
 		for(int index=hosts.size() - 1; index>=0; index--)
 			reply.add("<TR><TD>" + hosts.get(index).getAddress().toString().substring(1) + "</TD><TD>" + formatDate(hosts.get(index).getTimestamp()) + "</TD></TR>");
@@ -1137,6 +1143,8 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_listall_cgi(socket);
 					else if (url.equals("/cgi-bin/list-log.cgi"))
 						sendReply_cgibin_listlog_cgi(socket);
+					else if (url.equals("/stylesheet.css"))
+						sendReply_stylesheet_css(socket, isHeadRequest);
 					else
 					{
 						sendReply_404(socket, url);

@@ -25,6 +25,7 @@ public class MyHTTPServer
 	public MyHTTPServer(String adapter, int port) throws Exception
 	{
 		serverSocket = new ServerSocket();
+		serverSocket.setReuseAddress(true);
 		System.out.println("Binding to " + adapter + ":" + port);
 		serverSocket.bind(new InetSocketAddress(adapter, port));
 	}
