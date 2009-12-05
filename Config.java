@@ -62,6 +62,7 @@ public class Config
 	private boolean alsoSoftState;
 	private boolean alsoDisabledActiveChecks;
 	private boolean showProblemHostServices;
+	private int problemCols;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -133,6 +134,7 @@ public class Config
 		alsoSoftState = false;
 		alsoDisabledActiveChecks = false;
 		showProblemHostServices = false;
+		problemCols = 1;
 
 		unlock();
 	}
@@ -277,6 +279,8 @@ public class Config
 						setRowBorderColor(data);
 					else if (name.equals("sound"))
 						setProblemSound(data);
+					else if (name.equals("problem-columns"))
+						setNProblemCols(Integer.valueOf(data));
 					else if (name.equals("listen-port"))
 						setHTTPServerListenPort(Integer.valueOf(data));
 					else if (name.equals("listen-adapter"))
@@ -432,6 +436,7 @@ public class Config
 		writeLine(out, "also-soft-state = " + (getAlsoSoftState() ? "true" : "false"));
 		writeLine(out, "also-disabled-active-checks = " + (getAlsoDisabledActiveChecks() ? "true" : "false"));
 		writeLine(out, "show-services-for-host-with-problems = " + (getShowServicesForHostWithProblems() ? "true" : "false"));
+		writeLine(out, "problem-columns = " + getNProblemCols());
 
 		for(NagiosDataSource dataSource : getNagiosDataSources())
 		{
@@ -695,7 +700,6 @@ public class Config
 		unlock();
 		return copy;
 	}
-
 
 	public void setCounter(boolean doCounter)
 	{
@@ -1438,5 +1442,21 @@ public class Config
 		lock();
 		showProblemHostServices = ssfhwp;
 		unlock();
+	}
+
+	public void setNProblemCols(int n)
+	{
+		lock();
+		this.problemCols = n;
+		unlock();
+	}
+
+	public int getNProblemCols()
+	{
+		int copy;
+		lock();
+		copy = problemCols;
+		unlock();
+		return copy;
 	}
 }

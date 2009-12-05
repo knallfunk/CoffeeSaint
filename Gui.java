@@ -51,15 +51,18 @@ public class Gui extends JPanel implements ImageObserver
 		this.statistics = statistics;
 	}
 
-	void drawRow(Graphics g, int windowWidth, String msg, int row, String state, Color bgColor)
+	void drawRow(Graphics gTo, int windowWidth, String msg, int row, String state, Color bgColor, int nCols, int colNr)
 	{
 		final int totalNRows = config.getNRows();
 		final int rowHeight = getHeight() / totalNRows;
+		final int rowColWidth = windowWidth / nCols;
+		final int xStart = rowColWidth * colNr;
 
-		final int y = rowHeight * row;
+		BufferedImage output = new BufferedImage(rowColWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
+		Graphics g = output.createGraphics();
 
 		g.setColor(coffeeSaint.stateToColor(state));
-		g.fillRect(0, y, windowWidth, rowHeight);
+		g.fillRect(0, 0, rowColWidth, rowHeight);
 
 		g.setColor(config.getTextColor());
 
@@ -78,23 +81,17 @@ public class Gui extends JPanel implements ImageObserver
 		{
 			Rectangle2D boundingRectangle = f.getStringBounds(msg, 0, msg.length(), new FontRenderContext(null, false, false));
 
-			shrink = Math.min(shrink, (double)windowWidth / (double)boundingRectangle.getWidth());
+			shrink = Math.min(shrink, (double)rowColWidth / (double)boundingRectangle.getWidth());
 		}
 		double newSize = (double)rowHeight * shrink;
 		double newAsc  = (double)fm.getAscent() * shrink;
 		f = f.deriveFont((float)newSize);
 		g.setFont(f);
 
-		int plotY = y + (int)newAsc;
-		CoffeeSaint.log.add("row " + row + ", " + newSize + "|" + newAsc + " -> " + plotY + " RH: " + rowHeight);
-		g.drawString(msg, 0, plotY);
+		g.drawString(msg, 0, (int)newAsc);
 
-		if (config.getRowBorder())
-		{
-			int drawY = y + rowHeight - 1;
-			g.setColor(config.getRowBorderColor());
-			g.drawLine(0, drawY, windowWidth, drawY);
-		}
+		Graphics2D gTo2D = (Graphics2D)gTo;
+		gTo2D.drawImage((Image)output, xStart, rowHeight * row, null);
 	}
 
 	public BufferedImage createHeaderImage(String header, String state, Color bgColor, int rowHeight)
@@ -104,7 +101,7 @@ public class Gui extends JPanel implements ImageObserver
 		int imageWidth = g2.getFontMetrics(new Font(config.getFontName(), Font.PLAIN, rowHeight)).stringWidth(header);
 		BufferedImage output = new BufferedImage(imageWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
 
-		drawRow(output.createGraphics(), imageWidth, header, 0, state, bgColor);
+		drawRow(output.createGraphics(), imageWidth, header, 0, state, bgColor, 1, 0);
 
 		return output;
 	}
@@ -220,7 +217,7 @@ public class Gui extends JPanel implements ImageObserver
 		g.setColor(Color.RED);
 		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
-		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY);
+		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1, 0);
 	}
 
 	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
@@ -237,7 +234,7 @@ public class Gui extends JPanel implements ImageObserver
 			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
 			if (config.getVerbose())
-				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor);
+				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor, 1, 0);
 			startLoadTs = System.currentTimeMillis();
 			ImageParameters [] imageParameters = coffeeSaint.loadImage(this, windowWidth, g);
 			endLoadTs = System.currentTimeMillis();
@@ -252,7 +249,7 @@ public class Gui extends JPanel implements ImageObserver
 
 			/* find the problems in the nagios data */
 			if (config.getVerbose())
-				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor);
+				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor, 1, 0);
 			coffeeSaint.lockProblems();
 			coffeeSaint.loadNagiosData(this, windowWidth, g);
 			coffeeSaint.findProblems();
@@ -280,10 +277,11 @@ public class Gui extends JPanel implements ImageObserver
 				if (config.getScrollingHeader())
 					currentHeader = createHeaderImage(header, problems.size() == 0 ? "0" : "255", bgColor, rowHeight);
 				else
-					drawRow(g, windowWidth, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor);
+					drawRow(g, windowWidth, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor, 1, 0);
 				curNRows++;
 			}
 
+			int colNr = 0;
 			for(Problem currentProblem : problems)
 			{
 				String escapeString;
@@ -295,11 +293,40 @@ public class Gui extends JPanel implements ImageObserver
 
 				CoffeeSaint.log.add(output);
 
-				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor);
+				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, config.getNProblemCols(), colNr);
 				curNRows++;
 
 				if (curNRows == config.getNRows())
-					break;
+				{
+					curNRows = config.getShowHeader() ? 1 : 0;
+					colNr++;
+					if (colNr == config.getNProblemCols())
+						break;
+				}
+			}
+
+			if (config.getRowBorder())
+			{
+				g.setColor(config.getRowBorderColor());
+				if (problems.size() > config.getNRows())
+				{
+					for(int rowColumns=0; rowColumns < config.getNProblemCols(); rowColumns++)
+					{
+						int x = (windowWidth * rowColumns) / config.getNProblemCols();
+						int y =  config.getShowHeader() ? rowHeight : 0;
+						g.drawLine(x, y, x, rowHeight * config.getNRows());
+					}
+				}
+
+				if (problems.size() > 0)
+				{
+					for(int rowsRow=0; rowsRow < Math.min(config.getNRows(), problems.size()); rowsRow++)
+					{
+						int drawY = rowHeight + rowsRow * rowHeight;
+						g.drawLine(0, drawY, windowWidth, drawY);
+					}
+
+				}
 			}
 
 			if (problems.size() > 0)

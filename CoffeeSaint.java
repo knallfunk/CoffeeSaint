@@ -280,7 +280,7 @@ public class CoffeeSaint
 	public void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor());
+			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor(), 1, 0);
 	}
 
 	public ImageParameters [] loadImage(Gui gui, int windowWidth, Graphics g) throws Exception
@@ -534,6 +534,7 @@ public class CoffeeSaint
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--fullscreen  Run in fullscreen mode, e.g. without any borders");
+		System.out.println("--problem-columns x  Split the screen in x columns so that it can display x * nrows");
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin");
 		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems");
 		System.out.println("--random-img  Randomize order of images shown");
@@ -736,6 +737,8 @@ public class CoffeeSaint
 						config.setSleepTime(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--image"))
 						config.addImageUrl(arg[++loop]);
+					else if (arg[loop].equals("--problem-columns"))
+						config.setNProblemCols(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--cam-rows"))
 						config.setCamRows(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--cam-cols"))

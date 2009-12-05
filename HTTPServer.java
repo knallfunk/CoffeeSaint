@@ -269,7 +269,7 @@ class HTTPServer implements Runnable
 		reply.add("<FORM ACTION=\"/cgi-bin/config-do.cgi\" METHOD=\"POST\">\n");
 
 		reply.add("<H2>Nagios handling parameters</H2>\n");
-		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
 		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + isChecked(config.getAlwaysNotify()) + "></TD><TD>Also display when notifications are disabled</TD></TR>\n");
 		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + isChecked(config.getAlsoAcknowledged()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also scheduled downtime</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_scheduled_downtime\" VALUE=\"on\" " + isChecked(config.getAlsoScheduledDowntime()) + "></TD><TD>Also display problems for which downtime has been scheduled</TD></TR>\n");
@@ -280,9 +280,10 @@ class HTTPServer implements Runnable
 		reply.add("<BR>\n");
 
 		reply.add("<H2>Look and feel parameters</H2>\n");
-		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
 
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD></TD></TR>\n");
 
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		List<String> fontNames = convertStringArrayToList(lge.getAvailableFontFamilyNames());
@@ -334,7 +335,7 @@ class HTTPServer implements Runnable
 		reply.add("<BR>\n");
 
 		reply.add("<H2>Nagios server(s)</H2>\n");
-		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
 		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD></TR>\n");
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
 		{
@@ -376,8 +377,8 @@ class HTTPServer implements Runnable
 		reply.add("TCP requires an ip-address followed by a space and a port-number in the parameters field.<BR>\n");
 		reply.add("<BR>\n");
 
-		reply.add("<H2>Webcams</H2\n");
-		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
+		reply.add("<H2>Webcams</H2>\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
 		for(String image : config.getImageUrls())
 			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
 		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
@@ -442,6 +443,19 @@ class HTTPServer implements Runnable
 			{
 				CoffeeSaint.log.add("Setting new # rows to: " + newNRows);
 				config.setNRows(newNRows);
+			}
+		}
+
+		HTTPRequestData nCols = socket.findRecord(requestData, "problem-columns");
+		if (nCols != null && nCols.getData() != null)
+		{
+			int newNCols = Integer.valueOf(nCols.getData());
+			if (newNCols < 1)
+				reply.add("New number of rows invalid, must be >= 1.<BR>\n");
+			else
+			{
+				CoffeeSaint.log.add("Setting new # rows to: " + newNCols);
+				config.setNProblemCols(newNCols);
 			}
 		}
 
@@ -680,7 +694,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
 		reply.add("<TR><TD><B>Host</B></TD><TD><B>host status</B></TD><TD><B>Service</B></TD><TD><B>service status</B></TD></TR>\n");
 
 		try
@@ -736,7 +750,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<TABLE CLASS=\"b\" BORDER=\"1\">\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
 
 		// stats
 		reply.add("<TR><TH ROWSPAN=\"4\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
