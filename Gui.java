@@ -223,7 +223,7 @@ public class Gui extends JPanel implements ImageObserver
 		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1, 0);
 	}
 
-	public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
+	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
 	{
 		try
 		{
