@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v1.9-beta002, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v2.0, (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
 
@@ -745,6 +745,8 @@ public class CoffeeSaint
 						config.setCamCols(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--reduce-textwidth"))
 						config.setReduceTextWidth(true);
+					else if (arg[loop].equals("--flexible-n-columns"))
+						config.setFlexibleNColumns(true);
 					else if (arg[loop].equals("--prefer"))
 					{
 						System.out.println("Loading prefers from " + arg[++loop]);

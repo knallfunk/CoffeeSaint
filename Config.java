@@ -63,6 +63,7 @@ public class Config
 	private boolean alsoDisabledActiveChecks;
 	private boolean showProblemHostServices;
 	private int problemCols;
+	private boolean flexibleNColumns;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -135,6 +136,7 @@ public class Config
 		alsoDisabledActiveChecks = false;
 		showProblemHostServices = false;
 		problemCols = 1;
+		flexibleNColumns = false;
 
 		unlock();
 	}
@@ -269,6 +271,8 @@ public class Config
 						setServiceIssue(data);
 					else if (name.equals("counter"))
 						setCounter(data.equalsIgnoreCase("true") ? true : false);
+					else if (name.equals("flexible-n-columns"))
+						setFlexibleNColumns(data.equalsIgnoreCase("true") ? true : false);
 					else if (name.equals("verbose"))
 						setVerbose(data.equalsIgnoreCase("true") ? true : false);
 					else if (name.equals("row-border"))
@@ -401,6 +405,7 @@ public class Config
 		writeLine(out, "critical-textcolor = " + getCriticalTextColorName());
 		writeLine(out, "bgcolorok = " + getBackgroundColorOkStatusName());
 		writeLine(out, "nrows = " + getNRows());
+		writeLine(out, "flexible-n-columns = " + (getFlexibleNColumns() ? "true" : "false"));
 		writeLine(out, "interval = " + getSleepTime());
 		for(String imgUrl : getImageUrls())
 			writeLine(out, "image = " + imgUrl);
@@ -1458,5 +1463,21 @@ public class Config
 		copy = problemCols;
 		unlock();
 		return copy;
+	}
+
+	public boolean getFlexibleNColumns()
+	{
+		boolean copy;
+		lock();
+		copy = flexibleNColumns;
+		unlock();
+		return copy;
+	}
+
+	public void setFlexibleNColumns(boolean fnc)
+	{
+		lock();
+		flexibleNColumns = fnc;
+		unlock();
 	}
 }

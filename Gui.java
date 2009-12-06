@@ -59,7 +59,10 @@ public class Gui extends JPanel implements ImageObserver
 		final int xStart = rowColWidth * colNr;
 
 		BufferedImage output = new BufferedImage(rowColWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
-		Graphics g = output.createGraphics();
+		Graphics2D g = output.createGraphics();
+
+		if (config.getAntiAlias())
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
 		g.setColor(coffeeSaint.stateToColor(state));
 		g.fillRect(0, 0, rowColWidth, rowHeight);
@@ -88,7 +91,7 @@ public class Gui extends JPanel implements ImageObserver
 		f = f.deriveFont((float)newSize);
 		g.setFont(f);
 
-		g.drawString(msg, 0, (int)newAsc);
+		g.drawString(msg, 1, (int)newAsc);
 
 		Graphics2D gTo2D = (Graphics2D)gTo;
 		gTo2D.drawImage((Image)output, xStart, rowHeight * row, null);
@@ -282,6 +285,12 @@ public class Gui extends JPanel implements ImageObserver
 			}
 
 			int colNr = 0;
+			int dummyNRows = config.getNRows() - (config.getShowHeader() ? 1 : 0);
+			int curNColumns;
+			if (config.getFlexibleNColumns())
+				curNColumns = Math.min(config.getNProblemCols(), (problems.size() + dummyNRows - 1) / dummyNRows);
+			else
+				curNColumns = config.getNProblemCols();
 			for(Problem currentProblem : problems)
 			{
 				String escapeString;
@@ -293,14 +302,14 @@ public class Gui extends JPanel implements ImageObserver
 
 				CoffeeSaint.log.add(output);
 
-				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, config.getNProblemCols(), colNr);
+				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, curNColumns, colNr);
 				curNRows++;
 
 				if (curNRows == config.getNRows())
 				{
 					curNRows = config.getShowHeader() ? 1 : 0;
 					colNr++;
-					if (colNr == config.getNProblemCols())
+					if (colNr == curNColumns)
 						break;
 				}
 			}
@@ -312,7 +321,7 @@ public class Gui extends JPanel implements ImageObserver
 				{
 					for(int rowColumns=0; rowColumns < config.getNProblemCols(); rowColumns++)
 					{
-						int x = (windowWidth * rowColumns) / config.getNProblemCols();
+						int x = (windowWidth * rowColumns) / curNColumns;
 						int y =  config.getShowHeader() ? rowHeight : 0;
 						g.drawLine(x, y, x, rowHeight * config.getNRows());
 					}

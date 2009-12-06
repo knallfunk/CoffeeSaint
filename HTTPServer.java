@@ -284,6 +284,7 @@ class HTTPServer implements Runnable
 
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Flexible number of columns:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"flexible-n-columns\" VALUE=\"on\" " + isChecked(config.getFlexibleNColumns()) + "></TD><TD>Use in combination with number of columns</TD></TR>\n");
 
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		List<String> fontNames = convertStringArrayToList(lge.getAvailableFontFamilyNames());
@@ -458,6 +459,8 @@ class HTTPServer implements Runnable
 				config.setNProblemCols(newNCols);
 			}
 		}
+
+		config.setFlexibleNColumns(getCheckBox(socket, requestData, "flexible-n-columns"));
 
 		config.setFontName(getFieldDecoded(socket, requestData, "font"));
 
