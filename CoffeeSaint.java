@@ -17,14 +17,14 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v2.0-beta001, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v2.0-beta002, (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
 
 	volatile static Config config;
 
-	static Predictor predictor;
-	static long lastPredictorDump = 0;
+	Predictor predictor;
+	long lastPredictorDump = 0;
 	//
 	static int currentImageFile = 0;
 	static Semaphore imageSemaphore = new Semaphore(1);
@@ -37,13 +37,28 @@ public class CoffeeSaint
 	//
 	Random random = new Random();
 
-	public CoffeeSaint()
+	public CoffeeSaint() throws Exception
 	{
+		if (config.getBrainFileName() != null)
+		{
+			predictor = new Predictor(config.getSleepTime());
+
+			try
+			{
+				System.out.println("Loading brain from " + config.getBrainFileName());
+				predictor.restoreBrainFromFile(config.getBrainFileName());
+			}
+			catch(FileNotFoundException e)
+			{
+				System.err.println("File " + config.getBrainFileName() + " not found, continuing(!) anyway");
+			}
+		}
 	}
 
-	static public Predictor getPredictor()
+	static public void cleanUp()
 	{
-		return predictor;
+		System.runFinalization();
+		System.gc();
 	}
 
 	static public String getVersion()
@@ -59,10 +74,10 @@ public class CoffeeSaint
 		for(StackTraceElement ste: e.getStackTrace())
 		{
 			log.add(" " + ste.getClassName() + ", "
-				+ ste.getFileName() + ", "
-				+ ste.getLineNumber() + ", "
-				+ ste.getMethodName() + ", "
-				+ (ste.isNativeMethod() ? "is native method" : "NOT a native method"));
+					+ ste.getFileName() + ", "
+					+ ste.getLineNumber() + ", "
+					+ ste.getMethodName() + ", "
+					+ (ste.isNativeMethod() ? "is native method" : "NOT a native method"));
 		}
 	}
 
@@ -263,13 +278,13 @@ public class CoffeeSaint
 	public Color stateToColor(String state)
 	{
 		if (state.equals("0") == true)
-			return Color.GREEN;
+			return config.getBackgroundColorOkStatus();
 		else if (state.equals("1") == true)
-			return Color.YELLOW;
+			return config.getWarningBgColor();
 		else if (state.equals("2") == true)
-			return Color.RED;
+			return config.getCriticalBgColor();
 		else if (state.equals("3") == true) // UNKNOWN STATE
-			return Color.MAGENTA;
+			return config.getNagiosUnknownBgColor();
 		else if (state.equals("255") == true)
 			return config.getBackgroundColor();
 
@@ -395,15 +410,20 @@ public class CoffeeSaint
 		return bgColor;
 	}
 
+	public void dumpPredictorBrainToFile() throws Exception
+	{
+		log.add("Dumping brain to " + config.getBrainFileName());
+
+		predictor.dumpBrainToFile(config.getBrainFileName());
+	}
+
 	public void learnProblems(Calendar rightNow, int nProblems) throws Exception
 	{
 		predictor.learn(rightNow, nProblems);
 
 		if ((System.currentTimeMillis() - lastPredictorDump)  > 1800000)
 		{
-			log.add("Dumping brain to " + config.getBrainFileName());
-
-			predictor.dumpBrainToFile(config.getBrainFileName());
+			dumpPredictorBrainToFile();
 
 			lastPredictorDump = System.currentTimeMillis();
 		}
@@ -575,6 +595,9 @@ public class CoffeeSaint
 		System.out.println("--scrolling-header  In case there's more information to put into it than what fits on the screen");
 		System.out.println("--anti-alias  Anti-alias graphics");
 		System.out.println("--verbose     Show what it is doing");
+		System.out.println("--warning-bg-color x Background color for warnings (yellow)");
+		System.out.println("--critical-bg-color x Background color for criticals (red)");
+		System.out.println("--nagios-unknown-bg-color x Background color for unknonws (magenta)");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -727,6 +750,12 @@ public class CoffeeSaint
 						config.listColors();
 						System.exit(0);
 					}
+					else if (arg[loop].equals("--warning-bg-color"))
+						config.setWarningBgColor(arg[++loop]);
+					else if (arg[loop].equals("--critical-bg-color"))
+						config.setCriticalBgColor(arg[++loop]);
+					else if (arg[loop].equals("--nagios-unknown-bg-color"))
+						config.setNagiosUnknownBgColor(arg[++loop]);
 					else if (arg[loop].equals("--bgcolor"))
 						config.setBackgroundColor(arg[++loop]);
 					else if (arg[loop].equals("--textcolor"))
@@ -745,6 +774,8 @@ public class CoffeeSaint
 						config.setCamCols(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--reduce-textwidth"))
 						config.setReduceTextWidth(true);
+					else if (arg[loop].equals("--max-quality-graphics"))
+						config.setMaxQualityGraphics(true);
 					else if (arg[loop].equals("--flexible-n-columns"))
 						config.setFlexibleNColumns(true);
 					else if (arg[loop].equals("--prefer"))
@@ -805,21 +836,6 @@ public class CoffeeSaint
 				}
 			}
 
-			if (config.getBrainFileName() != null)
-			{
-				predictor = new Predictor(config.getSleepTime());
-
-				try
-				{
-					System.out.println("Loading brain from " + config.getBrainFileName());
-					predictor.restoreBrainFromFile(config.getBrainFileName());
-				}
-				catch(FileNotFoundException e)
-				{
-					System.err.println("File " + config.getBrainFileName() + " not found, continuing(!) anyway");
-				}
-			}
-
 			CoffeeSaint coffeeSaint = new CoffeeSaint();
 			Gui gui = null;
 			if (config.getRunGui())
@@ -840,6 +856,8 @@ public class CoffeeSaint
 				f.setSize(useable.width, useable.height);
 				f.setContentPane(gui);
 
+				RepaintManager.currentManager(gui).setDoubleBufferingEnabled(false);
+
 				System.out.println("Initial paint");
 
 				f.setTitle(getVersion());
@@ -847,7 +865,7 @@ public class CoffeeSaint
 
 				f.setVisible(true);
 
-				f.addWindowListener(new FrameListener(config));
+				f.addWindowListener(new FrameListener(config, coffeeSaint));
 			}
 
 			if (config.getHTTPServerListenPort() != -1)

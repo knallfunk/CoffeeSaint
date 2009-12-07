@@ -51,8 +51,26 @@ public class Gui extends JPanel implements ImageObserver
 		this.statistics = statistics;
 	}
 
+	public void configureRendered(Graphics2D g)
+	{
+		if (config.getAntiAlias())
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+		if (config.getMaxQualityGraphics())
+		{
+			g.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
+
+			g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+
+			g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+
+			g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+		}
+	}
+
 	void drawRow(Graphics gTo, int windowWidth, String msg, int row, String state, Color bgColor, int nCols, int colNr)
 	{
+		System.out.println("DRAW ROW: " + msg + " " + row);
 		final int totalNRows = config.getNRows();
 		final int rowHeight = getHeight() / totalNRows;
 		final int rowColWidth = windowWidth / nCols;
@@ -61,8 +79,7 @@ public class Gui extends JPanel implements ImageObserver
 		BufferedImage output = new BufferedImage(rowColWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g = output.createGraphics();
 
-		if (config.getAntiAlias())
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		configureRendered(g);
 
 		g.setColor(coffeeSaint.stateToColor(state));
 		g.fillRect(0, 0, rowColWidth, rowHeight);
@@ -225,6 +242,7 @@ public class Gui extends JPanel implements ImageObserver
 
 	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
 	{
+		System.out.println(">>> DRAW PROBLEMS START <<<");
 		try
 		{
 			String loadImage = null;
@@ -329,7 +347,7 @@ public class Gui extends JPanel implements ImageObserver
 
 				if (problems.size() > 0)
 				{
-					for(int rowsRow=0; rowsRow < Math.min(config.getNRows(), problems.size()); rowsRow++)
+					for(int rowsRow=0; rowsRow < Math.min(config.getNRows(), problems.size() + (config.getShowHeader() ? 1 : 0)); rowsRow++)
 					{
 						int drawY = rowHeight + rowsRow * rowHeight;
 						g.drawLine(0, drawY, windowWidth, drawY);
@@ -374,18 +392,20 @@ public class Gui extends JPanel implements ImageObserver
 			if (g != null)
 				showCoffeeSaintProblem(e, g, windowWidth, rowHeight);
 		}
+		System.out.println(">>> DRAW PROBLEMS END <<<");
 	}
 
-	public void paint(Graphics g)
+	public void paintComponent(Graphics g)
 	{
+		System.out.println("+++ PAINT START +++ " + getWidth() + "x" + getHeight());
+		// super.paintComponent(g); not needed, doing everything myself
 		final Graphics2D g2d = (Graphics2D)g;
-		CoffeeSaint.log.add("Window size: " + getWidth() + "x" + getHeight());
 		final int rowHeight = getHeight() / config.getNRows();
 
-		CoffeeSaint.log.add("*** Paint PROBLEMS ");
-		if (config.getAntiAlias())
-			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		configureRendered(g2d);
+
 		drawProblems(g, getWidth(), getHeight(), rowHeight);
+		System.out.println("+++ PAINT END +++");
 	}
 
 	public void guiLoop() throws Exception
@@ -403,8 +423,7 @@ public class Gui extends JPanel implements ImageObserver
 			int rowHeight = getHeight() / config.getNRows();
 			int characterSize = rowHeight - 1;
 
-			if (config.getAntiAlias())
-				g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			configureRendered(g2d);
 
 			if (left <= 0)
 			{

@@ -5,21 +5,19 @@ import java.awt.event.WindowEvent;
 class FrameListener extends WindowAdapter
 {
 	Config config;
+	CoffeeSaint coffeeSaint;
 
-	FrameListener(Config config)
+	FrameListener(Config config, CoffeeSaint coffeeSaint)
 	{
 		this.config = config;
+		this.coffeeSaint = coffeeSaint;
 	}
 
 	public void windowClosing(WindowEvent event)
 	{
 		try
 		{
-			if (CoffeeSaint.getPredictor() != null)
-			{
-				CoffeeSaint.log.add("Storing brain to file " + config.getBrainFileName());
-				CoffeeSaint.predictor.dumpBrainToFile(config.getBrainFileName());
-			}
+			coffeeSaint.dumpPredictorBrainToFile();
 		}
 		catch(Exception exception)
 		{

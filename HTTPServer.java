@@ -285,7 +285,6 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Flexible number of columns:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"flexible-n-columns\" VALUE=\"on\" " + isChecked(config.getFlexibleNColumns()) + "></TD><TD>Use in combination with number of columns</TD></TR>\n");
-
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		List<String> fontNames = convertStringArrayToList(lge.getAvailableFontFamilyNames());
 		reply.add("<TR><TD>Font:</TD><TD>");
@@ -300,6 +299,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Reduce text width to fit to screen:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"reduce-textwidth\" VALUE=\"on\" " + isChecked(config.getReduceTextWidth()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Anti-alias:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"anti-alias\" VALUE=\"on\" " + isChecked(config.getAntiAlias()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Max. quality graphics:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"max-quality-graphics\" VALUE=\"on\" " + isChecked(config.getMaxQualityGraphics()) + "></TD><TD>Slows down and difference is small</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
@@ -321,6 +321,16 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Background color OK-status:</TD><TD>\n");
 		colorSelectorHTML(reply, "bgColorOk", config.getBackgroundColorOkStatusName());
 		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Background color warning-status:</TD><TD>\n");
+		colorSelectorHTML(reply, "warning-bg-color", config.getWarningBgColorName());
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Background color critical-status:</TD><TD>\n");
+		colorSelectorHTML(reply, "critical-bg-color", config.getCriticalBgColorName());
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Background color unknown-status:</TD><TD>\n");
+		colorSelectorHTML(reply, "unknown-bg-color", config.getNagiosUnknownBgColorName());
+		reply.add("</TD><TD></TD></TR>");
+
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
@@ -344,7 +354,7 @@ class HTTPServer implements Runnable
 			if (dataSource.getType() == NagiosDataSourceType.TCP)
 				type = "tcp";
 			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
-				type = "ztcp";
+				type = "compressed tcp";
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 				type = "http";
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
@@ -462,6 +472,8 @@ class HTTPServer implements Runnable
 
 		config.setFlexibleNColumns(getCheckBox(socket, requestData, "flexible-n-columns"));
 
+		config.setMaxQualityGraphics(getCheckBox(socket, requestData, "max-quality-graphics"));
+
 		config.setFontName(getFieldDecoded(socket, requestData, "font"));
 
 		config.setWarningFontName(getFieldDecoded(socket, requestData, "warning-font"));
@@ -475,6 +487,9 @@ class HTTPServer implements Runnable
 		config.setBackgroundColor(getField(socket, requestData, "backgroundColor"));
 
 		config.setBackgroundColorOkStatus(getField(socket, requestData, "bgColorOk"));
+		config.setWarningBgColor(getField(socket, requestData, "warning-bg-color"));
+		config.setCriticalBgColor(getField(socket, requestData, "critical-bg-color"));
+		config.setNagiosUnknownBgColor(getField(socket, requestData, "unknown-bg-color"));
 
 		String sleepTime = getField(socket, requestData, "sleepTime");
 		if (sleepTime.equals("") == false)

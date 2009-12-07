@@ -12,6 +12,12 @@ class ColorPair
 		this.value = value;
 	}
 
+	public ColorPair(String name, int value)
+	{
+		this.name = name;
+		this.value = new Color(value);
+	}
+
 	public String getName()
 	{
 		return name;

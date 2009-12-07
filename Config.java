@@ -30,6 +30,8 @@ public class Config
 	private String backgroundColorName;
 	private Color textColor, warningTextColor, criticalTextColor;
 	private String textColorName, warningTextColorName, criticalTextColorName;
+	private Color warningBgColor, criticalBgColor, nagiosUnknownBgColor;
+	private String warningBgColorName, criticalBgColorName, nagiosUnknownBgColorName;
 	private String bgColorOkStatusName;
 	private Color bgColorOkStatus;
 	private String problemSound = null;
@@ -64,6 +66,7 @@ public class Config
 	private boolean showProblemHostServices;
 	private int problemCols;
 	private boolean flexibleNColumns;
+	private boolean maxQualityGraphics;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -99,13 +102,13 @@ public class Config
 		always_notify = false;
 		also_acknowledged = false;
 		backgroundColor = Color.GRAY;
-		backgroundColorName = "GRAY";
+		backgroundColorName = "gray";
 		textColor = Color.BLACK;
-		textColorName = "BLACK";
+		textColorName = "black";
 		warningTextColor = Color.BLACK;
-		warningTextColorName = "BLACK";
+		warningTextColorName = "black";
 		criticalTextColor = Color.BLACK;
-		criticalTextColorName = "BLACK";
+		criticalTextColorName = "black";
 		counter = false;
 		adaptImgSize = false;
 		randomWebcam = false;
@@ -129,7 +132,7 @@ public class Config
 		reduceTextWidth = false;
 		rowBorder = false;
 		rowBorderColor = Color.BLACK;
-		rowBorderColorName = "BLACK";
+		rowBorderColorName = "black";
 		antiAlias = false;
 		alsoScheduledDowntime = false;
 		alsoSoftState = false;
@@ -137,6 +140,12 @@ public class Config
 		showProblemHostServices = false;
 		problemCols = 1;
 		flexibleNColumns = false;
+		warningBgColor = Color.YELLOW;
+		warningBgColorName = "yellow";
+		criticalBgColor = Color.RED;
+		criticalBgColorName = "red";
+		nagiosUnknownBgColor = Color.MAGENTA;
+		nagiosUnknownBgColorName = "magenta";
 
 		unlock();
 	}
@@ -217,6 +226,8 @@ public class Config
 					String name = line.substring(0, is).trim();
 					String data = line.substring(is + 1).trim();
 
+					boolean isTrue = data.equalsIgnoreCase("true") ? true : false;
+
 					if (name.equals("config"))
 						loadConfig(data);
 					else if (name.equals("source"))
@@ -258,11 +269,11 @@ public class Config
 					else if (name.equals("fullscreen"))
 						setFullscreen(true);
 					else if (name.equals("adapt-img"))
-						setAdaptImageSize(data.equalsIgnoreCase("true") ? true : false);
+						setAdaptImageSize(isTrue);
 					else if (name.equals("random-img"))
-						setRandomWebcam(data.equalsIgnoreCase("true") ? true : false);
+						setRandomWebcam(isTrue);
 					else if (name.equals("no-gui"))
-						setRunGui(!(data.equalsIgnoreCase("true") ? true : false));
+						setRunGui(!(isTrue));
 					else if (name.equals("header"))
 						setHeader(data);
 					else if (name.equals("host-issue"))
@@ -270,15 +281,17 @@ public class Config
 					else if (name.equals("service-issue"))
 						setServiceIssue(data);
 					else if (name.equals("counter"))
-						setCounter(data.equalsIgnoreCase("true") ? true : false);
+						setCounter(isTrue);
 					else if (name.equals("flexible-n-columns"))
-						setFlexibleNColumns(data.equalsIgnoreCase("true") ? true : false);
+						setFlexibleNColumns(isTrue);
 					else if (name.equals("verbose"))
-						setVerbose(data.equalsIgnoreCase("true") ? true : false);
+						setVerbose(isTrue);
 					else if (name.equals("row-border"))
-						setRowBorder(data.equalsIgnoreCase("true") ? true : false);
+						setRowBorder(isTrue);
 					else if (name.equals("anti-alias"))
-						setAntiAlias(data.equalsIgnoreCase("true") ? true : false);
+						setAntiAlias(isTrue);
+					else if (name.equals("max-quality-graphics"))
+						setMaxQualityGraphics(isTrue);
 					else if (name.equals("row-border-color"))
 						setRowBorderColor(data);
 					else if (name.equals("sound"))
@@ -292,15 +305,15 @@ public class Config
 					else if (name.equals("bgcolor"))
 						setBackgroundColor(data);
 					else if (name.equals("reduce-textwidth"))
-						setReduceTextWidth(data.equalsIgnoreCase("true") ? true : false);
+						setReduceTextWidth(isTrue);
 					else if (name.equals("also-scheduled-downtime"))
-						setAlsoScheduledDowntime(data.equalsIgnoreCase("true") ? true : false);
+						setAlsoScheduledDowntime(isTrue);
 					else if (name.equals("also-soft-state"))
-						setAlsoSoftState(data.equalsIgnoreCase("true") ? true : false);
+						setAlsoSoftState(isTrue);
 					else if (name.equals("also-disabled-active-checks"))
-						setAlsoDisabledActiveChecks(data.equalsIgnoreCase("true") ? true : false);
+						setAlsoDisabledActiveChecks(isTrue);
 					else if (name.equals("show-services-for-host-with-problems"))
-						setShowServicesForHostWithProblems(data.equalsIgnoreCase("true") ? true : false);
+						setShowServicesForHostWithProblems(isTrue);
 					else if (name.equals("textcolor"))
 						setTextColor(data);
 					else if (name.equals("warning-textcolor"))
@@ -314,7 +327,7 @@ public class Config
 					else if (name.equals("interval"))
 						setSleepTime(Integer.valueOf(data));
 					else if (name.equals("scrolling-header"))
-						setScrollingHeader(data.equalsIgnoreCase("true") ? true : false);
+						setScrollingHeader(isTrue);
 					else if (name.equals("scroll-pixels-per-sec"))
 						setScrollingHeaderPixelsPerSecond(Integer.valueOf(data));
 					else if (name.equals("image"))
@@ -326,7 +339,7 @@ public class Config
 					else if (name.equals("prefer"))
 						loadPrefers(data);
 					else if (name.equals("ignore-aspect-ratio"))
-						setKeepAspectRatio(!(data.equalsIgnoreCase("true") ? true : false));
+						setKeepAspectRatio(!(isTrue));
 					else if (name.equals("sort-order"))
 					{
 						String field = null;
@@ -344,17 +357,23 @@ public class Config
 						setSortOrder(field, numeric, reverse);
 					}
 					else if (name.equals("always-notify"))
-						setAlwaysNotify(data.equalsIgnoreCase("true") ? true : false);
+						setAlwaysNotify(isTrue);
 					else if (name.equals("also-acknowledged"))
-						setAlsoAcknowledged(data.equalsIgnoreCase("true") ? true : false);
+						setAlsoAcknowledged(isTrue);
 					else if (name.equals("show-header"))
-						setShowHeader(data.equalsIgnoreCase("true") ? true : false);
+						setShowHeader(isTrue);
 					else if (name.equals("font"))
 						setFontName(data);
 					else if (name.equals("critical-font"))
 						setCriticalFontName(data);
 					else if (name.equals("warning-font"))
 						setWarningFontName(data);
+					else if (name.equals("warning-bg-color"))
+						setWarningBgColor(data);
+					else if (name.equals("critical-bg-color"))
+						setCriticalBgColor(data);
+					else if (name.equals("nagios-unknown-bg-color"))
+						setNagiosUnknownBgColor(data);
 					else
 						throw new Exception("Unknown parameter on line " + lineNr);
 				}
@@ -418,6 +437,7 @@ public class Config
 		writeLine(out, "warning-font = " + getWarningFontName());
 		writeLine(out, "verbose = " + (getVerbose() ? "true" : "false"));
 		writeLine(out, "anti-alias = " + (getAntiAlias() ? "true" : "false"));
+		writeLine(out, "max-quality-graphics = " + (getMaxQualityGraphics() ? "true" : "false"));
 		writeLine(out, "row-border = " + (getRowBorder() ? "true" : "false"));
 		writeLine(out, "row-border-color = " + getRowBorderColorName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
@@ -477,6 +497,9 @@ public class Config
 		writeLine(out, "cam-rows = " + getCamRows());
 		writeLine(out, "cam-cols = " + getCamCols());
 		writeLine(out, "ignore-aspect-ratio = " + (!getKeepAspectRatio() ? "true" : "false"));
+		writeLine(out, "warning-bg-color = " + getWarningBgColorName());
+		writeLine(out, "critical-bg-color = " + getCriticalBgColorName());
+		writeLine(out, "nagios-unknown-bg-color = " + getNagiosUnknownBgColorName());
 
 		out.close();
 	}
@@ -500,19 +523,149 @@ public class Config
 	public void initColors()
 	{
 		colorPairs = new ArrayList<ColorPair>();
+		colorPairs.add(new ColorPair("aliceblue", 0xf0f8ff));
+		colorPairs.add(new ColorPair("antiquewhite", 0xfaebd7));
+		colorPairs.add(new ColorPair("aqua", 0x00ffff));
+		colorPairs.add(new ColorPair("aquamarine", 0x7fffd4));
+		colorPairs.add(new ColorPair("azure", 0xf0ffff));
+		colorPairs.add(new ColorPair("beige", 0xf5f5dc));
+		colorPairs.add(new ColorPair("bisque", 0xffe4c4));
 		colorPairs.add(new ColorPair("black", Color.BLACK));
+		colorPairs.add(new ColorPair("blanchedalmond", 0xffebcd));
 		colorPairs.add(new ColorPair("blue", Color.BLUE));
+		colorPairs.add(new ColorPair("blueviolet", 0x8a2be2));
+		colorPairs.add(new ColorPair("brown", 0xa52a2a));
+		colorPairs.add(new ColorPair("burlywood", 0xdeb887));
+		colorPairs.add(new ColorPair("cadetblue", 0x5f9ea0));
+		colorPairs.add(new ColorPair("chartreuse", 0x7fff00));
+		colorPairs.add(new ColorPair("chocolate", 0xd2691e));
+		colorPairs.add(new ColorPair("coral", 0xff7f50));
+		colorPairs.add(new ColorPair("cornflowerblue", 0x6495ed));
+		colorPairs.add(new ColorPair("cornsilk", 0xfff8dc));
+		colorPairs.add(new ColorPair("crimson", 0xdc143c));
+		colorPairs.add(new ColorPair("cyan", 0x00ffff));
 		colorPairs.add(new ColorPair("cyan", Color.CYAN));
+		colorPairs.add(new ColorPair("darkblue", 0x00008b));
+		colorPairs.add(new ColorPair("darkcyan", 0x008b8b));
+		colorPairs.add(new ColorPair("darkgoldenrod", 0xb8860b));
+		colorPairs.add(new ColorPair("darkgray", 0xa9a9a9));
 		colorPairs.add(new ColorPair("dark_gray", Color.DARK_GRAY));
+		colorPairs.add(new ColorPair("darkgreen", 0x006400));
+		colorPairs.add(new ColorPair("darkkhaki", 0xbdb76b));
+		colorPairs.add(new ColorPair("darkmagenta", 0x8b008b));
+		colorPairs.add(new ColorPair("darkolivegreen", 0x556b2f));
+		colorPairs.add(new ColorPair("darkorange", 0xff8c00));
+		colorPairs.add(new ColorPair("darkorchid", 0x9932cc));
+		colorPairs.add(new ColorPair("darkred", 0x8b0000));
+		colorPairs.add(new ColorPair("darksalmon", 0xe9967a));
+		colorPairs.add(new ColorPair("darkseagreen", 0x8fbc8f));
+		colorPairs.add(new ColorPair("darkslateblue", 0x483d8b));
+		colorPairs.add(new ColorPair("darkslategray", 0x2f4f4f));
+		colorPairs.add(new ColorPair("darkturquoise", 0x00ced1));
+		colorPairs.add(new ColorPair("darkviolet", 0x9400d3));
+		colorPairs.add(new ColorPair("deeppink", 0xff1493));
+		colorPairs.add(new ColorPair("deepskyblue", 0x00bfff));
+		colorPairs.add(new ColorPair("dimgray", 0x696969));
+		colorPairs.add(new ColorPair("dodgerblue", 0x1e90ff));
+		colorPairs.add(new ColorPair("firebrick", 0xb22222));
+		colorPairs.add(new ColorPair("floralwhite", 0xfffaf0));
+		colorPairs.add(new ColorPair("forestgreen", 0x228b22));
+		colorPairs.add(new ColorPair("fuchsia", 0xff00ff));
+		colorPairs.add(new ColorPair("gainsboro", 0xdcdcdc));
+		colorPairs.add(new ColorPair("ghostwhite", 0xf8f8ff));
+		colorPairs.add(new ColorPair("gold", 0xffd700));
+		colorPairs.add(new ColorPair("goldenrod", 0xdaa520));
 		colorPairs.add(new ColorPair("gray", Color.GRAY));
 		colorPairs.add(new ColorPair("green", Color.GREEN));
+		colorPairs.add(new ColorPair("greenyellow", 0xadff2f));
+		colorPairs.add(new ColorPair("honeydew", 0xf0fff0));
+		colorPairs.add(new ColorPair("hotpink", 0xff69b4));
+		colorPairs.add(new ColorPair("indianred", 0xcd5c5c));
+		colorPairs.add(new ColorPair("indigo", 0x4b0082));
+		colorPairs.add(new ColorPair("ivory", 0xfffff0));
+		colorPairs.add(new ColorPair("khaki", 0xf0e68c));
+		colorPairs.add(new ColorPair("lavender", 0xe6e6fa));
+		colorPairs.add(new ColorPair("lavenderblush", 0xfff0f5));
+		colorPairs.add(new ColorPair("lawngreen", 0x7cfc00));
+		colorPairs.add(new ColorPair("lemonchiffon", 0xfffacd));
+		colorPairs.add(new ColorPair("lightblue", 0xadd8e6));
+		colorPairs.add(new ColorPair("lightcoral", 0xf08080));
+		colorPairs.add(new ColorPair("lightcyan", 0xe0ffff));
+		colorPairs.add(new ColorPair("lightgoldenrodyellow", 0xfafad2));
 		colorPairs.add(new ColorPair("light_gray", Color.LIGHT_GRAY));
+		colorPairs.add(new ColorPair("lightgreen", 0x90ee90));
+		colorPairs.add(new ColorPair("lightgrey", 0xd3d3d3));
+		colorPairs.add(new ColorPair("lightpink", 0xffb6c1));
+		colorPairs.add(new ColorPair("lightsalmon", 0xffa07a));
+		colorPairs.add(new ColorPair("lightseagreen", 0x20b2aa));
+		colorPairs.add(new ColorPair("lightskyblue", 0x87cefa));
+		colorPairs.add(new ColorPair("lightslategray", 0x778899));
+		colorPairs.add(new ColorPair("lightsteelblue", 0xb0c4de));
+		colorPairs.add(new ColorPair("lightyellow", 0xffffe0));
+		colorPairs.add(new ColorPair("lime", 0x00ff00));
+		colorPairs.add(new ColorPair("limegreen", 0x32cd32));
+		colorPairs.add(new ColorPair("linen", 0xfaf0e6));
 		colorPairs.add(new ColorPair("magenta", Color.MAGENTA));
+		colorPairs.add(new ColorPair("maroon", 0x800000));
+		colorPairs.add(new ColorPair("mediumauqamarine", 0x66cdaa));
+		colorPairs.add(new ColorPair("mediumblue", 0x0000cd));
+		colorPairs.add(new ColorPair("mediumorchid", 0xba55d3));
+		colorPairs.add(new ColorPair("mediumpurple", 0x9370d8));
+		colorPairs.add(new ColorPair("mediumseagreen", 0x3cb371));
+		colorPairs.add(new ColorPair("mediumslateblue", 0x7b68ee));
+		colorPairs.add(new ColorPair("mediumspringgreen", 0x00fa9a));
+		colorPairs.add(new ColorPair("mediumturquoise", 0x48d1cc));
+		colorPairs.add(new ColorPair("mediumvioletred", 0xc71585));
+		colorPairs.add(new ColorPair("midnightblue", 0x191970));
+		colorPairs.add(new ColorPair("mintcream", 0xf5fffa));
+		colorPairs.add(new ColorPair("mistyrose", 0xffe4e1));
+		colorPairs.add(new ColorPair("moccasin", 0xffe4b5));
+		colorPairs.add(new ColorPair("navajowhite", 0xffdead));
+		colorPairs.add(new ColorPair("navy", 0x000080));
+		colorPairs.add(new ColorPair("oldlace", 0xfdf5e6));
+		colorPairs.add(new ColorPair("olive", 0x808000));
+		colorPairs.add(new ColorPair("olivedrab", 0x688e23));
 		colorPairs.add(new ColorPair("orange", Color.ORANGE));
+		colorPairs.add(new ColorPair("orangered", 0xff4500));
+		colorPairs.add(new ColorPair("orchid", 0xda70d6));
+		colorPairs.add(new ColorPair("palegoldenrod", 0xeee8aa));
+		colorPairs.add(new ColorPair("palegreen", 0x98fb98));
+		colorPairs.add(new ColorPair("paleturquoise", 0xafeeee));
+		colorPairs.add(new ColorPair("palevioletred", 0xd87093));
+		colorPairs.add(new ColorPair("papayawhip", 0xffefd5));
+		colorPairs.add(new ColorPair("peachpuff", 0xffdab9));
+		colorPairs.add(new ColorPair("peru", 0xcd853f));
 		colorPairs.add(new ColorPair("pink", Color.PINK));
+		colorPairs.add(new ColorPair("plum", 0xdda0dd));
+		colorPairs.add(new ColorPair("powderblue", 0xb0e0e6));
+		colorPairs.add(new ColorPair("purple", 0x800080));
 		colorPairs.add(new ColorPair("red", Color.RED));
-		colorPairs.add(new ColorPair("white", Color.WHITE));
+		colorPairs.add(new ColorPair("rosybrown", 0xbc8f8f));
+		colorPairs.add(new ColorPair("royalblue", 0x4169e1));
+		colorPairs.add(new ColorPair("saddlebrown", 0x8b4513));
+		colorPairs.add(new ColorPair("salmon", 0xfa8072));
+		colorPairs.add(new ColorPair("sandybrown", 0xf4a460));
+		colorPairs.add(new ColorPair("seagreen", 0x2e8b57));
+		colorPairs.add(new ColorPair("seashell", 0xfff5ee));
+		colorPairs.add(new ColorPair("sienna", 0xa0522d));
+		colorPairs.add(new ColorPair("silver", 0xc0c0c0));
+		colorPairs.add(new ColorPair("skyblue", 0x87ceeb));
+		colorPairs.add(new ColorPair("slateblue", 0x6a5acd));
+		colorPairs.add(new ColorPair("slategray", 0x708090));
+		colorPairs.add(new ColorPair("snow", 0xfffafa));
+		colorPairs.add(new ColorPair("springgreen", 0x00ff7f));
+		colorPairs.add(new ColorPair("steelblue", 0x4682b4));
+		colorPairs.add(new ColorPair("tan", 0xd2b48c));
+		colorPairs.add(new ColorPair("teal", 0x008080));
+		colorPairs.add(new ColorPair("thistle", 0xd8bfd8));
+		colorPairs.add(new ColorPair("tomato", 0xff6347));
+		colorPairs.add(new ColorPair("turquoise", 0x40e0d0));
+		colorPairs.add(new ColorPair("violet", 0xee82ee));
+		colorPairs.add(new ColorPair("wheat", 0xf5deb3));
+		colorPairs.add(new ColorPair("white", 0xffffff));
+		colorPairs.add(new ColorPair("whitesmoke", 0xf5f5f5));
 		colorPairs.add(new ColorPair("yellow", Color.YELLOW));
+		colorPairs.add(new ColorPair("yellowgreen", 0x9acd32));
 	}
 
 	public List<ColorPair> getColors()
@@ -1478,6 +1631,109 @@ public class Config
 	{
 		lock();
 		flexibleNColumns = fnc;
+		unlock();
+	}
+
+	public void setCriticalBgColor(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		criticalBgColor = color;
+		criticalBgColorName = colorName;
+		unlock();
+	}
+
+	public Color getCriticalBgColor()
+	{
+		Color copy;
+		lock();
+		copy = criticalBgColor;
+		unlock();
+		return copy;
+	}
+
+	public String getCriticalBgColorName()
+	{
+		String copy;
+		lock();
+		copy = criticalBgColorName;
+		unlock();
+		return copy;
+	}
+
+	public void setWarningBgColor(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		warningBgColor = color;
+		warningBgColorName = colorName;
+		unlock();
+	}
+
+	public Color getWarningBgColor()
+	{
+		Color copy;
+		lock();
+		copy = warningBgColor;
+		unlock();
+		return copy;
+	}
+
+	public String getWarningBgColorName()
+	{
+		String copy;
+		lock();
+		copy = warningBgColorName;
+		unlock();
+		return copy;
+	}
+
+	public void setNagiosUnknownBgColor(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		nagiosUnknownBgColor = color;
+		nagiosUnknownBgColorName = colorName;
+		unlock();
+	}
+
+	public Color getNagiosUnknownBgColor()
+	{
+		Color copy;
+		lock();
+		copy = nagiosUnknownBgColor;
+		unlock();
+		return copy;
+	}
+
+	public String getNagiosUnknownBgColorName()
+	{
+		String copy;
+		lock();
+		copy = nagiosUnknownBgColorName;
+		unlock();
+		return copy;
+	}
+
+	public boolean getMaxQualityGraphics()
+	{
+		boolean copy;
+		lock();
+		copy = alsoDisabledActiveChecks;
+		unlock();
+		return copy;
+	}
+
+	public void setMaxQualityGraphics(boolean mqg)
+	{
+		lock();
+		maxQualityGraphics = mqg;
 		unlock();
 	}
 }
