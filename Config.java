@@ -67,6 +67,8 @@ public class Config
 	private int problemCols;
 	private boolean flexibleNColumns;
 	private boolean maxQualityGraphics;
+	private boolean allowCompression;
+	private float transparency;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -146,6 +148,8 @@ public class Config
 		criticalBgColorName = "red";
 		nagiosUnknownBgColor = Color.MAGENTA;
 		nagiosUnknownBgColorName = "magenta";
+		allowCompression = true;
+		transparency = 1.0f;
 
 		unlock();
 	}
@@ -330,6 +334,8 @@ public class Config
 						setScrollingHeader(isTrue);
 					else if (name.equals("scroll-pixels-per-sec"))
 						setScrollingHeaderPixelsPerSecond(Integer.valueOf(data));
+					else if (name.equals("transparency"))
+						setTransparency(Float.valueOf(data));
 					else if (name.equals("image"))
 						addImageUrl(data);
 					else if (name.equals("cam-rows"))
@@ -374,6 +380,8 @@ public class Config
 						setCriticalBgColor(data);
 					else if (name.equals("nagios-unknown-bg-color"))
 						setNagiosUnknownBgColor(data);
+					else if (name.equals("disable-http-compression"))
+						setAllowHTTPCompression(false);
 					else
 						throw new Exception("Unknown parameter on line " + lineNr);
 				}
@@ -450,6 +458,7 @@ public class Config
 		writeLine(out, "scroll-pixels-per-sec = " + getScrollingHeaderPixelsPerSecond());
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
+		writeLine(out, "transparency = " + getTransparency());
 		String sort = "";
 		if (getSortOrderNumeric())
 			sort += "numeric ";
@@ -500,6 +509,7 @@ public class Config
 		writeLine(out, "warning-bg-color = " + getWarningBgColorName());
 		writeLine(out, "critical-bg-color = " + getCriticalBgColorName());
 		writeLine(out, "nagios-unknown-bg-color = " + getNagiosUnknownBgColorName());
+		writeLine(out, "disable-http-compression = " + (!getAllowHTTPCompression() ? "true" : "false"));
 
 		out.close();
 	}
@@ -1734,6 +1744,34 @@ public class Config
 	{
 		lock();
 		maxQualityGraphics = mqg;
+		unlock();
+	}
+
+	public void setAllowHTTPCompression(boolean allow)
+	{
+		lock();
+		allowCompression = allow;
+		unlock();
+	}
+
+	public boolean getAllowHTTPCompression()
+	{
+		boolean copy;
+		lock();
+		copy = allowCompression;
+		unlock();
+		return copy;
+	}
+
+	public float getTransparency()
+	{
+		return transparency;
+	}
+
+	public void setTransparency(float t)
+	{
+		lock();
+		transparency = t;
 		unlock();
 	}
 }

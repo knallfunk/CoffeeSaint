@@ -68,7 +68,7 @@ public class Gui extends JPanel implements ImageObserver
 		}
 	}
 
-	void drawRow(Graphics gTo, int windowWidth, String msg, int row, String state, Color bgColor, int nCols, int colNr)
+	void drawRow(Graphics gTo, int windowWidth, String msg, int row, String state, Color bgColor, int nCols, int colNr, float seeThrough)
 	{
 		System.out.println("DRAW ROW: " + msg + " " + row);
 		final int totalNRows = config.getNRows();
@@ -76,7 +76,7 @@ public class Gui extends JPanel implements ImageObserver
 		final int rowColWidth = windowWidth / nCols;
 		final int xStart = rowColWidth * colNr;
 
-		BufferedImage output = new BufferedImage(rowColWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
+		BufferedImage output = new BufferedImage(rowColWidth, rowHeight, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = output.createGraphics();
 
 		configureRendered(g);
@@ -111,7 +111,19 @@ public class Gui extends JPanel implements ImageObserver
 		g.drawString(msg, 1, (int)newAsc);
 
 		Graphics2D gTo2D = (Graphics2D)gTo;
-		gTo2D.drawImage((Image)output, xStart, rowHeight * row, null);
+
+		int x = xStart;
+		int y = rowHeight * row;
+		if (seeThrough != 1.0)
+		{
+			float [] scales  = { 1f, 1f, 1f, seeThrough };
+			float [] offsets = { 0f, 0f, 0f, 0f   };
+			gTo2D.drawImage(output, new RescaleOp(scales, offsets, null), x, y);
+		}
+		else
+		{
+			gTo2D.drawImage((Image)output, x, y, null);
+		}
 	}
 
 	public BufferedImage createHeaderImage(String header, String state, Color bgColor, int rowHeight)
@@ -121,7 +133,7 @@ public class Gui extends JPanel implements ImageObserver
 		int imageWidth = g2.getFontMetrics(new Font(config.getFontName(), Font.PLAIN, rowHeight)).stringWidth(header);
 		BufferedImage output = new BufferedImage(imageWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
 
-		drawRow(output.createGraphics(), imageWidth, header, 0, state, bgColor, 1, 0);
+		drawRow(output.createGraphics(), imageWidth, header, 0, state, bgColor, 1, 0, 1.0f);
 
 		return output;
 	}
@@ -237,7 +249,7 @@ public class Gui extends JPanel implements ImageObserver
 		g.setColor(Color.RED);
 		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
-		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1, 0);
+		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1, 0, 1.0f);
 	}
 
 	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
@@ -255,7 +267,7 @@ public class Gui extends JPanel implements ImageObserver
 			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
 			if (config.getVerbose())
-				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor, 1, 0);
+				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor, 1, 0, 1.0f);
 			startLoadTs = System.currentTimeMillis();
 			ImageParameters [] imageParameters = coffeeSaint.loadImage(this, windowWidth, g);
 			endLoadTs = System.currentTimeMillis();
@@ -270,7 +282,7 @@ public class Gui extends JPanel implements ImageObserver
 
 			/* find the problems in the nagios data */
 			if (config.getVerbose())
-				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor, 1, 0);
+				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor, 1, 0, 1.0f);
 			coffeeSaint.lockProblems();
 			coffeeSaint.loadNagiosData(this, windowWidth, g);
 			coffeeSaint.findProblems();
@@ -298,7 +310,7 @@ public class Gui extends JPanel implements ImageObserver
 				if (config.getScrollingHeader())
 					currentHeader = createHeaderImage(header, problems.size() == 0 ? "0" : "255", bgColor, rowHeight);
 				else
-					drawRow(g, windowWidth, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor, 1, 0);
+					drawRow(g, windowWidth, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor, 1, 0, 1.0f);
 				curNRows++;
 			}
 
@@ -320,7 +332,7 @@ public class Gui extends JPanel implements ImageObserver
 
 				CoffeeSaint.log.add(output);
 
-				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, curNColumns, colNr);
+				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, curNColumns, colNr, config.getTransparency());
 				curNRows++;
 
 				if (curNRows == config.getNRows())
@@ -430,6 +442,7 @@ public class Gui extends JPanel implements ImageObserver
 				lastRefresh = now;
 				CoffeeSaint.log.add("*** Update PROBLEMS " + left);
 				drawProblems(g, getWidth(), getHeight(), rowHeight);
+				coffeeSaint.cleanUp();
 			}
 
 			if (currentHeader != null && config.getScrollingHeader())

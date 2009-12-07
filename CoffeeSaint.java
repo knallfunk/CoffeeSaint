@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v2.0-beta002, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v2.1, (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
 
@@ -55,7 +55,7 @@ public class CoffeeSaint
 		}
 	}
 
-	static public void cleanUp()
+	public void cleanUp()
 	{
 		System.runFinalization();
 		System.gc();
@@ -295,7 +295,7 @@ public class CoffeeSaint
 	public void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor(), 1, 0);
+			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor(), 1, 0, 1.0f);
 	}
 
 	public ImageParameters [] loadImage(Gui gui, int windowWidth, Graphics g) throws Exception
@@ -456,7 +456,7 @@ public class CoffeeSaint
 			{
 				logStr += dataSource.getURL();
 				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getURL());
-				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion());
+				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion(), config.getAllowHTTPCompression());
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 			{
@@ -528,6 +528,7 @@ public class CoffeeSaint
 		for(;;)
 		{
 			Thread.sleep(config.getSleepTime() * 1000);
+			coffeeSaint.cleanUp();
 		}
 	}
 
@@ -551,6 +552,7 @@ public class CoffeeSaint
 		System.out.println("              You can add as many Nagios servers as you like");
 		System.out.println("              Example: --source file 3 /var/cache/nagios3/status.dat");
 		System.out.println("");
+		System.out.println("--disable-http-compression Don't use gzip/deflate compression in HTTP connection - usefull for fast links as the server has less load then");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--fullscreen  Run in fullscreen mode, e.g. without any borders");
@@ -558,6 +560,7 @@ public class CoffeeSaint
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin");
 		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems");
 		System.out.println("--random-img  Randomize order of images shown");
+		System.out.println("--transparency x Transparency for drawing (0.0...1.0) - only usefull with background image/webcam");
 		System.out.println("--font x      Font to use. Default is 'Arial'");
 		System.out.println("--critical-font x  Font to use for critical problems");
 		System.out.println("--warning-font x   Font to use for warning problems");
@@ -807,6 +810,10 @@ public class CoffeeSaint
 						config.setAlsoSoftState(true);
 					else if (arg[loop].equals("--also-disabled-active-checks"))
 						config.setAlsoDisabledActiveChecks(true);
+					else if (arg[loop].equals("--disable-http-compression"))
+						config.setAllowHTTPCompression(false);
+					else if (arg[loop].equals("--transparency"))
+						config.setTransparency(Float.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--version") || arg[loop].equals("-version"))
 					{
 						System.out.println(getVersion());

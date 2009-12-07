@@ -282,8 +282,8 @@ class HTTPServer implements Runnable
 		reply.add("<H2>Look and feel parameters</H2>\n");
 		reply.add("<TABLE CLASS=\"b\">\n");
 
-		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD>&gt;= 3</TD></TR>\n");
+		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD>&gt;= 1</TD></TR>\n");
 		reply.add("<TR><TD>Flexible number of columns:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"flexible-n-columns\" VALUE=\"on\" " + isChecked(config.getFlexibleNColumns()) + "></TD><TD>Use in combination with number of columns</TD></TR>\n");
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		List<String> fontNames = convertStringArrayToList(lge.getAvailableFontFamilyNames());
@@ -296,10 +296,11 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Critical font:</TD><TD>");
 		stringSelectorHTML(reply, "critical-font", fontNames, config.getCriticalFontName());
 		reply.add("</TD><TD></TD></TR>");
-		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
 		reply.add("<TR><TD>Reduce text width to fit to screen:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"reduce-textwidth\" VALUE=\"on\" " + isChecked(config.getReduceTextWidth()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Anti-alias:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"anti-alias\" VALUE=\"on\" " + isChecked(config.getAntiAlias()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Max. quality graphics:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"max-quality-graphics\" VALUE=\"on\" " + isChecked(config.getMaxQualityGraphics()) + "></TD><TD>Slows down and difference is small</TD></TR>\n");
+		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
@@ -384,6 +385,7 @@ class HTTPServer implements Runnable
 		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\">3</OPTION></SELECT></TD>\n");
 		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"server-add-parameters\"></TD>\n");
 		reply.add("</TR>\n");
+		reply.add("<TR><TD>Use HTTP compression:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"disable-http-compression\" VALUE=\"on\" " + isChecked(config.getAllowHTTPCompression()) + "></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("TCP requires an ip-address followed by a space and a port-number in the parameters field.<BR>\n");
 		reply.add("<BR>\n");
@@ -451,10 +453,7 @@ class HTTPServer implements Runnable
 			if (newNRows < 3)
 				reply.add("New number of rows invalid, must be >= 3.<BR>\n");
 			else
-			{
-				CoffeeSaint.log.add("Setting new # rows to: " + newNRows);
 				config.setNRows(newNRows);
-			}
 		}
 
 		HTTPRequestData nCols = socket.findRecord(requestData, "problem-columns");
@@ -464,11 +463,19 @@ class HTTPServer implements Runnable
 			if (newNCols < 1)
 				reply.add("New number of rows invalid, must be >= 1.<BR>\n");
 			else
-			{
-				CoffeeSaint.log.add("Setting new # rows to: " + newNCols);
 				config.setNProblemCols(newNCols);
-			}
 		}
+
+		HTTPRequestData transparency = socket.findRecord(requestData, "transparency");
+		if (transparency != null && transparency.getData() != null)
+		{
+			float newTransparency = Float.valueOf(transparency.getData());
+			if (newTransparency < 0.0 || newTransparency > 1.0)
+				reply.add("Transparency must be between 0.0 and 1.0 (both inclusive)");
+			else
+				config.setTransparency(newTransparency);
+		}
+
 
 		config.setFlexibleNColumns(getCheckBox(socket, requestData, "flexible-n-columns"));
 
@@ -540,6 +547,8 @@ class HTTPServer implements Runnable
 		}
 
 		config.setAdaptImageSize(getCheckBox(socket, requestData, "adapt-img"));
+
+		config.setAllowHTTPCompression(getCheckBox(socket, requestData, "disable-http-compression"));
 
 		config.setAntiAlias(getCheckBox(socket, requestData, "anti-alias"));
 

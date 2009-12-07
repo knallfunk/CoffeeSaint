@@ -459,13 +459,14 @@ public class JavNag
 		}
 	}
 
-	public void loadNagiosData(URL url, NagiosVersion nagiosVersion) throws Exception
+	public void loadNagiosData(URL url, NagiosVersion nagiosVersion, boolean allowCompression) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();
 
 		HttpURLConnection HTTPConnection = (HttpURLConnection)url.openConnection();
 		HTTPConnection.setFollowRedirects(true);
-		HTTPConnection.setRequestProperty("Accept-Encoding", "gzip, deflate");
+		if (allowCompression)
+			HTTPConnection.setRequestProperty("Accept-Encoding", "gzip, deflate");
 		//establish connection, get response headers
 		HTTPConnection.connect();
 		//obtain the encoding returned by the server
@@ -542,8 +543,8 @@ public class JavNag
 	 * @param nagiosVersion	Nagios-version this file is from.
 	 * @see NagiosVersion
 	 */
-	public JavNag(URL url, NagiosVersion nagiosVersion) throws Exception
+	public JavNag(URL url, NagiosVersion nagiosVersion, boolean allowCompression) throws Exception
 	{
-		loadNagiosData(url, nagiosVersion);
+		loadNagiosData(url, nagiosVersion, allowCompression);
 	}
 }
