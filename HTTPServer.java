@@ -9,6 +9,7 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
@@ -272,22 +273,35 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<FORM ACTION=\"/cgi-bin/select_configfile-do.cgi\" METHOD=\"POST\">\n");
-		reply.add("Current path: <B>" + dir.getAbsolutePath() + "</B><BR><BR>\n");
+		if (config.getDisableHTTPFileselect())
+		{
+			reply.add("Access denied");
+		}
+		else
+		{
+			reply.add("<FORM ACTION=\"/cgi-bin/select_configfile-do.cgi\" METHOD=\"POST\">\n");
+			reply.add("Current path: <B>" + dir.getAbsolutePath() + "</B><BR><BR>\n");
 
-		String currentFile = config.getConfigFilename();
-		reply.add("<TABLE CLASS=\"b\">\n");
-		reply.add("<TR><TD>Configuration file:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"config-file\" VALUE=\"" + (currentFile != null?currentFile:"") + "\"></TD></TR>\n");
-		reply.add("<TR><TD>or select from:</TD><TD>\n");
-		String [] files = dir.list();
-		Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
-		stringSelectorHTML(reply, "config-file-list", convertStringArrayToList(files), currentFile != null ? currentFile : "---NONE---", true);
-		reply.add("</TD></TR>\n");
-		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes!\"></TD></TR>\n");
-		reply.add("</TABLE>\n");
-		reply.add("<BR>\n");
+			String currentFile = config.getConfigFilename();
+			reply.add("<TABLE CLASS=\"b\">\n");
+			reply.add("<TR><TD>Configuration file:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"config-file\" VALUE=\"" + (currentFile != null?currentFile:"") + "\"></TD></TR>\n");
+			reply.add("<TR><TD>or select from:</TD><TD>\n");
+			FilenameFilter fileFilter = new FilenameFilter() {
+					public boolean accept(File dir, String name)
+					{
+						return !new File(name).isDirectory();
+					}
+				};
+			String [] files = dir.list(fileFilter);
+			Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
+			stringSelectorHTML(reply, "config-file-list", convertStringArrayToList(files), currentFile != null ? currentFile : "---NONE---", true);
+			reply.add("</TD></TR>\n");
+			reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes!\"></TD></TR>\n");
+			reply.add("</TABLE>\n");
+			reply.add("<BR>\n");
 
-		reply.add("</FORM>\n");
+			reply.add("</FORM>\n");
+		}
 
 		addPageTail(reply, true);
 
@@ -301,13 +315,20 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		String newFileName = getField(socket, requestData, "config-file");
-		if (newFileName == null || newFileName.equals(""))
-			newFileName = getField(socket, requestData, "config-file-list");
-		if (newFileName != null && newFileName.equals("") == false)
+		if (config.getDisableHTTPFileselect())
 		{
-			config.setConfigFilename(newFileName);
-			reply.add("Configuration filename set to <B>" + newFileName + "</B>");
+			reply.add("Access denied");
+		}
+		else
+		{
+			String newFileName = getField(socket, requestData, "config-file");
+			if (newFileName == null || newFileName.equals(""))
+				newFileName = getField(socket, requestData, "config-file-list");
+			if (newFileName != null && newFileName.equals("") == false)
+			{
+				config.setConfigFilename(newFileName);
+				reply.add("Configuration filename set to <B>" + newFileName + "</B>");
+			}
 		}
 
 		addPageTail(reply, true);
