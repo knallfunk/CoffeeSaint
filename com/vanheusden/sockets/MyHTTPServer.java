@@ -84,6 +84,13 @@ public class MyHTTPServer
 		socket = null;
 	}
 
+	public void closeServer() throws Exception
+	{
+		if (serverSocket != null)
+			serverSocket.close();
+		serverSocket = null;
+	}
+
 	public HTTPRequestData findRecord(List<HTTPRequestData> records, String what)
 	{
 		for(HTTPRequestData record : records)

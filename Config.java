@@ -69,6 +69,8 @@ public class Config
 	private boolean maxQualityGraphics;
 	private boolean allowCompression;
 	private float transparency;
+	private boolean disableHTTPFileselect = false;
+	private boolean showFlapping;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -150,6 +152,7 @@ public class Config
 		nagiosUnknownBgColorName = "magenta";
 		allowCompression = true;
 		transparency = 1.0f;
+		showFlapping = true;
 
 		unlock();
 	}
@@ -312,6 +315,8 @@ public class Config
 						setReduceTextWidth(isTrue);
 					else if (name.equals("also-scheduled-downtime"))
 						setAlsoScheduledDowntime(isTrue);
+					else if (name.equals("show-flapping"))
+						setShowFlapping(isTrue);
 					else if (name.equals("also-soft-state"))
 						setAlsoSoftState(isTrue);
 					else if (name.equals("also-disabled-active-checks"))
@@ -470,6 +475,7 @@ public class Config
 		writeLine(out, "also-soft-state = " + (getAlsoSoftState() ? "true" : "false"));
 		writeLine(out, "also-disabled-active-checks = " + (getAlsoDisabledActiveChecks() ? "true" : "false"));
 		writeLine(out, "show-services-for-host-with-problems = " + (getShowServicesForHostWithProblems() ? "true" : "false"));
+		writeLine(out, "show-flapping = " + (getShowFlapping() ? "true" : "false"));
 		writeLine(out, "problem-columns = " + getNProblemCols());
 
 		for(NagiosDataSource dataSource : getNagiosDataSources())
@@ -1773,5 +1779,37 @@ public class Config
 		lock();
 		transparency = t;
 		unlock();
+	}
+
+	public void setDisableHTTPFileselect()
+	{
+		lock();
+		disableHTTPFileselect = true;
+		unlock();
+	}
+
+	public boolean getDisableHTTPFileselect()
+	{
+		boolean copy;
+		lock();
+		copy = disableHTTPFileselect;
+		unlock();
+		return copy;
+	}
+
+	public void setShowFlapping(boolean sf)
+	{
+		lock();
+		showFlapping = sf;
+		unlock();
+	}
+
+	public boolean getShowFlapping()
+	{
+		boolean copy;
+		lock();
+		copy = showFlapping;
+		unlock();
+		return copy;
 	}
 }

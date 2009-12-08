@@ -340,9 +340,12 @@ public class JavNag
 	 * @param also_acknowledged	Also return true when the problem has been acknowledged in Nagios.
 	 * @return 			true/false
 	 */
-	public boolean shouldIShowHost(Host host, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks)
+	public boolean shouldIShowHost(Host host, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping)
 	{
 		if (host.getParameters().size() == 0)
+			return false;
+
+		if (!show_flapping && host.getParameter("is_flapping").equals("1") == true)
 			return false;
 
 		if (!also_soft_state && host.getParameter("state_type").equals("0") == true) // if SOFT, do not show
@@ -382,12 +385,15 @@ public class JavNag
 	 * @param also_acknowledged	Also return true when the problem has been acknowledged in Nagios.
 	 * @return 			true/false
 	 */
-	public boolean shouldIShowService(Service service, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks)
+	public boolean shouldIShowService(Service service, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping)
 	{
 		if (!also_soft_state && service.getParameter("state_type").equals("1") == false)
 			return false;
 
 		if (service.getParameter("current_state").equals("0") == true)
+			return false;
+
+		if (!show_flapping && service.getParameter("is_flapping").equals("1") == true)
 			return false;
 
 		if (!also_disabled_active_checks && service.getParameter("active_checks_enabled").equals("0") == true && service.getParameter("passive_checks_enabled").equals("0") == true)

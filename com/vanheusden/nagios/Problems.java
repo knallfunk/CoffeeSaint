@@ -88,14 +88,14 @@ public class Problems implements Comparator<Problem>
 			lessImportant.add(new Problem(host, service, state));
 	}
 
-	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> prioProblems, List<Problem> lessImportant, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_services_from_host_with_problems)
+	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> prioProblems, List<Problem> lessImportant, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_services_from_host_with_problems, boolean display_flapping)
 	{
 		for(Host currentHost: javNag.getListOfHosts())
 		{
 			boolean showHost = false;
 			assert currentHost != null;
 
-			if (javNag.shouldIShowHost(currentHost, always_notify, also_acknowledged, also_scheduled_downtime, also_soft_state, also_disabled_active_checks))
+			if (javNag.shouldIShowHost(currentHost, always_notify, also_acknowledged, also_scheduled_downtime, also_soft_state, also_disabled_active_checks, display_flapping))
 			{
 				String useState = null;
 				String state = currentHost.getParameter("current_state");
@@ -117,7 +117,7 @@ public class Problems implements Comparator<Problem>
 				for(Service currentService : currentHost.getServices())
 				{
 					assert currentService != null;
-					if (javNag.shouldIShowService(currentService, always_notify, also_acknowledged, also_scheduled_downtime, also_soft_state, also_disabled_active_checks))
+					if (javNag.shouldIShowService(currentService, always_notify, also_acknowledged, also_scheduled_downtime, also_soft_state, also_disabled_active_checks, display_flapping))
 					{
 						String state = currentService.getParameter("current_state");
 

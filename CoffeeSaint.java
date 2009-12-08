@@ -486,7 +486,7 @@ public class CoffeeSaint
 		problems = new ArrayList<Problem>();
 
 		// collect problems
-		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems());
+		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems(), config.getShowFlapping());
 		// sort problems
 		Problems.sortList(problems, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
 		Problems.sortList(lessImportant, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
@@ -571,6 +571,7 @@ public class CoffeeSaint
 		System.out.println("--also-scheduled-downtime Also display problems for which downtime has been scheduled");
 		System.out.println("--also-soft-state   Also display problems that are not yet in hard state");
 		System.out.println("--also-disabled-active-checks Also display problems for which active checks have been disabled");
+		System.out.println("--suppress-flapping Do not show hosts that are flapping");
 		System.out.println("--show-services-for-host-with-problems");
 		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray");
 		System.out.println("--list-bgcolors     Show a list of available colors");
@@ -585,6 +586,7 @@ public class CoffeeSaint
 		System.out.println("--create-config x    Create new configuration file with filename x");
 		System.out.println("--listen-port Port to listen for the internal webserver");
 		System.out.println("--listen-adapter Network interface to listen for the internal webserver");
+		System.out.println("--disable-http-fileselect Do not allow web-interface to select a file to write configuration to");
 		System.out.println("--header x    String to display in header. Can contain escapes, see below");
 		System.out.println("--host-issue x  String defining how to format host-issues");
 		System.out.println("--service-issue x  String defining how to format service-issues");
@@ -781,6 +783,8 @@ public class CoffeeSaint
 						config.setMaxQualityGraphics(true);
 					else if (arg[loop].equals("--flexible-n-columns"))
 						config.setFlexibleNColumns(true);
+					else if (arg[loop].equals("--disable-http-fileselect"))
+						config.setDisableHTTPFileselect();
 					else if (arg[loop].equals("--prefer"))
 					{
 						System.out.println("Loading prefers from " + arg[++loop]);
@@ -788,6 +792,8 @@ public class CoffeeSaint
 					}
 					else if (arg[loop].equals("--always-notify"))
 						config.setAlwaysNotify(true);
+					else if (arg[loop].equals("--suppress-flapping"))
+						config.setShowFlapping(false);
 					else if (arg[loop].equals("--also-acknowledged"))
 						config.setAlsoAcknowledged(true);
 					else if (arg[loop].equals("--font"))

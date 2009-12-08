@@ -75,6 +75,7 @@ public class Gui extends JPanel implements ImageObserver
 		final int rowHeight = getHeight() / totalNRows;
 		final int rowColWidth = windowWidth / nCols;
 		final int xStart = rowColWidth * colNr;
+		boolean shrunkMore = false;
 
 		BufferedImage output = new BufferedImage(rowColWidth, rowHeight, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = output.createGraphics();
@@ -101,14 +102,29 @@ public class Gui extends JPanel implements ImageObserver
 		{
 			Rectangle2D boundingRectangle = f.getStringBounds(msg, 0, msg.length(), new FontRenderContext(null, false, false));
 
-			shrink = Math.min(shrink, (double)rowColWidth / (double)boundingRectangle.getWidth());
+			double newShrink = (double)rowColWidth / (double)boundingRectangle.getWidth();
+			if (newShrink < shrink)
+			{
+				shrink = newShrink;
+				shrunkMore = true;
+			}
 		}
 		double newSize = (double)rowHeight * shrink;
 		double newAsc  = (double)fm.getAscent() * shrink;
 		f = f.deriveFont((float)newSize);
 		g.setFont(f);
 
-		g.drawString(msg, 1, (int)newAsc);
+		if (shrunkMore == true)
+		{
+			double heightDiff = (double)fm.getAscent() - newAsc;
+			int newY = (int)(heightDiff / 2.0 + newAsc);
+
+			System.out.println("newAsc: " + newAsc + ", heightDiff: " + heightDiff + ", rowHeight: " + rowHeight + ", newy: " + newY + " " + msg);
+
+			g.drawString(msg, 1, newY);
+		}
+		else
+			g.drawString(msg, 1, (int)newAsc);
 
 		Graphics2D gTo2D = (Graphics2D)gTo;
 

@@ -198,7 +198,7 @@ class HTTPServer implements Runnable
 		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/robots.txt", "text/plain", headRequest);
 	}
 
-	public void sendReply_imagejpg(MyHTTPServer socket) throws Exception
+	public void sendReply_imagejpg(MyHTTPServer socket)
 	{
 		try
 		{
@@ -207,10 +207,11 @@ class HTTPServer implements Runnable
 			ImageIO.write(createBufferedImage(img), "jpg", socket.getOutputStream());
 			socket.close();
 		}
-		catch(SocketException se)
+		catch(Exception e)
 		{
 			// really don't care if the transmit failed; browser
 			// probably closed session
+			// don't care if we could display the image or not
 		}
 	}
 
@@ -353,6 +354,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Also soft state:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_soft_State\" VALUE=\"on\" " + isChecked(config.getAlsoSoftState()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also disabled checks:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_disabled_active_checks\" VALUE=\"on\" " + isChecked(config.getAlsoDisabledActiveChecks()) + "></TD><TD>Also display problems for which active checks have been disabled</TD></TR>\n");
 		reply.add("<TR><TD>Show services for host with problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show_services_for_host_with_problems\" VALUE=\"on\" " + isChecked(config.getShowServicesForHostWithProblems()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Show flapping:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-flapping\" VALUE=\"on\" " + isChecked(config.getShowFlapping()) + "></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
@@ -599,6 +601,8 @@ class HTTPServer implements Runnable
 		config.setAlsoDisabledActiveChecks(getCheckBox(socket, requestData, "also_disabled_active_checks"));
 
 		config.setShowServicesForHostWithProblems(getCheckBox(socket, requestData, "show_services_for_host_with_problems"));
+
+		config.setShowFlapping(getCheckBox(socket, requestData, "show-flapping"));
 
 		config.setCounter(getCheckBox(socket, requestData, "counter"));
 
@@ -1289,6 +1293,7 @@ class HTTPServer implements Runnable
 					if (socket != null)
 					{
 						socket.close();
+						socket.closeServer();
 						socket = null;
 					}
 				}
