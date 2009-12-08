@@ -8,6 +8,7 @@ import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
@@ -16,6 +17,7 @@ import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import javax.imageio.*;
@@ -32,6 +34,7 @@ class HTTPServer implements Runnable
 	//
 	int webServerHits, webServer404;
 	boolean configNotWrittenToDisk = false;
+	final private String defaultCharset = "US-ASCII";
 
 	public HTTPServer(Config config, CoffeeSaint coffeeSaint, String adapter, int port, Statistics statistics, Gui gui)
 	{
@@ -232,9 +235,11 @@ class HTTPServer implements Runnable
 		reply.add("</SELECT>");
 	}
 
-	public void stringSelectorHTML(List<String> reply, String name, List<String> list, String selected)
+	public void stringSelectorHTML(List<String> reply, String name, List<String> list, String selected, boolean addEmpty) throws Exception
 	{
 		reply.add("<SELECT NAME=\"" + name + "\">\n");
+		if (addEmpty)
+			reply.add("<OPTION VALUE=\"\"></OPTION>\n");
 		for(String option : list)
 		{
 			String line = "<OPTION VALUE=\"" + option + "\"";
@@ -261,16 +266,23 @@ class HTTPServer implements Runnable
 
 	public void sendReply_cgibin_select_configfile_cgi(MyHTTPServer socket) throws Exception
 	{
+		File dir = new File(".");
 		List<String> reply = new ArrayList<String>();
 
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
 		reply.add("<FORM ACTION=\"/cgi-bin/select_configfile-do.cgi\" METHOD=\"POST\">\n");
+		reply.add("Current path: <B>" + dir.getAbsolutePath() + "</B><BR><BR>\n");
 
 		String currentFile = config.getConfigFilename();
 		reply.add("<TABLE CLASS=\"b\">\n");
 		reply.add("<TR><TD>Configuration file:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"config-file\" VALUE=\"" + (currentFile != null?currentFile:"") + "\"></TD></TR>\n");
+		reply.add("<TR><TD>or select from:</TD><TD>\n");
+		String [] files = dir.list();
+		Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
+		stringSelectorHTML(reply, "config-file-list", convertStringArrayToList(files), currentFile != null ? currentFile : "---NONE---", true);
+		reply.add("</TD></TR>\n");
 		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes!\"></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
@@ -290,6 +302,8 @@ class HTTPServer implements Runnable
 		addPageHeader(reply, "");
 
 		String newFileName = getField(socket, requestData, "config-file");
+		if (newFileName == null || newFileName.equals(""))
+			newFileName = getField(socket, requestData, "config-file-list");
 		if (newFileName != null && newFileName.equals("") == false)
 		{
 			config.setConfigFilename(newFileName);
@@ -330,13 +344,13 @@ class HTTPServer implements Runnable
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		List<String> fontNames = convertStringArrayToList(lge.getAvailableFontFamilyNames());
 		reply.add("<TR><TD>Font:</TD><TD>");
-		stringSelectorHTML(reply, "font", fontNames, config.getFontName());
+		stringSelectorHTML(reply, "font", fontNames, config.getFontName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Warning font:</TD><TD>");
-		stringSelectorHTML(reply, "warning-font", fontNames, config.getWarningFontName());
+		stringSelectorHTML(reply, "warning-font", fontNames, config.getWarningFontName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Critical font:</TD><TD>");
-		stringSelectorHTML(reply, "critical-font", fontNames, config.getCriticalFontName());
+		stringSelectorHTML(reply, "critical-font", fontNames, config.getCriticalFontName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
 		reply.add("<TR><TD>Reduce text width to fit to screen:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"reduce-textwidth\" VALUE=\"on\" " + isChecked(config.getReduceTextWidth()) + "></TD><TD></TD></TR>\n");
@@ -381,7 +395,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingHeaderPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD>\n");
-		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder());
+		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Sort numeric:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-numeric\" VALUE=\"on\" " + isChecked(config.getSortOrderNumeric()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort reverse:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-reverse\" VALUE=\"on\" " + isChecked(config.getSortOrderReverse()) + "></TD><TD></TD></TR>\n");
@@ -476,7 +490,7 @@ class HTTPServer implements Runnable
 
 	public String getFieldDecoded(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName) throws Exception
 	{
-		return URLDecoder.decode(getField(socket, requestData, fieldName), "US-ASCII");
+		return URLDecoder.decode(getField(socket, requestData, fieldName), defaultCharset);
 	}
 
 	public void sendReply_cgibin_configdo_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData) throws Exception
