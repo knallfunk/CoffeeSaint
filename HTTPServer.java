@@ -259,6 +259,48 @@ class HTTPServer implements Runnable
 		return list;
 	}
 
+	public void sendReply_cgibin_select_configfile_cgi(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		reply.add("<FORM ACTION=\"/cgi-bin/select_configfile-do.cgi\" METHOD=\"POST\">\n");
+
+		String currentFile = config.getConfigFilename();
+		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<TR><TD>Configuration file:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"config-file\" VALUE=\"" + (currentFile != null?currentFile:"") + "\"></TD></TR>\n");
+		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes!\"></TD></TR>\n");
+		reply.add("</TABLE>\n");
+		reply.add("<BR>\n");
+
+		reply.add("</FORM>\n");
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
+	public void sendReply_cgibin_select_configfile_do_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		String newFileName = getField(socket, requestData, "config-file");
+		if (newFileName != null && newFileName.equals("") == false)
+		{
+			config.setConfigFilename(newFileName);
+			reply.add("Configuration filename set to <B>" + newFileName + "</B>");
+		}
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
 	public void sendReply_cgibin_configmenu_cgi(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -786,10 +828,11 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-log.cgi\">Show log</A></TD></TR>\n");
 
 		// configure
-		reply.add("<TR><TH ROWSPAN=\"3\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"4\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/reload-config.cgi\">Reload configuration</A></TD></TR>\n");
+		reply.add("<TR><TD><A HREF=\"/cgi-bin/select_configfile.cgi\">Select configuration file</A></TD></TR>\n");
 		if (config.getConfigFilename() == null)
-			reply.add("<TR><TD>No configuration-file selected (use --config), save configuration disabled</TD></TR>\n");
+			reply.add("<TR><TD>No configuration-file selected (use --config or the link<BR>above), save configuration disabled</TD></TR>\n");
 		else
 		{
 			String line = "<TR><TD><A HREF=\"/cgi-bin/write-config.cgi\">Write configuration to " + config.getConfigFilename() + "</A>";
@@ -1149,6 +1192,13 @@ class HTTPServer implements Runnable
 						sendReply_imagejpg(socket);
 					else if (url.equals("/cgi-bin/config-menu.cgi"))
 						sendReply_cgibin_configmenu_cgi(socket);
+					else if (url.equals("/cgi-bin/select_configfile.cgi"))
+						sendReply_cgibin_select_configfile_cgi(socket);
+					else if (url.equals("/cgi-bin/select_configfile-do.cgi"))
+					{
+						List<HTTPRequestData> requestData = socket.getRequestData(request);
+						sendReply_cgibin_select_configfile_do_cgi(socket, requestData);
+					}
 					else if (url.equals("/cgi-bin/config-do.cgi"))
 					{
 						List<HTTPRequestData> requestData = socket.getRequestData(request);
