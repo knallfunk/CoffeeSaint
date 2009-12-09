@@ -51,20 +51,20 @@ public class Gui extends JPanel implements ImageObserver
 		this.statistics = statistics;
 	}
 
-	public void configureRendered(Graphics2D g)
+	public void configureRendered(Graphics2D g, boolean enable)
 	{
 		if (config.getAntiAlias())
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, enable ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF);
 
 		if (config.getMaxQualityGraphics())
 		{
-			g.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
+			g.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, enable ? RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY : RenderingHints.VALUE_ALPHA_INTERPOLATION_DEFAULT);
 
-			g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+			g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, enable ? RenderingHints.VALUE_COLOR_RENDER_QUALITY : RenderingHints.VALUE_COLOR_RENDER_DEFAULT);
 
-			g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+			g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, enable ? RenderingHints.VALUE_FRACTIONALMETRICS_ON : RenderingHints.VALUE_FRACTIONALMETRICS_DEFAULT);
 
-			g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+			g.setRenderingHint(RenderingHints.KEY_RENDERING, enable ? RenderingHints.VALUE_RENDER_QUALITY : RenderingHints.VALUE_RENDER_DEFAULT);
 		}
 	}
 
@@ -80,7 +80,7 @@ public class Gui extends JPanel implements ImageObserver
 		BufferedImage output = new BufferedImage(rowColWidth, rowHeight, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = output.createGraphics();
 
-		configureRendered(g);
+		configureRendered(g, true);
 
 		g.setColor(coffeeSaint.stateToColor(state));
 		g.fillRect(0, 0, rowColWidth, rowHeight);
@@ -362,6 +362,8 @@ public class Gui extends JPanel implements ImageObserver
 
 			if (config.getRowBorder())
 			{
+				configureRendered((Graphics2D)g, false);
+
 				g.setColor(config.getRowBorderColor());
 				if (problems.size() > config.getNRows())
 				{
@@ -382,6 +384,8 @@ public class Gui extends JPanel implements ImageObserver
 					}
 
 				}
+
+				configureRendered((Graphics2D)g, true);
 			}
 
 			if (problems.size() > 0)
@@ -430,7 +434,7 @@ public class Gui extends JPanel implements ImageObserver
 		final Graphics2D g2d = (Graphics2D)g;
 		final int rowHeight = getHeight() / config.getNRows();
 
-		configureRendered(g2d);
+		configureRendered(g2d, true);
 
 		drawProblems(g, getWidth(), getHeight(), rowHeight);
 		System.out.println("+++ PAINT END +++");
@@ -451,7 +455,7 @@ public class Gui extends JPanel implements ImageObserver
 			int rowHeight = getHeight() / config.getNRows();
 			int characterSize = rowHeight - 1;
 
-			configureRendered(g2d);
+			configureRendered(g2d, true);
 
 			if (left <= 0)
 			{

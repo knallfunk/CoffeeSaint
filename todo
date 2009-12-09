@@ -2,3 +2,7 @@
 - timeout op laden image - in een aparte thread?
 - die andere monitoring dinges, zabbix
 - toggle fullscreen @ runtime
+
+- iets doen met performance_data: grafiekje naast problemen? -> sparklines
+
+- filter op inhoud van velden. numeriek, ascii, host en services

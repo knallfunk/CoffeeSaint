@@ -74,7 +74,7 @@ public class Problems implements Comparator<Problem>
 
 			for(Pattern currentPattern : prioPatterns)
 			{
-				if (currentPattern.matcher(msg).matches())
+				if (currentPattern.matcher(msg).find())
 				{
 					important = true;
 					break;
@@ -88,12 +88,36 @@ public class Problems implements Comparator<Problem>
 			lessImportant.add(new Problem(host, service, state));
 	}
 
-	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> prioProblems, List<Problem> lessImportant, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_services_from_host_with_problems, boolean display_flapping)
+	public static boolean filter(List<Pattern> filterExclude, List<Pattern> filterInclude, String pattern)
+	{
+		boolean add = true;
+
+		if (filterExclude != null)
+		{
+			for(Pattern currentPattern : filterExclude)
+			{
+				if (currentPattern.matcher(pattern).find())
+					add = false;
+			}
+		}
+		if (filterInclude != null && add == false)
+		{
+			for(Pattern currentPattern : filterInclude)
+			{
+				if (currentPattern.matcher(pattern).find())
+					add = true;
+			}
+		}
+
+		return add;
+	}
+
+	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> prioProblems, List<Problem> lessImportant, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_services_from_host_with_problems, boolean display_flapping, List<Pattern> hostsFilterExclude, List<Pattern> hostsFilterInclude, List<Pattern> servicesFilterExclude, List<Pattern> servicesFilterInclude)
 	{
 		for(Host currentHost: javNag.getListOfHosts())
 		{
+			final String hostName = currentHost.getHostName();
 			boolean showHost = false;
-			assert currentHost != null;
 
 			if (javNag.shouldIShowHost(currentHost, always_notify, also_acknowledged, also_scheduled_downtime, also_soft_state, also_disabled_active_checks, display_flapping))
 			{
@@ -107,7 +131,10 @@ public class Problems implements Comparator<Problem>
 				else /* all other states (including 'pending' ("3")) are WARNING */
 					useState = "1";
 
-				addProblem(prioPatterns, prioProblems, lessImportant, currentHost, null, useState);
+				boolean add = filter(hostsFilterExclude, hostsFilterInclude, hostName);
+
+				if (add)
+					addProblem(prioPatterns, prioProblems, lessImportant, currentHost, null, useState);
 
 				showHost = true;
 			}
@@ -120,8 +147,15 @@ public class Problems implements Comparator<Problem>
 					if (javNag.shouldIShowService(currentService, always_notify, also_acknowledged, also_scheduled_downtime, also_soft_state, also_disabled_active_checks, display_flapping))
 					{
 						String state = currentService.getParameter("current_state");
+						String serviceName = currentService.getServiceName();
 
-						addProblem(prioPatterns, prioProblems, lessImportant, currentHost, currentService, state);
+						boolean add = filter(hostsFilterExclude, hostsFilterInclude, hostName);
+
+						if (add)
+							add = filter(servicesFilterExclude, servicesFilterInclude, serviceName);
+
+						if (add)
+							addProblem(prioPatterns, prioProblems, lessImportant, currentHost, currentService, state);
 					}
 				}
 			}

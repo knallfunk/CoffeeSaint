@@ -24,6 +24,14 @@ public class Config
 	private String listenAdapter = "0.0.0.0";
 	private int listenPort = -1;
 	private java.util.List<Pattern> prioPatterns;
+	private java.util.List<Pattern> hostsFilterExclude;
+	private java.util.List<Pattern> hostsFilterInclude;
+	private java.util.List<Pattern> servicesFilterExclude;
+	private java.util.List<Pattern> servicesFilterInclude;
+	private String hostsFilterExcludeList;
+	private String hostsFilterIncludeList;
+	private String servicesFilterExcludeList;
+	private String servicesFilterIncludeList;
 	private String prefersFilename;
 	private boolean always_notify, also_acknowledged;
 	private Color backgroundColor;
@@ -329,6 +337,16 @@ public class Config
 						setWarningTextColor(data);
 					else if (name.equals("critical-textcolor"))
 						setCriticalTextColor(data);
+
+					else if (name.equals("hosts-filter-exclude"))
+						setHostsFilterExclude(data);
+					else if (name.equals("hosts-filter-include"))
+						setHostsFilterInclude(data);
+					else if (name.equals("services-filter-exclude"))
+						setServicesFilterExclude(data);
+					else if (name.equals("services-filter-include"))
+						setServicesFilterInclude(data);
+
 					else if (name.equals("bgcolorok"))
 						setBackgroundColorOkStatus(data);
 					else if (name.equals("nrows"))
@@ -386,7 +404,7 @@ public class Config
 					else if (name.equals("nagios-unknown-bg-color"))
 						setNagiosUnknownBgColor(data);
 					else if (name.equals("disable-http-compression"))
-						setAllowHTTPCompression(false);
+						setAllowHTTPCompression(isTrue ? false : true);
 					else
 						throw new Exception("Unknown parameter on line " + lineNr);
 				}
@@ -464,6 +482,10 @@ public class Config
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
 		writeLine(out, "transparency = " + getTransparency());
+		writeLine(out, "hosts-filter-exclude = " + getHostsFilterExcludeList());
+		writeLine(out, "hosts-filter-include = " + getHostsFilterIncludeList());
+		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
+		writeLine(out, "services-filter-include = " + getServicesFilterIncludeList());
 		String sort = "";
 		if (getSortOrderNumeric())
 			sort += "numeric ";
@@ -1136,6 +1158,121 @@ public class Config
 	public String getPrefersFilename()
 	{
 		return prefersFilename;
+	}
+
+	public void setServicesFilterExclude(String services) throws Exception
+	{
+		lock();
+		servicesFilterExclude = setFilter(services);
+		servicesFilterExcludeList = services;
+		unlock();
+	}
+
+	public List<Pattern> getServicesFilterExclude()
+	{
+		List<Pattern> copy;
+		lock();
+		copy = servicesFilterExclude;
+		unlock();
+		return copy;
+	}
+
+	public String getServicesFilterExcludeList()
+	{
+		String copy;
+		lock();
+		copy = servicesFilterExcludeList != null ? servicesFilterExcludeList : "";
+		unlock();
+		return copy;
+	}
+
+	public void setServicesFilterInclude(String services) throws Exception
+	{
+		lock();
+		servicesFilterInclude = setFilter(services);
+		servicesFilterIncludeList = services;
+		unlock();
+	}
+
+	public List<Pattern> getServicesFilterInclude()
+	{
+		List<Pattern> copy;
+		lock();
+		copy = servicesFilterInclude;
+		unlock();
+		return copy;
+	}
+
+	public String getServicesFilterIncludeList()
+	{
+		String copy;
+		lock();
+		copy = servicesFilterIncludeList != null ? servicesFilterIncludeList : "";
+		unlock();
+		return copy;
+	}
+
+	java.util.List<Pattern> setFilter(String input)
+	{
+		java.util.List<Pattern> output = new ArrayList<Pattern>();
+		String [] elementsArray = input.split(",");
+
+		for(String element : elementsArray)
+			output.add(Pattern.compile(element));
+
+		return output;
+	}
+
+	public void setHostsFilterExclude(String hosts) throws Exception
+	{
+		lock();
+		hostsFilterExclude = setFilter(hosts);
+		hostsFilterExcludeList = hosts;
+		unlock();
+	}
+
+	public List<Pattern> getHostsFilterExclude()
+	{
+		List<Pattern> copy;
+		lock();
+		copy = hostsFilterExclude;
+		unlock();
+		return copy;
+	}
+
+	public String getHostsFilterExcludeList()
+	{
+		String copy;
+		lock();
+		copy = hostsFilterExcludeList != null ? hostsFilterExcludeList : "";
+		unlock();
+		return copy;
+	}
+
+	public void setHostsFilterInclude(String hosts) throws Exception
+	{
+		lock();
+		hostsFilterInclude = setFilter(hosts);
+		hostsFilterIncludeList = hosts;
+		unlock();
+	}
+
+	public List<Pattern> getHostsFilterInclude()
+	{
+		List<Pattern> copy;
+		lock();
+		copy = hostsFilterInclude;
+		unlock();
+		return copy;
+	}
+
+	public String getHostsFilterIncludeList()
+	{
+		String copy;
+		lock();
+		copy = hostsFilterIncludeList != null ? hostsFilterIncludeList : "";
+		unlock();
+		return copy;
 	}
 
 	public void loadPrefers(String fileName) throws Exception

@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v2.1, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v2.3-beta001, (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
 
@@ -486,7 +486,7 @@ public class CoffeeSaint
 		problems = new ArrayList<Problem>();
 
 		// collect problems
-		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems(), config.getShowFlapping());
+		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems(), config.getShowFlapping(), config.getHostsFilterExclude(), config.getHostsFilterInclude(), config.getServicesFilterExclude(), config.getServicesFilterInclude());
 		// sort problems
 		Problems.sortList(problems, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
 		Problems.sortList(lessImportant, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
@@ -603,6 +603,10 @@ public class CoffeeSaint
 		System.out.println("--warning-bg-color x Background color for warnings (yellow)");
 		System.out.println("--critical-bg-color x Background color for criticals (red)");
 		System.out.println("--nagios-unknown-bg-color x Background color for unknonws (magenta)");
+		System.out.println("--hosts-filter-exclude x Komma-seperated list of hosts not to display");
+		System.out.println("--hosts-filter-include x Komma-seperated list of hosts to display. Use in combination with --hosts-filter-exclude: will be invoked after the exclude.");
+		System.out.println("--services-filter-exclude x Komma-seperated list of services not to display");
+		System.out.println("--services-filter-include x Komma-seperated list of services to display. Use in combination with --services-filter-exclude: will be invoked after the exclude.");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -820,6 +824,14 @@ public class CoffeeSaint
 						config.setAllowHTTPCompression(false);
 					else if (arg[loop].equals("--transparency"))
 						config.setTransparency(Float.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--hosts-filter-exclude"))
+						config.setHostsFilterExclude(arg[++loop]);
+					else if (arg[loop].equals("--hosts-filter-include"))
+						config.setHostsFilterInclude(arg[++loop]);
+					else if (arg[loop].equals("--services-filter-exclude"))
+						config.setServicesFilterExclude(arg[++loop]);
+					else if (arg[loop].equals("--services-filter-include"))
+						config.setServicesFilterInclude(arg[++loop]);
 					else if (arg[loop].equals("--version") || arg[loop].equals("-version"))
 					{
 						System.out.println(getVersion());

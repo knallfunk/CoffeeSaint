@@ -422,6 +422,10 @@ class HTTPServer implements Runnable
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Sort numeric:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-numeric\" VALUE=\"on\" " + isChecked(config.getSortOrderNumeric()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort reverse:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-reverse\" VALUE=\"on\" " + isChecked(config.getSortOrderReverse()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Hosts filter exclude list:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"hosts-filter-exclude-list\" VALUE=\"" + config.getHostsFilterExcludeList() + "\"></TD><TD>Komma-seperated list (can be regular expressions)</TD></TR>\n");
+		reply.add("<TR><TD>Hosts filter include list:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"hosts-filter-include-list\" VALUE=\"" + config.getHostsFilterIncludeList() + "\"></TD><TD>(are applied after processing the exclude list)</TD></TR>\n");
+		reply.add("<TR><TD>Services filter exclude list:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"services-filter-exclude-list\" VALUE=\"" + config.getServicesFilterExcludeList() + "\"></TD><TD>See host-filter comments</TD></TR>\n");
+		reply.add("<TR><TD>Services filter include list:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"services-filter-include-list\" VALUE=\"" + config.getServicesFilterIncludeList() + "\"></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
@@ -638,6 +642,11 @@ class HTTPServer implements Runnable
 		config.setReduceTextWidth(getCheckBox(socket, requestData, "reduce-textwidth"));
 
 		config.setHeader(getFieldDecoded(socket, requestData, "header"));
+
+		config.setHostsFilterExclude(getFieldDecoded(socket, requestData, "hosts-filter-exclude-list"));
+		config.setHostsFilterInclude(getFieldDecoded(socket, requestData, "hosts-filter-include-list"));
+		config.setServicesFilterExclude(getFieldDecoded(socket, requestData, "services-filter-exclude-list"));
+		config.setServicesFilterInclude(getFieldDecoded(socket, requestData, "services-filter-include-list"));
 
 		config.setScrollingHeader(getCheckBox(socket, requestData, "scrolling-header"));
 
