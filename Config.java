@@ -411,8 +411,6 @@ public class Config
 						setNagiosUnknownBgColor(data);
 					else if (name.equals("disable-http-compression"))
 						setAllowHTTPCompression(isTrue ? false : true);
-					else if (name.equals("brain-filename"))
-						setBrainFileName(data);
 					else if (name.equals("performance-data-filename"))
 						setPerformanceDataFileName(data);
 					else
@@ -449,7 +447,8 @@ public class Config
 	{
 		BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
 
-		writeLine(out, "predict = " + getBrainFileName());
+		if (getBrainFileName() != null)
+			writeLine(out, "predict = " + getBrainFileName());
 		if (getExec() != null)
 			writeLine(out, "exec = " + getExec());
 		writeLine(out, "adapt-img = " + (getAdaptImageSize() ? "true" : "false"));
@@ -460,8 +459,8 @@ public class Config
 		writeLine(out, "listen-port = " + getHTTPServerListenPort());
 		writeLine(out, "listen-adapter = " + getHTTPServerListenAdapter());
 		writeLine(out, "bgcolor = " + getBackgroundColorName());
-		writeLine(out, "brain-filename = " + getBrainFileName());
-		writeLine(out, "performance-data-filename = " + getPerformanceDataFileName());
+		if (getPerformanceDataFileName() != null)
+			writeLine(out, "performance-data-filename = " + getPerformanceDataFileName());
 		writeLine(out, "textcolor = " + getTextColorName());
 		writeLine(out, "warning-textcolor = " + getWarningTextColorName());
 		writeLine(out, "critical-textcolor = " + getCriticalTextColorName());
