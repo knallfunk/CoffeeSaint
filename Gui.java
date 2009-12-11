@@ -68,7 +68,7 @@ public class Gui extends JPanel implements ImageObserver
 		}
 	}
 
-	void drawRow(Graphics gTo, int windowWidth, String msg, int row, String state, Color bgColor, int nCols, int colNr, float seeThrough)
+	void drawRow(Graphics gTo, int windowWidth, String msg, int row, String state, Color bgColor, int nCols, int colNr, float seeThrough, BufferedImage sparkLine)
 	{
 		System.out.println("DRAW ROW: " + msg + " " + row);
 		final int totalNRows = config.getNRows();
@@ -126,6 +126,9 @@ public class Gui extends JPanel implements ImageObserver
 		else
 			g.drawString(msg, 1, (int)newAsc);
 
+		if (sparkLine != null)
+			g.drawImage(sparkLine, rowColWidth - sparkLine.getWidth(), 0, null);
+
 		Graphics2D gTo2D = (Graphics2D)gTo;
 
 		int x = xStart;
@@ -149,7 +152,7 @@ public class Gui extends JPanel implements ImageObserver
 		int imageWidth = g2.getFontMetrics(new Font(config.getFontName(), Font.PLAIN, rowHeight)).stringWidth(header);
 		BufferedImage output = new BufferedImage(imageWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
 
-		drawRow(output.createGraphics(), imageWidth, header, 0, state, bgColor, 1, 0, 1.0f);
+		drawRow(output.createGraphics(), imageWidth, header, 0, state, bgColor, 1, 0, 1.0f, null);
 
 		return output;
 	}
@@ -265,7 +268,7 @@ public class Gui extends JPanel implements ImageObserver
 		g.setColor(Color.RED);
 		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
-		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1, 0, 1.0f);
+		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1, 0, 1.0f, null);
 	}
 
 	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
@@ -283,7 +286,7 @@ public class Gui extends JPanel implements ImageObserver
 			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
 			if (config.getVerbose())
-				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor, 1, 0, 1.0f);
+				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor, 1, 0, 1.0f, null);
 			startLoadTs = System.currentTimeMillis();
 			ImageParameters [] imageParameters = coffeeSaint.loadImage(this, windowWidth, g);
 			endLoadTs = System.currentTimeMillis();
@@ -298,10 +301,11 @@ public class Gui extends JPanel implements ImageObserver
 
 			/* find the problems in the nagios data */
 			if (config.getVerbose())
-				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor, 1, 0, 1.0f);
+				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor, 1, 0, 1.0f, null);
 			coffeeSaint.lockProblems();
 			coffeeSaint.loadNagiosData(this, windowWidth, g);
 			coffeeSaint.findProblems();
+			coffeeSaint.collectPerformanceData();
 			java.util.List<Problem> problems = coffeeSaint.getProblems();
 
 			Calendar rightNow = Calendar.getInstance();
@@ -326,7 +330,7 @@ public class Gui extends JPanel implements ImageObserver
 				if (config.getScrollingHeader())
 					currentHeader = createHeaderImage(header, problems.size() == 0 ? "0" : "255", bgColor, rowHeight);
 				else
-					drawRow(g, windowWidth, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor, 1, 0, 1.0f);
+					drawRow(g, windowWidth, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor, 1, 0, 1.0f, null);
 				curNRows++;
 			}
 
@@ -348,7 +352,12 @@ public class Gui extends JPanel implements ImageObserver
 
 				CoffeeSaint.log.add(output);
 
-				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, curNColumns, colNr, config.getTransparency());
+				int sparkLineWidth = config.getSparkLineWidth();
+				if (sparkLineWidth > 0)
+					BufferedImage sparkLine = coffeeSaint.getSparkLine(currentProblem.getHost(), currentProblem.getService(), sparkLineWidth, rowHeight);
+
+				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, curNColumns, colNr, config.getTransparency(), sparkLine);
+
 				curNRows++;
 
 				if (curNRows == config.getNRows())

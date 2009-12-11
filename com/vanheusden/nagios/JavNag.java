@@ -101,6 +101,7 @@ public class JavNag
 				addHostParameterEntry(host, "plugin_output", elements[20]);
 
 				addHostParameterEntry(host, "state_type", "1"); // version 1 doesn't set this so always assume hard state
+				// FIXME addHostParameterEntry(host, "performance_data", ""); RETRIEVE FROM PLUGIN_OUTPUT
 			}
 			else if (type.equals("SERVICE"))
 			{
@@ -158,6 +159,7 @@ public class JavNag
 					addServiceEntry(service, "plugin_output", elements[31]);
 				else
 					addServiceEntry(service, "plugin_output", "");
+				// FIXME addHostParameterEntry(host, "performance_data", ""); RETRIEVE FROM PLUGIN_OUTPUT
 			}
 		}
 	}

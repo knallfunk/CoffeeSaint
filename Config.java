@@ -24,6 +24,7 @@ public class Config
 	private String listenAdapter = "0.0.0.0";
 	private int listenPort = -1;
 	private java.util.List<Pattern> prioPatterns;
+	private String prioPatternsList;
 	private java.util.List<Pattern> hostsFilterExclude;
 	private java.util.List<Pattern> hostsFilterInclude;
 	private java.util.List<Pattern> servicesFilterExclude;
@@ -48,6 +49,7 @@ public class Config
 	private boolean adaptImgSize;
 	private String execCmd;
 	private String predictorBrainFileName;
+	private String performanceDataFileName;
 	private boolean gui = true;
 	private boolean randomWebcam;
 	private String header;
@@ -79,6 +81,7 @@ public class Config
 	private float transparency;
 	private boolean disableHTTPFileselect = false;
 	private boolean showFlapping;
+	private int sparkLineWidth;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -161,6 +164,7 @@ public class Config
 		allowCompression = true;
 		transparency = 1.0f;
 		showFlapping = true;
+		sparkLineWidth = 0;
 
 		unlock();
 	}
@@ -293,6 +297,8 @@ public class Config
 						setHeader(data);
 					else if (name.equals("host-issue"))
 						setHostIssue(data);
+					else if (name.equals("sparkline-width"))
+						setSparkLineWidth(Integer.valueOf(data));
 					else if (name.equals("service-issue"))
 						setServiceIssue(data);
 					else if (name.equals("counter"))
@@ -366,7 +372,7 @@ public class Config
 					else if (name.equals("cam-cols"))
 						setCamCols(Integer.valueOf(data));
 					else if (name.equals("prefer"))
-						loadPrefers(data);
+						setPrefers(data);
 					else if (name.equals("ignore-aspect-ratio"))
 						setKeepAspectRatio(!(isTrue));
 					else if (name.equals("sort-order"))
@@ -405,6 +411,10 @@ public class Config
 						setNagiosUnknownBgColor(data);
 					else if (name.equals("disable-http-compression"))
 						setAllowHTTPCompression(isTrue ? false : true);
+					else if (name.equals("brain-filename"))
+						setBrainFileName(data);
+					else if (name.equals("performance-data-filename"))
+						setPerformanceDataFileName(data);
 					else
 						throw new Exception("Unknown parameter on line " + lineNr);
 				}
@@ -450,6 +460,8 @@ public class Config
 		writeLine(out, "listen-port = " + getHTTPServerListenPort());
 		writeLine(out, "listen-adapter = " + getHTTPServerListenAdapter());
 		writeLine(out, "bgcolor = " + getBackgroundColorName());
+		writeLine(out, "brain-filename = " + getBrainFileName());
+		writeLine(out, "performance-data-filename = " + getPerformanceDataFileName());
 		writeLine(out, "textcolor = " + getTextColorName());
 		writeLine(out, "warning-textcolor = " + getWarningTextColorName());
 		writeLine(out, "critical-textcolor = " + getCriticalTextColorName());
@@ -459,8 +471,7 @@ public class Config
 		writeLine(out, "interval = " + getSleepTime());
 		for(String imgUrl : getImageUrls())
 			writeLine(out, "image = " + imgUrl);
-		if (getPrefersFilename() != null)
-			writeLine(out, "prefer = " + getPrefersFilename());
+		writeLine(out, "prefer = " + getPrefersList());
 		writeLine(out, "always-notify = " + (getAlwaysNotify() ? "true" : "false"));
 		writeLine(out, "also-acknowledged = " + (getAlsoAcknowledged() ? "true" : "false"));
 		writeLine(out, "font = " + getFontName());
@@ -486,6 +497,7 @@ public class Config
 		writeLine(out, "hosts-filter-include = " + getHostsFilterIncludeList());
 		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
 		writeLine(out, "services-filter-include = " + getServicesFilterIncludeList());
+		writeLine(out, "sparkline-width = " + getSparkLineWidth());
 		String sort = "";
 		if (getSortOrderNumeric())
 			sort += "numeric ";
@@ -845,6 +857,22 @@ public class Config
 		String copy;
 		lock();
 		copy = predictorBrainFileName;
+		unlock();
+		return copy;
+	}
+
+	public void setPerformanceDataFileName(String fileName)
+	{
+		lock();
+		performanceDataFileName = fileName;
+		unlock();
+	}
+
+	public String getPerformanceDataFileName()
+	{
+		String copy;
+		lock();
+		copy = performanceDataFileName;
 		unlock();
 		return copy;
 	}
@@ -1275,31 +1303,30 @@ public class Config
 		return copy;
 	}
 
-	public void loadPrefers(String fileName) throws Exception
+	public void setPrefers(String patterns)
 	{
 		lock();
+		prioPatterns = setFilter(patterns);
+		prioPatternsList = patterns;
+		unlock();
+	}
 
-		prioPatterns = new ArrayList<Pattern>();
-		prefersFilename = fileName;
+	public List<Pattern> getPrefers()
+	{
+		List<Pattern> copy;
+		lock();
+		copy = prioPatterns;
+		unlock();
+		return copy;
+	}
 
-		try
-		{
-			String line;
-			BufferedReader in = new BufferedReader(new FileReader(fileName));
-
-			while((line = in.readLine()) != null)
-				prioPatterns.add(Pattern.compile(line));
-
-			in.close();
-		}
-		catch(Exception e)
-		{
-			throw e;
-		}
-		finally
-		{
-			unlock();
-		}
+	public String getPrefersList()
+	{
+		String copy;
+		lock();
+		copy = prioPatternsList != null ? prioPatternsList : "";
+		unlock();
+		return copy;
 	}
 
 	public List<Pattern> getPrioPatterns()
@@ -1946,6 +1973,22 @@ public class Config
 		boolean copy;
 		lock();
 		copy = showFlapping;
+		unlock();
+		return copy;
+	}
+
+	public void setSparkLineWidth(int width)
+	{
+		lock();
+		sparkLineWidth = width;
+		unlock();
+	}
+
+	public int getSparkLineWidth()
+	{
+		int copy;
+		lock();
+		copy = sparkLineWidth;
 		unlock();
 		return copy;
 	}

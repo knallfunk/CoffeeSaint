@@ -26,6 +26,8 @@ public class CoffeeSaint
 	Predictor predictor;
 	long lastPredictorDump = 0;
 	//
+	PerformanceData performanceData;
+	//
 	static int currentImageFile = 0;
 	static Semaphore imageSemaphore = new Semaphore(1);
 	//
@@ -52,6 +54,126 @@ public class CoffeeSaint
 			{
 				System.err.println("File " + config.getBrainFileName() + " not found, continuing(!) anyway");
 			}
+		}
+
+		if (config.getPerformanceDataFileName() != null)
+		{
+			System.out.println("Reloading performance data from " + config.getPerformanceDataFileName());
+
+			try
+			{
+				performanceData = new PerformanceData(config.getPerformanceDataFileName());
+			}
+			catch(FileNotFoundException fnfe)
+			{
+				System.err.println("Performance data file " + config.getPerformanceDataFileName() + " does not exist. Continuing.");
+				performanceData = new PerformanceData();
+			}
+		}
+		else
+		{
+			performanceData = new PerformanceData();
+		}
+	}
+
+	public java.util.List<DataSource> getPerformanceData(Host host, Service service)
+	{
+		String hostName = host.getHostName();
+		String serviceName = service.getServiceName();
+
+		String entity = hostName;
+		if (serviceName != null)
+			entity += " | " + serviceName;
+		System.out.println("sparkline entity: " + entity);
+
+		PerformanceDataPerElement element = performanceData.get(entity);
+		if (element != null)
+			return element.getAllDataSources();
+
+		return null;
+	}
+
+	BufferedImage getSparkLine(Host host, Service service, int width, int height)
+	{
+		BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		java.util.List<DataSource> dataSources = getPerformanceData(host, service);
+		if (dataSources == null)
+			return null;
+
+		Graphics g = output.getGraphics();
+
+		g.setColor(Color.WHITE);
+		g.fillRect(0, 0, width, height);
+
+		Color [] colors = { Color.RED, Color.GREEN, Color.BLUE, Color.BLACK };
+		int colorIndex = 0;
+
+		for(DataSource dataSource : dataSources)
+		{
+			DataInfo stats = dataSource.getStats();
+			double min = stats.getMin();
+			double max = stats.getMax();
+			double avg = stats.getAvg();
+			double sd  = stats.getSd();
+			// double scale = height / (2.0 * sd);
+			double scale = height / (max - min);
+			java.util.List<Double> values = dataSource.getValues();
+			int px = -1, py = -1;
+
+			g.setColor(colors[colorIndex++]);
+			if (colorIndex == colors.length)
+				colorIndex = 0;
+
+			for(int offset=0; offset<width; offset++)
+			{
+				int dataOffset = offset + (values.size() - width) - 1;
+				if (dataOffset >= 0)
+				{
+					double value = values.get(dataOffset);
+					// double scaledValue = (value - (avg - sd)) * scale;
+					double scaledValue = (value - min) * scale;
+					int y = height - (int)(1 + Math.min(Math.max(0, scaledValue), (double)(height - 1)));
+					int x = offset;
+
+					if (px == -1 || py == -1)
+						output.setRGB(x, y, 0);
+					else
+						g.drawLine(px, py, x, y);
+
+					px = x;
+					py = y;
+				}
+			}
+		}
+
+		return output;
+	}
+
+	public void collectPerformanceData()
+	{
+		for(Host currentHost : javNag.getListOfHosts())
+		{
+			String hostPerformanceData = currentHost.getParameter("performance_data");
+			String lastHostCheck = currentHost.getParameter("last_check");
+			if (hostPerformanceData != null && hostPerformanceData.trim().equals("") == false)
+				performanceData.add(currentHost.getHostName(), hostPerformanceData, lastHostCheck);
+
+			for(Service currentService : currentHost.getServices())
+			{
+				String servicePerformanceData = currentService.getParameter("performance_data");
+				String lastServiceCheck = currentService.getParameter("last_check");
+				if (servicePerformanceData != null && servicePerformanceData.trim().equals("") == false)
+					performanceData.add(currentHost.getHostName() + " | " + currentService.getServiceName(), servicePerformanceData, lastServiceCheck);
+			}
+		}
+	}
+
+	public void dumpPerformanceData() throws Exception
+	{
+		if (config.getPerformanceDataFileName() != null)
+		{
+			System.out.println("Dumping performance data to " + config.getPerformanceDataFileName());
+			performanceData.dump(config.getPerformanceDataFileName());
 		}
 	}
 
@@ -160,7 +282,7 @@ public class CoffeeSaint
 		if (cmd.equals("PENDING"))
 			return "" + totals.getNPending();
 
-		if (cmd.equals("PREDICT"))
+		if (predictor != null && cmd.equals("PREDICT"))
 		{
 			Double count = predictProblemCount(rightNow);
 			if (count == null)
@@ -295,7 +417,7 @@ public class CoffeeSaint
 	public void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor(), 1, 0, 1.0f);
+			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor(), 1, 0, 1.0f, null);
 	}
 
 	public ImageParameters [] loadImage(Gui gui, int windowWidth, Graphics g) throws Exception
@@ -412,9 +534,12 @@ public class CoffeeSaint
 
 	public void dumpPredictorBrainToFile() throws Exception
 	{
-		log.add("Dumping brain to " + config.getBrainFileName());
+		if (predictor != null)
+		{
+			log.add("Dumping brain to " + config.getBrainFileName());
 
-		predictor.dumpBrainToFile(config.getBrainFileName());
+			predictor.dumpBrainToFile(config.getBrainFileName());
+		}
 	}
 
 	public void learnProblems(Calendar rightNow, int nProblems) throws Exception
@@ -565,7 +690,7 @@ public class CoffeeSaint
 		System.out.println("--critical-font x  Font to use for critical problems");
 		System.out.println("--warning-font x   Font to use for warning problems");
 		System.out.println("--reduce-textwidth Try to fit text to the window width");
-		System.out.println("--prefer x    File to load regular expressions from which tell what problems to show with priority (on top of the others)");
+		System.out.println("--prefer x    Comma seperated list of regular expressions which tell what problems to show with priority (on top of the others)");
 		System.out.println("--also-acknowledged Display acknowledged problems as well");
 		System.out.println("--always-notify	Also display problems for which notifications are disabled");
 		System.out.println("--also-scheduled-downtime Also display problems for which downtime has been scheduled");
@@ -582,6 +707,7 @@ public class CoffeeSaint
 		System.out.println("--counter     Show counter decreasing upto the point that a refresh will happen");
 		System.out.println("--exec x      Execute program when one or more errors are shown");
 		System.out.println("--predict x   File to write brain-dump to (and read from)");
+		System.out.println("--performance-data-filename x   File to write performance data to");
 		System.out.println("--config x    Load configuration from file x. This overrides all configurationsettings set previously");
 		System.out.println("--create-config x    Create new configuration file with filename x");
 		System.out.println("--listen-port Port to listen for the internal webserver");
@@ -603,10 +729,11 @@ public class CoffeeSaint
 		System.out.println("--warning-bg-color x Background color for warnings (yellow)");
 		System.out.println("--critical-bg-color x Background color for criticals (red)");
 		System.out.println("--nagios-unknown-bg-color x Background color for unknonws (magenta)");
-		System.out.println("--hosts-filter-exclude x Komma-seperated list of hosts not to display");
-		System.out.println("--hosts-filter-include x Komma-seperated list of hosts to display. Use in combination with --hosts-filter-exclude: will be invoked after the exclude.");
-		System.out.println("--services-filter-exclude x Komma-seperated list of services not to display");
-		System.out.println("--services-filter-include x Komma-seperated list of services to display. Use in combination with --services-filter-exclude: will be invoked after the exclude.");
+		System.out.println("--hosts-filter-exclude x Comma-seperated list of hosts not to display");
+		System.out.println("--hosts-filter-include x Comma-seperated list of hosts to display. Use in combination with --hosts-filter-exclude: will be invoked after the exclude.");
+		System.out.println("--services-filter-exclude x Comma-seperated list of services not to display");
+		System.out.println("--services-filter-include x Comma-seperated list of services to display. Use in combination with --services-filter-exclude: will be invoked after the exclude.");
+		System.out.println("--sparkline-width x Adds sparklines to the listed problems. 'x' specifies the width in pixels");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -730,6 +857,8 @@ public class CoffeeSaint
 						config.loadConfig(arg[++loop]);
 					else if (arg[loop].equals("--predict"))
 						config.setBrainFileName(arg[++loop]);
+					else if (arg[loop].equals("--performance-data-filename"))
+						config.setPerformanceDataFileName(arg[++loop]);
 					else if (arg[loop].equals("--exec"))
 						config.setExec(arg[++loop]);
 					else if (arg[loop].equals("--adapt-img"))
@@ -790,10 +919,7 @@ public class CoffeeSaint
 					else if (arg[loop].equals("--disable-http-fileselect"))
 						config.setDisableHTTPFileselect();
 					else if (arg[loop].equals("--prefer"))
-					{
-						System.out.println("Loading prefers from " + arg[++loop]);
-						config.loadPrefers(arg[loop]);
-					}
+						config.setPrefers(arg[++loop]);
 					else if (arg[loop].equals("--always-notify"))
 						config.setAlwaysNotify(true);
 					else if (arg[loop].equals("--suppress-flapping"))
@@ -832,6 +958,8 @@ public class CoffeeSaint
 						config.setServicesFilterExclude(arg[++loop]);
 					else if (arg[loop].equals("--services-filter-include"))
 						config.setServicesFilterInclude(arg[++loop]);
+					else if (arg[loop].equals("--sparkline-width"))
+						config.setSparkLineWidth(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--version") || arg[loop].equals("-version"))
 					{
 						System.out.println(getVersion());
