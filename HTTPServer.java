@@ -905,10 +905,11 @@ class HTTPServer implements Runnable
 		reply.add("<TABLE CLASS=\"b\">\n");
 
 		// stats
-		reply.add("<TR><TH ROWSPAN=\"4\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
+		reply.add("<TR><TH ROWSPAN=\"5\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/log.cgi\">List of connecting hosts</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-all.cgi\">List of hosts/services</A></TD></TR>\n");
 		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-log.cgi\">Show log</A></TD></TR>\n");
+		reply.add("<TR><TD><A HREF=\"/cgi-bin/performance-data.cgi\">Performance data</A></TD></TR>\n");
 
 		// configure
 		reply.add("<TR><TH ROWSPAN=\"4\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
@@ -998,9 +999,9 @@ class HTTPServer implements Runnable
 		int nRefreshes = statistics.getNRefreshes();
 		reply.add("<TR><TD>Total number of refreshes:</TD><TD>" + nRefreshes + "</TD></TR>\n");
 		reply.add("<TR><TD>Total refresh time:</TD><TD>" + statistics.getTotalRefreshTime() + "</TD></TR>\n");
-		reply.add("<TR><TD>Average refresh time:</TD><TD>" + (statistics.getTotalRefreshTime() / (double)nRefreshes) + "</TD></TR>\n");
+		reply.add("<TR><TD>Average refresh time:</TD><TD>" + String.format("%.4f", statistics.getTotalRefreshTime() / (double)nRefreshes) + "</TD></TR>\n");
 		reply.add("<TR><TD>Total image refresh time:</TD><TD>" + statistics.getTotalImageLoadTime() + "</TD></TR>\n");
-		reply.add("<TR><TD>Average image refresh time:</TD><TD>" + (statistics.getTotalImageLoadTime() / (double)nRefreshes) + "</TD></TR>\n");
+		reply.add("<TR><TD>Average image refresh time:</TD><TD>" + String.format("%.4f", statistics.getTotalImageLoadTime() / (double)nRefreshes) + "</TD></TR>\n");
 		reply.add("<TR><TD>Total running time:</TD><TD>" + ((double)(System.currentTimeMillis() - statistics.getRunningSince()) / 1000.0) + "s</TD></TR>\n");
 		reply.add("<TR><TD>Number of webserver hits:</TD><TD>" + webServerHits + "</TD></TR>\n");
 		reply.add("<TR><TD>Number of 404 pages serverd:</TD><TD>" + webServer404 + "</TD></TR>\n");
@@ -1190,7 +1191,9 @@ class HTTPServer implements Runnable
 
 		JavNag javNag = coffeeSaint.getNagiosData();
 
-		reply.add("<TABLE>\n");
+		reply.add("<H2>Performance data</H2>\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<TR><TD><B>host</B></TD><TD><B>service</B></TD><TD><B>parameter</B></TD><TD><B>min</B></TD><TD><B>max</B></TD><TD><B>avg</B></TD><TD><B>std.dev.</B></TD><TD><B># samples</B></TD></TR>\n");
 		for(Host currentHost : javNag.getListOfHosts())
 		{
 			List<DataSource> dataSources = coffeeSaint.getPerformanceData(currentHost, null);
@@ -1200,7 +1203,7 @@ class HTTPServer implements Runnable
 				{
 					DataInfo dataInfo = dataSource.getStats();
 
-					reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD></TD><TD>" + dataInfo.getMin() + "</TD><TD>" + dataInfo.getMax() + "</TD><TD>" + dataInfo.getAvg() + "</TD><TD>" + dataInfo.getSd() + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
+					reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD></TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
 				}
 			}
 			for(Service currentService : currentHost.getServices())
@@ -1212,7 +1215,7 @@ class HTTPServer implements Runnable
 					{
 						DataInfo dataInfo = dataSource.getStats();
 
-						reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + currentService.getServiceName() + "</TD><TD>" + dataInfo.getMin() + "</TD><TD>" + dataInfo.getMax() + "</TD><TD>" + dataInfo.getAvg() + "</TD><TD>" + dataInfo.getSd() + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
+					reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + currentService.getServiceName() + "</TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
 					}
 				}
 			}

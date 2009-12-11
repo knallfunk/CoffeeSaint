@@ -119,7 +119,7 @@ public class Gui extends JPanel implements ImageObserver
 			double heightDiff = (double)fm.getAscent() - newAsc;
 			int newY = (int)(heightDiff / 2.0 + newAsc);
 
-			System.out.println("newAsc: " + newAsc + ", heightDiff: " + heightDiff + ", rowHeight: " + rowHeight + ", newy: " + newY + " " + msg);
+			// System.out.println("newAsc: " + newAsc + ", heightDiff: " + heightDiff + ", rowHeight: " + rowHeight + ", newy: " + newY + " " + msg);
 
 			g.drawString(msg, 1, newY);
 		}

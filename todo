@@ -3,8 +3,6 @@
 - die andere monitoring dinges, zabbix
 - toggle fullscreen @ runtime
 
-- iets doen met performance_data: grafiekje naast problemen? -> sparklines
-  -> in http-server configureerbaar maken
--> files van performance data & brain configureerbaar maken in http-server
+- sparklines in web-interface opnemen, mbv GET
 
 - filter op inhoud van velden. numeriek, ascii, host en services
