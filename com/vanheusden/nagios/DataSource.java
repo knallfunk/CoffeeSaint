@@ -52,7 +52,7 @@ public class DataSource
 
 		sd = Math.sqrt((sdval / (double)data.size()) - Math.pow(avg, 2.0));
 
-		return new DataInfo(min, max, avg, sd);
+		return new DataInfo(min, max, avg, sd, data.size());
 	}
 
 	public List<Double> getValues()

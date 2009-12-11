@@ -4,13 +4,15 @@ package com.vanheusden.nagios;
 public class DataInfo
 {
 	double min, max, avg, sd;
+	int n;
 
-	public DataInfo(double min, double max, double avg, double sd)
+	public DataInfo(double min, double max, double avg, double sd, int n)
 	{
 		this.min = min;
 		this.max = max;
 		this.avg = avg;
 		this.sd  = sd ;
+		this.n = n;
 	}
 
 	public double getMin()
@@ -31,5 +33,10 @@ public class DataInfo
 	public double getSd()
 	{
 		return sd;
+	}
+
+	public int getN()
+	{
+		return n;
 	}
 }

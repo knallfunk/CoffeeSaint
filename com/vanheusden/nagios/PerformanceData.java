@@ -28,8 +28,12 @@ public class PerformanceData
 			// thegate | HTTP;time;0.009249|0.009249
 			String [] parts = line.split(";");
 
-			PerformanceDataPerElement newElement = new PerformanceDataPerElement();
-			map.put(parts[0], newElement);
+			PerformanceDataPerElement newElement = map.get(parts[0]);
+			if (newElement == null)
+			{
+				newElement = new PerformanceDataPerElement();
+				map.put(parts[0], newElement);
+			}
 
 			DataSource dataSource = newElement.add(parts[1]);
 
@@ -57,7 +61,7 @@ public class PerformanceData
 			return;
 		current.setCheckTime(checkTime);
 
-		// performance_data=rta=0.168000ms;1000.000000;2000.000000;0.000000 pl=0%;20;60;0
+		// rta=0.168000ms;1000.000000;2000.000000;0.000000 pl=0%;20;60;0
 		String [] sets = nagiosPerfomanceDataLine.split(" ");
 		for(String currentSet : sets)
 		{

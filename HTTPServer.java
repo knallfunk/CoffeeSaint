@@ -1181,6 +1181,49 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+	public void sendReply_cgibin_performancedata_cgi(MyHTTPServer socket) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		JavNag javNag = coffeeSaint.getNagiosData();
+
+		reply.add("<TABLE>\n");
+		for(Host currentHost : javNag.getListOfHosts())
+		{
+			List<DataSource> dataSources = coffeeSaint.getPerformanceData(currentHost, null);
+			if (dataSources != null)
+			{
+				for(DataSource dataSource : dataSources)
+				{
+					DataInfo dataInfo = dataSource.getStats();
+
+					reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD></TD><TD>" + dataInfo.getMin() + "</TD><TD>" + dataInfo.getMax() + "</TD><TD>" + dataInfo.getAvg() + "</TD><TD>" + dataInfo.getSd() + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
+				}
+			}
+			for(Service currentService : currentHost.getServices())
+			{
+				dataSources = coffeeSaint.getPerformanceData(currentHost, currentService);
+				if (dataSources != null)
+				{
+					for(DataSource dataSource : dataSources)
+					{
+						DataInfo dataInfo = dataSource.getStats();
+
+						reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + currentService.getServiceName() + "</TD><TD>" + dataInfo.getMin() + "</TD><TD>" + dataInfo.getMax() + "</TD><TD>" + dataInfo.getAvg() + "</TD><TD>" + dataInfo.getSd() + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
+					}
+				}
+			}
+		}
+		reply.add("</TABLE>\n");
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
 	public void sendReply_helpescapes_html(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -1320,6 +1363,8 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_listall_cgi(socket);
 					else if (url.equals("/cgi-bin/list-log.cgi"))
 						sendReply_cgibin_listlog_cgi(socket);
+					else if (url.equals("/cgi-bin/performance-data.cgi"))
+						sendReply_cgibin_performancedata_cgi(socket);
 					else if (url.equals("/stylesheet.css"))
 						sendReply_stylesheet_css(socket, isHeadRequest);
 					else

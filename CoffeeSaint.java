@@ -27,6 +27,7 @@ public class CoffeeSaint
 	long lastPredictorDump = 0;
 	//
 	PerformanceData performanceData;
+	long lastPerformanceDump = 0;
 	//
 	static int currentImageFile = 0;
 	static Semaphore imageSemaphore = new Semaphore(1);
@@ -79,7 +80,9 @@ public class CoffeeSaint
 	public java.util.List<DataSource> getPerformanceData(Host host, Service service)
 	{
 		String hostName = host.getHostName();
-		String serviceName = service.getServiceName();
+		String serviceName = null;
+		if (service != null)
+			serviceName = service.getServiceName();
 
 		String entity = hostName;
 		if (serviceName != null)
@@ -149,7 +152,7 @@ public class CoffeeSaint
 		return output;
 	}
 
-	public void collectPerformanceData()
+	public void collectPerformanceData() throws Exception
 	{
 		for(Host currentHost : javNag.getListOfHosts())
 		{
@@ -165,6 +168,13 @@ public class CoffeeSaint
 				if (servicePerformanceData != null && servicePerformanceData.trim().equals("") == false)
 					performanceData.add(currentHost.getHostName() + " | " + currentService.getServiceName(), servicePerformanceData, lastServiceCheck);
 			}
+		}
+
+		if ((System.currentTimeMillis() - lastPerformanceDump)  > 1800000)
+		{
+			dumpPerformanceData();
+
+			lastPerformanceDump = System.currentTimeMillis();
 		}
 	}
 
