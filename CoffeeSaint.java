@@ -671,6 +671,22 @@ public class CoffeeSaint
 		for(;;)
 		{
 			Thread.sleep(config.getSleepTime() * 1000);
+
+			if (!config.getRunGui() && config.getPerformanceDataFileName() != null)
+			{
+				coffeeSaint.lockProblems();
+				try
+				{
+					coffeeSaint.loadNagiosData(null, -1, null);
+					coffeeSaint.collectPerformanceData();
+				}
+				finally
+				{
+					coffeeSaint.unlockProblems();
+				}
+
+			}
+
 			coffeeSaint.cleanUp();
 		}
 	}
