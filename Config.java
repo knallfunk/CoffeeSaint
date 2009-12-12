@@ -82,6 +82,7 @@ public class Config
 	private boolean disableHTTPFileselect = false;
 	private boolean showFlapping;
 	private int sparkLineWidth;
+	private SparklineGraphMode sparklineGraphMode;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -165,6 +166,7 @@ public class Config
 		transparency = 1.0f;
 		showFlapping = true;
 		sparkLineWidth = 0;
+		sparklineGraphMode = SparklineGraphMode.MIN_MAX;
 
 		unlock();
 	}
@@ -299,6 +301,15 @@ public class Config
 						setHostIssue(data);
 					else if (name.equals("sparkline-width"))
 						setSparkLineWidth(Integer.valueOf(data));
+					else if (name.equals("sparkline-graph-mode"))
+					{
+						if (data.equals("avg-sd"))
+							setSparklineGraphMode(SparklineGraphMode.AVG_SD);
+						else if (data.equals("min-max"))
+							setSparklineGraphMode(SparklineGraphMode.MIN_MAX);
+						else
+							throw new Exception("sparkline-graph-mode " + data + " unknown");
+					}
 					else if (name.equals("service-issue"))
 						setServiceIssue(data);
 					else if (name.equals("counter"))
@@ -497,6 +508,12 @@ public class Config
 		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
 		writeLine(out, "services-filter-include = " + getServicesFilterIncludeList());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
+		String sparkMode = "sparkline-graph-mode = ";
+		if (getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
+			sparkMode += "avg-sd";
+		else if (getSparklineGraphMode() == SparklineGraphMode.MIN_MAX)
+			sparkMode += "min-max";
+		writeLine(out, sparkMode);
 		String sort = "";
 		if (getSortOrderNumeric())
 			sort += "numeric ";
@@ -1990,5 +2007,21 @@ public class Config
 		copy = sparkLineWidth;
 		unlock();
 		return copy;
+	}
+
+	public SparklineGraphMode getSparklineGraphMode()
+	{
+		SparklineGraphMode copy;
+		lock();
+		copy = sparklineGraphMode;
+		unlock();
+		return copy;
+	}
+
+	public void setSparklineGraphMode(SparklineGraphMode newMode)
+	{
+		lock();
+		sparklineGraphMode = newMode;
+		unlock();
 	}
 }

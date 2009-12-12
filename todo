@@ -4,5 +4,6 @@
 - toggle fullscreen @ runtime
 
 - sparklines in web-interface opnemen, mbv GET
+- sparkline-graph-mode commandline en web interface
 
 - filter op inhoud van velden. numeriek, ascii, host en services

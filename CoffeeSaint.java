@@ -118,8 +118,11 @@ public class CoffeeSaint
 			double max = stats.getMax();
 			double avg = stats.getAvg();
 			double sd  = stats.getSd();
-			// double scale = height / (2.0 * sd);
-			double scale = height / (max - min);
+			double scale;
+			if (config.getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
+				scale = height / (2.0 * sd);
+			else
+				scale = height / (max - min);
 			java.util.List<Double> values = dataSource.getValues();
 			int px = -1, py = -1;
 
@@ -133,9 +136,14 @@ public class CoffeeSaint
 				if (dataOffset >= 0)
 				{
 					double value = values.get(dataOffset);
-					// double scaledValue = (value - (avg - sd)) * scale;
-					double scaledValue = (value - min) * scale;
-					int y = height - (int)(1 + Math.min(Math.max(0, scaledValue), (double)(height - 1)));
+					double scaledValue;
+					if (config.getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
+						scaledValue = (value - (avg - sd)) * scale;
+					else
+						scaledValue = (value - min) * scale;
+					scaledValue = Math.max(scaledValue, 0.0);
+					scaledValue = Math.min(scaledValue, height - 1.0);
+					int y = (height - 1) - (int)scaledValue;
 					int x = offset;
 
 					if (px == -1 || py == -1)
