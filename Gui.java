@@ -355,7 +355,7 @@ public class Gui extends JPanel implements ImageObserver
 				BufferedImage sparkLine = null;
 				int sparkLineWidth = config.getSparkLineWidth();
 				if (sparkLineWidth > 0)
-					sparkLine = coffeeSaint.getSparkLine(currentProblem.getHost(), currentProblem.getService(), sparkLineWidth, rowHeight);
+					sparkLine = coffeeSaint.getSparkLine(currentProblem.getHost(), currentProblem.getService(), sparkLineWidth, rowHeight - (config.getRowBorder()?1:0));
 
 				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, curNColumns, colNr, config.getTransparency(), sparkLine);
 
