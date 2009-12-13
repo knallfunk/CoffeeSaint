@@ -215,6 +215,60 @@ class HTTPServer implements Runnable
 		}
 	}
 
+	public void sendReply_cgibin_sparkline_cgi(MyHTTPServer socket, List<HTTPRequestData> getData) throws Exception
+	{
+		coffeeSaint.lockProblems();
+
+		try
+		{
+			coffeeSaint.loadNagiosData(null, -1, null);
+			coffeeSaint.collectPerformanceData();
+			JavNag javNag = coffeeSaint.getNagiosData();
+
+			int width = 400;
+			HTTPRequestData widthData = MyHTTPServer.findRecord(getData, "width");
+			if (widthData != null && widthData.getData() != null)
+				width = Integer.valueOf(widthData.getData());
+
+			int height = 240;
+			HTTPRequestData heightData = MyHTTPServer.findRecord(getData, "height");
+			if (heightData != null && heightData.getData() != null)
+				height = Integer.valueOf(heightData.getData());
+
+			String host = null;
+			HTTPRequestData hostData = MyHTTPServer.findRecord(getData, "host");
+			if (hostData != null && hostData.getData() != null)
+				host = hostData.getData();
+
+			String service = null;
+			HTTPRequestData serviceData = MyHTTPServer.findRecord(getData, "service");
+			if (serviceData != null && serviceData.getData() != null)
+				service = hostData.getData();
+
+			if (host != null)
+			{
+				socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n".getBytes());
+				Host hostRecord = javNag.getHost(host);
+				Service serviceRecord = null;
+				if (service != null)
+					serviceRecord = hostRecord.getService(service);
+				BufferedImage sparkLine = coffeeSaint.getSparkLine(hostRecord, serviceRecord, width, height);
+				ImageIO.write(sparkLine, "png", socket.getOutputStream());
+			}
+		}
+		catch(Exception e)
+		{
+			// really don't care if the transmit failed; browser
+			// probably closed session
+			// don't care if we could display the image or not
+		}
+		finally
+		{
+			coffeeSaint.unlockProblems();
+			socket.close();
+		}
+	}
+
 	public String isChecked(boolean checked)
 	{
 		if (checked)
@@ -422,6 +476,10 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Sort numeric:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-numeric\" VALUE=\"on\" " + isChecked(config.getSortOrderNumeric()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort reverse:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"sort-order-reverse\" VALUE=\"on\" " + isChecked(config.getSortOrderReverse()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sparkline size:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sparkline-size\" VALUE=\"" + config.getSparkLineWidth() +  "\"></TD><TD>In number of pixels, 0 to disable</TD></TR>\n");
+		reply.add("<TR><TD>Sparkline draw mode:</TD><TD><SELECT NAME=\"sparkline-mode\">");
+		reply.add("<OPTION VALUE=\"avg-sd\"" + (config.getSparklineGraphMode() == SparklineGraphMode.AVG_SD ? " SELECTED" : "") + ">scale to average &amp; standard deviation</OPTION>\n");
+		reply.add("<OPTION VALUE=\"min-max\"" + (config.getSparklineGraphMode() == SparklineGraphMode.MIN_MAX ? " SELECTED" : "") + ">scale between min and max</OPTION>\n");
+		reply.add("</SELECT></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
@@ -515,7 +573,7 @@ class HTTPServer implements Runnable
 
 	public boolean getCheckBox(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName)
 	{
-		HTTPRequestData field = socket.findRecord(requestData, fieldName);
+		HTTPRequestData field = MyHTTPServer.findRecord(requestData, fieldName);
 		if (field != null && field.getData() != null)
 			return true;
 
@@ -524,7 +582,7 @@ class HTTPServer implements Runnable
 
 	public String getField(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName)
 	{
-		HTTPRequestData field = socket.findRecord(requestData, fieldName);
+		HTTPRequestData field = MyHTTPServer.findRecord(requestData, fieldName);
 		if (field != null && field.getData() != null)
 			return field.getData().trim();
 
@@ -545,7 +603,7 @@ class HTTPServer implements Runnable
 
 		configNotWrittenToDisk = true;
 
-		HTTPRequestData nRows = socket.findRecord(requestData, "nRows");
+		HTTPRequestData nRows = MyHTTPServer.findRecord(requestData, "nRows");
 		if (nRows != null && nRows.getData() != null)
 		{
 			int newNRows = Integer.valueOf(nRows.getData());
@@ -555,7 +613,7 @@ class HTTPServer implements Runnable
 				config.setNRows(newNRows);
 		}
 
-		HTTPRequestData nCols = socket.findRecord(requestData, "problem-columns");
+		HTTPRequestData nCols = MyHTTPServer.findRecord(requestData, "problem-columns");
 		if (nCols != null && nCols.getData() != null)
 		{
 			int newNCols = Integer.valueOf(nCols.getData());
@@ -565,7 +623,7 @@ class HTTPServer implements Runnable
 				config.setNProblemCols(newNCols);
 		}
 
-		HTTPRequestData transparency = socket.findRecord(requestData, "transparency");
+		HTTPRequestData transparency = MyHTTPServer.findRecord(requestData, "transparency");
 		if (transparency != null && transparency.getData() != null)
 		{
 			float newTransparency = Float.valueOf(transparency.getData());
@@ -575,7 +633,7 @@ class HTTPServer implements Runnable
 				config.setTransparency(newTransparency);
 		}
 
-		HTTPRequestData sparkline_size = socket.findRecord(requestData, "sparkline-size");
+		HTTPRequestData sparkline_size = MyHTTPServer.findRecord(requestData, "sparkline-size");
 		if (sparkline_size != null && sparkline_size.getData() != null)
 		{
 			int newSparklineSize = Integer.valueOf(sparkline_size.getData());
@@ -617,6 +675,15 @@ class HTTPServer implements Runnable
 				CoffeeSaint.log.add("Setting sleep interval to: " + newSleepTime);
 				config.setSleepTime(newSleepTime);
 			}
+		}
+
+		String sparkline_mode = getField(socket, requestData, "sparkline-mode");
+		if (sparkline_mode != null)
+		{
+			if (sparkline_mode.equals("avg-sd"))
+				config.setSparklineGraphMode(SparklineGraphMode.AVG_SD);
+			else if (sparkline_mode.equals("min-max"))
+				config.setSparklineGraphMode(SparklineGraphMode.MIN_MAX);
 		}
 
 		config.setAlwaysNotify(getCheckBox(socket, requestData, "always_notify"));
@@ -861,7 +928,11 @@ class HTTPServer implements Runnable
 				String hostState = currentHost.getParameter("state_type").equals("1") ? currentHost.getParameter("current_state") : "0";
 				String htmlHostStateColor = htmlColorString(coffeeSaint.stateToColor(hostState.equals("1") ? "2" : hostState));
 
-				reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD BGCOLOR=\"#" + htmlHostStateColor + "\">" + coffeeSaint.hostState(hostState) + "</TD>");
+				// // // // // // // // // /cgi-bin/sparkline.cgi
+
+				String host = currentHost.getHostName();
+
+				reply.add("<TR><TD>" + host + "</TD><TD BGCOLOR=\"#" + htmlHostStateColor + "\">" + coffeeSaint.hostState(hostState) + "</TD>");
 
 				boolean first = true;
 				for(Service currentService : currentHost.getServices())
@@ -1302,6 +1373,17 @@ class HTTPServer implements Runnable
 					if (space != -1)
 						url = url.substring(0, space);
 
+					List<HTTPRequestData> getData = null;
+					int questionMark = url.indexOf("?");
+					if (questionMark != -1)
+					{
+						String parameters = "";
+						if (questionMark < url.length() - 1)
+							parameters = url.substring(questionMark + 1);
+						url = url.substring(0, questionMark);
+						getData = MyHTTPServer.splitHTTPLine(parameters);
+					}
+
 					InetSocketAddress remoteAddress = socket.getRemoteSocketAddress();
 					CoffeeSaint.log.add("HTTP " + remoteAddress.toString().substring(1) + " " + requestType + "-request for: " + url);
 					//HTTPLogEntry
@@ -1378,6 +1460,8 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_performancedata_cgi(socket);
 					else if (url.equals("/stylesheet.css"))
 						sendReply_stylesheet_css(socket, isHeadRequest);
+					else if (url.equals("/cgi-bin/sparkline.cgi"))
+						sendReply_cgibin_sparkline_cgi(socket, getData);
 					else
 					{
 						sendReply_404(socket, url);

@@ -137,4 +137,15 @@ public class Host
 
 		return newService;
 	}
+
+	public Service getService(String serviceName)
+	{
+		for(Service currentService : services)
+		{
+			if (currentService.getServiceName().equals(serviceName))
+				return currentService;
+		}
+
+		return null;
+	}
 }

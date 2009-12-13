@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v2.3-beta001, (C) 2009 by folkert@vanheusden.com";
+	static String version = "CoffeeSaint v2.3-beta002, (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
 
@@ -26,6 +26,7 @@ public class CoffeeSaint
 	Predictor predictor;
 	long lastPredictorDump = 0;
 	//
+	static Semaphore performanceDataLock = new Semaphore(1);
 	PerformanceData performanceData;
 	long lastPerformanceDump = 0;
 	//
@@ -39,6 +40,16 @@ public class CoffeeSaint
 	static JavNag javNag;
 	//
 	Random random = new Random();
+
+	public void performanceDataLock()
+	{
+		performanceDataLock.acquireUninterruptibly();
+	}
+
+	public void performanceDataUnlock()
+	{
+		performanceDataLock.release();
+	}
 
 	public CoffeeSaint() throws Exception
 	{
@@ -768,6 +779,7 @@ public class CoffeeSaint
 		System.out.println("--services-filter-exclude x Comma-seperated list of services not to display");
 		System.out.println("--services-filter-include x Comma-seperated list of services to display. Use in combination with --services-filter-exclude: will be invoked after the exclude.");
 		System.out.println("--sparkline-width x Adds sparklines to the listed problems. 'x' specifies the width in pixels");
+		System.out.println("--sparkline-mode x (avg-sd or min-max) How to scale the sparkline graphcs");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -994,6 +1006,14 @@ public class CoffeeSaint
 						config.setServicesFilterInclude(arg[++loop]);
 					else if (arg[loop].equals("--sparkline-width"))
 						config.setSparkLineWidth(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--sparkline-mode"))
+					{
+						String mode = arg[++loop];
+						if (mode.equals("avg-sd"))
+							config.setSparklineGraphMode(SparklineGraphMode.AVG_SD);
+						else if (mode.equals("min-max"))
+							config.setSparklineGraphMode(SparklineGraphMode.MIN_MAX);
+					}
 					else if (arg[loop].equals("--version") || arg[loop].equals("-version"))
 					{
 						System.out.println(getVersion());

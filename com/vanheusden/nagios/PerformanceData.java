@@ -48,6 +48,14 @@ public class PerformanceData
 		return map.get(element);
 	}
 
+	public PerformanceDataPerElement get(String host, String service)
+	{
+		if (service != null)
+			return map.get(host + " | " + service);
+
+		return map.get(host);
+	}
+
 	public void add(String element, String nagiosPerfomanceDataLine, String checkTime)
 	{
 		PerformanceDataPerElement current = map.get(element);

@@ -166,7 +166,7 @@ public class Config
 		transparency = 1.0f;
 		showFlapping = true;
 		sparkLineWidth = 0;
-		sparklineGraphMode = SparklineGraphMode.MIN_MAX;
+		sparklineGraphMode = SparklineGraphMode.AVG_SD;
 
 		unlock();
 	}

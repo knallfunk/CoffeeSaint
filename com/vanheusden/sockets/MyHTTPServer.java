@@ -91,7 +91,7 @@ public class MyHTTPServer
 		serverSocket = null;
 	}
 
-	public HTTPRequestData findRecord(List<HTTPRequestData> records, String what)
+	public static HTTPRequestData findRecord(List<HTTPRequestData> records, String what)
 	{
 		for(HTTPRequestData record : records)
 		{
@@ -100,6 +100,25 @@ public class MyHTTPServer
 		}
 
 		return null;
+	}
+
+	public static List<HTTPRequestData> splitHTTPLine(String dataStr)
+	{
+		List<HTTPRequestData> requestPairs = new ArrayList<HTTPRequestData>();
+		String [] pairs = dataStr.split("&");
+		if (pairs.length == 0)
+			return null;
+		for(String pair : pairs)
+		{
+			int is = pair.indexOf("=");
+
+			if (is == -1)
+				requestPairs.add(new HTTPRequestData(pair, null));
+			else
+				requestPairs.add(new HTTPRequestData(pair.substring(0, is), pair.substring(is + 1)));
+		}
+
+		return requestPairs;
 	}
 
 	public List<HTTPRequestData> getRequestData(List<HTTPRequestData> request) throws Exception
@@ -128,21 +147,7 @@ public class MyHTTPServer
 
 		System.out.println("request data: " + dataStr);
 
-		List<HTTPRequestData> requestPairs = new ArrayList<HTTPRequestData>();
-		String [] pairs = dataStr.split("&");
-		if (pairs.length == 0)
-			return null;
-		for(String pair : pairs)
-		{
-			int is = pair.indexOf("=");
-
-			if (is == -1)
-				requestPairs.add(new HTTPRequestData(pair, null));
-			else
-				requestPairs.add(new HTTPRequestData(pair.substring(0, is), pair.substring(is + 1)));
-		}
-
-		return requestPairs;
+		return splitHTTPLine(dataStr);
 	}
 
 	public void sendReply(List<String> reply) throws Exception
