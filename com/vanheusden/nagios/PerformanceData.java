@@ -82,9 +82,13 @@ public class PerformanceData
 			while(data < currentSet.length() && (currentSet.charAt(data) == '.' || currentSet.charAt(data) == '-' || (currentSet.charAt(data) >= '0' && currentSet.charAt(data) <= '9')))
 				data++;
 
-			double value = Double.valueOf(currentSet.substring(is + 1, data));
+			String valueStr = currentSet.substring(is + 1, data).trim();
+			if (valueStr.equals("") == false)
+			{
+				double value = Double.valueOf(valueStr);
 
-			current.add(name, value);
+				current.add(name, value);
+			}
 		}
 	}
 
