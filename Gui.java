@@ -102,7 +102,7 @@ public class Gui extends JPanel implements ImageObserver
 		{
 			Rectangle2D boundingRectangle = f.getStringBounds(msg, 0, msg.length(), new FontRenderContext(null, false, false));
 
-			double newShrink = (double)rowColWidth / (double)boundingRectangle.getWidth();
+			double newShrink = (double)(Math.max(0, rowColWidth - (sparkLine != null ? sparkLine.getWidth() : 0))) / (double)boundingRectangle.getWidth();
 			if (newShrink < shrink)
 			{
 				shrink = newShrink;
