@@ -1261,7 +1261,13 @@ class HTTPServer implements Runnable
 				{
 					DataInfo dataInfo = dataSource.getStats();
 
-					reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD></TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
+					String host;
+					if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
+						host = "<A HREF=\"/cgi-bin/sparkline.cgi?width=400&height=240&host=" + URLDecoder.decode(currentHost.getHostName(), defaultCharset) + "\">" + currentHost.getHostName() + "</A>";
+					else
+						host = currentHost.getHostName();
+
+					reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
 				}
 			}
 			for(Service currentService : currentHost.getServices())
@@ -1273,7 +1279,13 @@ class HTTPServer implements Runnable
 					{
 						DataInfo dataInfo = dataSource.getStats();
 
-					reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + currentService.getServiceName() + "</TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
+						String service;
+						if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
+							service = "<A HREF=\"/cgi-bin/sparkline.cgi?width=400&height=240&host=" + URLDecoder.decode(currentHost.getHostName(), defaultCharset) + "&service=" + URLDecoder.decode(currentService.getServiceName(), defaultCharset) + "\">" + currentService.getServiceName() + "</A>";
+						else
+							service = currentService.getServiceName();
+
+						reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + service + "</TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
 					}
 				}
 			}
