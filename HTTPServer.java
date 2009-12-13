@@ -16,6 +16,7 @@ import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -217,13 +218,10 @@ class HTTPServer implements Runnable
 
 	public void sendReply_cgibin_sparkline_cgi(MyHTTPServer socket, List<HTTPRequestData> getData) throws Exception
 	{
-		coffeeSaint.lockProblems();
-
 		try
 		{
-			coffeeSaint.loadNagiosData(null, -1, null);
-			coffeeSaint.collectPerformanceData();
-			JavNag javNag = coffeeSaint.getNagiosData();
+			JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
+			coffeeSaint.collectPerformanceData(javNag);
 
 			int width = 400;
 			HTTPRequestData widthData = MyHTTPServer.findRecord(getData, "width");
@@ -238,13 +236,14 @@ class HTTPServer implements Runnable
 			String host = null;
 			HTTPRequestData hostData = MyHTTPServer.findRecord(getData, "host");
 			if (hostData != null && hostData.getData() != null)
-				host = hostData.getData();
+				host = URLDecoder.decode(hostData.getData(), defaultCharset);
 
 			String service = null;
 			HTTPRequestData serviceData = MyHTTPServer.findRecord(getData, "service");
 			if (serviceData != null && serviceData.getData() != null)
-				service = hostData.getData();
+				service = URLDecoder.decode(serviceData.getData(), defaultCharset);
 
+			System.out.println("" + width + "x" + height + ", " + host + " | " + service);
 			if (host != null)
 			{
 				socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n".getBytes());
@@ -264,7 +263,6 @@ class HTTPServer implements Runnable
 		}
 		finally
 		{
-			coffeeSaint.unlockProblems();
 			socket.close();
 		}
 	}
@@ -916,45 +914,46 @@ class HTTPServer implements Runnable
 		reply.add("<TABLE CLASS=\"b\">\n");
 		reply.add("<TR><TD><B>Host</B></TD><TD><B>host status</B></TD><TD><B>Service</B></TD><TD><B>service status</B></TD></TR>\n");
 
-		coffeeSaint.lockProblems();
-		try
+		JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
+                List<Problem> problems = CoffeeSaint.findProblems(javNag);
+                coffeeSaint.learnProblemCount(problems.size());
+		coffeeSaint.collectPerformanceData(javNag);
+
+		for(Host currentHost : javNag.getListOfHosts())
 		{
-			coffeeSaint.loadNagiosData(null, -1, null);
-			coffeeSaint.collectPerformanceData();
-			JavNag javNag = coffeeSaint.getNagiosData();
+			String hostState = currentHost.getParameter("state_type").equals("1") ? currentHost.getParameter("current_state") : "0";
+			String htmlHostStateColor = htmlColorString(coffeeSaint.stateToColor(hostState.equals("1") ? "2" : hostState));
 
-			for(Host currentHost : javNag.getListOfHosts())
+			String host;
+			if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
+				host = "<A HREF=\"/cgi-bin/sparkline.cgi?width=400&height=240&host=" + URLDecoder.decode(currentHost.getHostName(), defaultCharset) + "\">" + currentHost.getHostName() + "</A>";
+			else
+				host = currentHost.getHostName();
+
+			reply.add("<TR><TD>" + host + "</TD><TD BGCOLOR=\"#" + htmlHostStateColor + "\">" + coffeeSaint.hostState(hostState) + "</TD>");
+
+			boolean first = true;
+			for(Service currentService : currentHost.getServices())
 			{
-				String hostState = currentHost.getParameter("state_type").equals("1") ? currentHost.getParameter("current_state") : "0";
-				String htmlHostStateColor = htmlColorString(coffeeSaint.stateToColor(hostState.equals("1") ? "2" : hostState));
+				String serviceState = currentService.getParameter("state_type").equals("1") ? currentService.getParameter("current_state") : "0";
+				String htmlServiceStateColor = htmlColorString(coffeeSaint.stateToColor(serviceState));
 
-				// // // // // // // // // /cgi-bin/sparkline.cgi
+				String service;
+				if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
+					service = "<A HREF=\"/cgi-bin/sparkline.cgi?width=400&height=240&host=" + URLDecoder.decode(currentHost.getHostName(), defaultCharset) + "&service=" + URLDecoder.decode(currentService.getServiceName(), defaultCharset) + "\">" + currentService.getServiceName() + "</A>";
+				else
+					service = currentService.getServiceName();
 
-				String host = currentHost.getHostName();
-
-				reply.add("<TR><TD>" + host + "</TD><TD BGCOLOR=\"#" + htmlHostStateColor + "\">" + coffeeSaint.hostState(hostState) + "</TD>");
-
-				boolean first = true;
-				for(Service currentService : currentHost.getServices())
+				if (first)
 				{
-					String serviceState = currentService.getParameter("state_type").equals("1") ? currentService.getParameter("current_state") : "0";
-					String htmlServiceStateColor = htmlColorString(coffeeSaint.stateToColor(serviceState));
-
-					if (first)
-					{
-						first = false;
-						reply.add("<TD>" + currentService.getServiceName() + "</TD><TD BGCOLOR=\"#" + htmlServiceStateColor + "\">" + coffeeSaint.serviceState(serviceState) + "</TD></TR>\n");
-					}
-					else
-					{
-						reply.add("<TR><TD></TD><TD></TD><TD>" + currentService.getServiceName() + "</TD><TD BGCOLOR=\"#" + htmlServiceStateColor + "\">" + coffeeSaint.serviceState(serviceState) + "</TD></TR>\n");
-					}
+					first = false;
+					reply.add("<TD>" + service + "</TD><TD BGCOLOR=\"#" + htmlServiceStateColor + "\">" + coffeeSaint.serviceState(serviceState) + "</TD></TR>\n");
+				}
+				else
+				{
+					reply.add("<TR><TD></TD><TD></TD><TD>" + currentService.getServiceName() + "</TD><TD BGCOLOR=\"#" + htmlServiceStateColor + "\">" + coffeeSaint.serviceState(serviceState) + "</TD></TR>\n");
 				}
 			}
-		}
-		finally
-		{
-			coffeeSaint.unlockProblems();
 		}
 		reply.add("</TABLE>\n");
 
@@ -1095,61 +1094,52 @@ class HTTPServer implements Runnable
 		reply.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD><meta http-equiv=\"refresh\" content=\"" + config.getSleepTime() + "\"></HEAD><BODY>");
 		reply.add("<FONT SIZE=-1>Generated by: " + CoffeeSaint.getVersion() + "</FONT><BR><BR>");
 
-		coffeeSaint.lockProblems();
-		try
+		Calendar rightNow = Calendar.getInstance();
+
+		JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
+		List<Problem> problems = CoffeeSaint.findProblems(javNag);
+		coffeeSaint.learnProblemCount(problems.size());
+		coffeeSaint.collectPerformanceData(javNag);
+
+		if (config.getShowHeader())
 		{
-			Calendar rightNow = Calendar.getInstance();
+			String header = coffeeSaint.getScreenHeader(javNag, rightNow);
+			reply.add(header + "<BR>");
+		}
 
-			coffeeSaint.loadNagiosData(null, -1, null);
-			coffeeSaint.findProblems();
-			coffeeSaint.collectPerformanceData();
+		Color bgColor;
+		if (problems.size() > 0)
+			bgColor = config.getBackgroundColor();
+		else
+			bgColor = coffeeSaint.predictWithColor(rightNow);
 
-			JavNag javNag = coffeeSaint.getNagiosData();
+		reply.add("<TABLE CLASS=\"b\" WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
 
-			if (config.getShowHeader())
-			{
-				String header = coffeeSaint.getScreenHeader(javNag, rightNow);
-				reply.add(header + "<BR>");
-			}
+		for(Problem currentProblem : problems)
+		{
+			String stateColor = htmlColorString(coffeeSaint.stateToColor(currentProblem.getCurrent_state()));
 
-			Color bgColor;
-			if (coffeeSaint.getProblems().size() > 0)
-				bgColor = config.getBackgroundColor();
+			String escapeString;
+			if (currentProblem.getService() == null)
+				escapeString = config.getHostIssue();
 			else
-				bgColor = coffeeSaint.predictWithColor(rightNow);
+				escapeString = config.getServiceIssue();
+			String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem);
 
-			reply.add("<TABLE CLASS=\"b\" WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
-
-			for(Problem currentProblem : coffeeSaint.getProblems())
-			{
-				String stateColor = htmlColorString(coffeeSaint.stateToColor(currentProblem.getCurrent_state()));
-
-				String escapeString;
-				if (currentProblem.getService() == null)
-					escapeString = config.getHostIssue();
-				else
-					escapeString = config.getServiceIssue();
-				String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem);
-
-				reply.add("<TR><TD BGCOLOR=\"#" + stateColor + "\" TEXT=\"#" + htmlColorString(config.getTextColor()) + "\">" + output + "</TD></TR>\n");
-			}
-
-			if (coffeeSaint.getProblems().size() == 0)
-			{
-				if (config.getImageUrls().size() >= 1)
-					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER><IMG SRC=\"/image.jpg\" BORDER=\"0\"></TD></TR>\n");
-				else if (config.getNagiosDataSources().size() == 0)
-					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER>NO NAGIOS SERVERS SELECTED!</TD></TR>\n");
-				else
-					reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER>All fine.</TD></TR>\n");
-			}
-
-			reply.add("</TABLE>\n");
+			reply.add("<TR><TD BGCOLOR=\"#" + stateColor + "\" TEXT=\"#" + htmlColorString(config.getTextColor()) + "\">" + output + "</TD></TR>\n");
 		}
-		finally
+
+		if (problems.size() == 0)
 		{
-			coffeeSaint.unlockProblems();
+			if (config.getImageUrls().size() >= 1)
+				reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER><IMG SRC=\"/image.jpg\" BORDER=\"0\"></TD></TR>\n");
+			else if (config.getNagiosDataSources().size() == 0)
+				reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER>NO NAGIOS SERVERS SELECTED!</TD></TR>\n");
+			else
+				reply.add("<TR VALIGN=CENTER><TD ALIGN=CENTER>All fine.</TD></TR>\n");
 		}
+
+		reply.add("</TABLE>\n");
 
 		reply.add("</BODY>");
 		reply.add("</HTML>");
@@ -1254,21 +1244,10 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		coffeeSaint.lockProblems();
-		JavNag javNag = null;
-		try
-		{
-			coffeeSaint.loadNagiosData(null, -1, null);
-			coffeeSaint.findProblems();
-			coffeeSaint.collectPerformanceData();
-			javNag = coffeeSaint.getNagiosData();
-		}
-		finally
-		{
-			coffeeSaint.unlockProblems();
-		}
-		if (javNag == null)
-			return;
+		JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
+		List<Problem> problems = CoffeeSaint.findProblems(javNag);
+		coffeeSaint.learnProblemCount(problems.size());
+		coffeeSaint.collectPerformanceData(javNag);
 
 		reply.add("<H2>Performance data</H2>\n");
 		reply.add("<TABLE CLASS=\"b\">\n");

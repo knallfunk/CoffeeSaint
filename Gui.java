@@ -302,11 +302,10 @@ public class Gui extends JPanel implements ImageObserver
 			/* find the problems in the nagios data */
 			if (config.getVerbose())
 				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor, 1, 0, 1.0f, null);
-			coffeeSaint.lockProblems();
-			coffeeSaint.loadNagiosData(this, windowWidth, g);
-			coffeeSaint.findProblems();
-			coffeeSaint.collectPerformanceData();
-			java.util.List<Problem> problems = coffeeSaint.getProblems();
+			JavNag javNag = CoffeeSaint.loadNagiosData(this, windowWidth, g);
+			coffeeSaint.collectPerformanceData(javNag);
+			java.util.List<Problem> problems = CoffeeSaint.findProblems(javNag);
+			coffeeSaint.learnProblemCount(problems.size());
 
 			Calendar rightNow = Calendar.getInstance();
 
@@ -319,8 +318,6 @@ public class Gui extends JPanel implements ImageObserver
 
 			if (imageParameters != null)
 				displayImage(imageParameters, problems.size(), g, rowHeight, config.getAdaptImageSize(), windowWidth, windowHeight);
-
-			JavNag javNag = coffeeSaint.getNagiosData();
 
 			int curNRows = 0;
 
@@ -421,7 +418,6 @@ public class Gui extends JPanel implements ImageObserver
 			{
 				lastState = false;
 			}
-			coffeeSaint.unlockProblems();
 
 			CoffeeSaint.log.add("Memory usage: " + ((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024)) + "MB");
 		}

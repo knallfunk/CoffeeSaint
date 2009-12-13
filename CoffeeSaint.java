@@ -25,31 +25,19 @@ public class CoffeeSaint
 
 	Predictor predictor;
 	long lastPredictorDump = 0;
+	static Semaphore predictorSemaphore = new Semaphore(1);
 	//
-	static Semaphore performanceDataLock = new Semaphore(1);
-	PerformanceData performanceData;
+	static PerformanceData performanceData;
 	long lastPerformanceDump = 0;
+	static Semaphore performanceDataSemaphore = new Semaphore(1);
 	//
 	static int currentImageFile = 0;
 	static Semaphore imageSemaphore = new Semaphore(1);
 	//
 	static Statistics statistics = new Statistics();
-	//
-	static Semaphore problemsSemaphore = new Semaphore(1);
-	static java.util.List<Problem> problems;
-	static JavNag javNag;
+	static Semaphore statisticsSemaphore = new Semaphore(1);
 	//
 	Random random = new Random();
-
-	public void performanceDataLock()
-	{
-		performanceDataLock.acquireUninterruptibly();
-	}
-
-	public void performanceDataUnlock()
-	{
-		performanceDataLock.release();
-	}
 
 	public CoffeeSaint() throws Exception
 	{
@@ -88,7 +76,7 @@ public class CoffeeSaint
 		}
 	}
 
-	public java.util.List<DataSource> getPerformanceData(Host host, Service service)
+	protected java.util.List<DataSource> getPerformanceData(Host host, Service service)
 	{
 		String hostName = host.getHostName();
 		String serviceName = null;
@@ -109,10 +97,15 @@ public class CoffeeSaint
 
 	BufferedImage getSparkLine(Host host, Service service, int width, int height)
 	{
+		performanceDataSemaphore.acquireUninterruptibly();
+
 		BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		java.util.List<DataSource> dataSources = getPerformanceData(host, service);
 		if (dataSources == null)
+		{
+			performanceDataSemaphore.release();
 			return null;
+		}
 
 		Graphics g = output.getGraphics();
 
@@ -167,26 +160,35 @@ public class CoffeeSaint
 				}
 			}
 		}
+		performanceDataSemaphore.release();
 
 		return output;
 	}
 
-	public void collectPerformanceData() throws Exception
+	public void collectPerformanceData(JavNag javNag) throws Exception
 	{
-		for(Host currentHost : javNag.getListOfHosts())
+		performanceDataSemaphore.acquireUninterruptibly();
+		try
 		{
-			String hostPerformanceData = currentHost.getParameter("performance_data");
-			String lastHostCheck = currentHost.getParameter("last_check");
-			if (hostPerformanceData != null && hostPerformanceData.trim().equals("") == false)
-				performanceData.add(currentHost.getHostName(), hostPerformanceData, lastHostCheck);
-
-			for(Service currentService : currentHost.getServices())
+			for(Host currentHost : javNag.getListOfHosts())
 			{
-				String servicePerformanceData = currentService.getParameter("performance_data");
-				String lastServiceCheck = currentService.getParameter("last_check");
-				if (servicePerformanceData != null && servicePerformanceData.trim().equals("") == false)
-					performanceData.add(currentHost.getHostName() + " | " + currentService.getServiceName(), servicePerformanceData, lastServiceCheck);
+				String hostPerformanceData = currentHost.getParameter("performance_data");
+				String lastHostCheck = currentHost.getParameter("last_check");
+				if (hostPerformanceData != null && hostPerformanceData.trim().equals("") == false)
+					performanceData.add(currentHost.getHostName(), hostPerformanceData, lastHostCheck);
+
+				for(Service currentService : currentHost.getServices())
+				{
+					String servicePerformanceData = currentService.getParameter("performance_data");
+					String lastServiceCheck = currentService.getParameter("last_check");
+					if (servicePerformanceData != null && servicePerformanceData.trim().equals("") == false)
+						performanceData.add(currentHost.getHostName() + " | " + currentService.getServiceName(), servicePerformanceData, lastServiceCheck);
+				}
 			}
+		}
+		finally
+		{
+			performanceDataSemaphore.release();
 		}
 
 		if ((System.currentTimeMillis() - lastPerformanceDump)  > 1800000)
@@ -197,12 +199,29 @@ public class CoffeeSaint
 		}
 	}
 
+	public boolean havePerformanceData(String host, String service)
+	{
+		performanceDataSemaphore.acquireUninterruptibly();
+		boolean haveData = performanceData.get(host, service) != null;
+		performanceDataSemaphore.release();
+		return haveData;
+	}
+
 	public void dumpPerformanceData() throws Exception
 	{
-		if (config.getPerformanceDataFileName() != null)
+		performanceDataSemaphore.acquireUninterruptibly();
+
+		try
 		{
-			System.out.println("Dumping performance data to " + config.getPerformanceDataFileName());
-			performanceData.dump(config.getPerformanceDataFileName());
+			if (config.getPerformanceDataFileName() != null)
+			{
+				System.out.println("Dumping performance data to " + config.getPerformanceDataFileName());
+				performanceData.dump(config.getPerformanceDataFileName());
+			}
+		}
+		finally
+		{
+			performanceDataSemaphore.release();
 		}
 	}
 
@@ -443,7 +462,7 @@ public class CoffeeSaint
 		return Color.ORANGE;
 	}
 
-	public void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
+	public static void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
 			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor(), 1, 0, 1.0f, null);
@@ -583,9 +602,9 @@ public class CoffeeSaint
 		}
 	}
 
-	synchronized public void loadNagiosData(Gui gui, int windowWidth, Graphics g) throws Exception
+	public static JavNag loadNagiosData(Gui gui, int windowWidth, Graphics g) throws Exception
 	{
-		javNag = new JavNag();
+		JavNag javNag = new JavNag();
 
 		long startLoadTs = System.currentTimeMillis();
 
@@ -630,14 +649,18 @@ public class CoffeeSaint
 		double took = (double)(endLoadTs - startLoadTs) / 1000.0;
 		log.add("Took " + took + "s to load status data");
 
+		statisticsSemaphore.acquireUninterruptibly();
 		statistics.addToTotalRefreshTime(took);
 		statistics.addToNRefreshes(1);
+		statisticsSemaphore.release();
+
+		return javNag;
 	}
 
-	public void findProblems() throws Exception
+	public static java.util.List<Problem> findProblems(JavNag javNag) throws Exception
 	{
 		java.util.List<Problem> lessImportant = new ArrayList<Problem>();
-		problems = new ArrayList<Problem>();
+		java.util.List<Problem> problems = new ArrayList<Problem>();
 
 		// collect problems
 		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems(), config.getShowFlapping(), config.getHostsFilterExclude(), config.getHostsFilterInclude(), config.getServicesFilterExclude(), config.getServicesFilterInclude());
@@ -648,33 +671,18 @@ public class CoffeeSaint
 		for(Problem currentLessImportant : lessImportant)
 			problems.add(currentLessImportant);
 
-		if (predictor != null)
-		{
-			Calendar rightNow = Calendar.getInstance();
-			learnProblems(rightNow, problems.size());
-		}
-
-		problemsSemaphore.release();
-	}
-
-	public void lockProblems()
-	{
-		problemsSemaphore.acquireUninterruptibly();
-	}
-
-	public void unlockProblems()
-	{
-		problemsSemaphore.release();
-	}
-
-	public java.util.List<Problem> getProblems()
-	{
 		return problems;
 	}
 
-	public JavNag getNagiosData()
+	public void learnProblemCount(int nProblems) throws Exception
 	{
-		return javNag;
+		if (predictor != null)
+		{
+			Calendar rightNow = Calendar.getInstance();
+			predictorSemaphore.acquireUninterruptibly();
+			learnProblems(rightNow, nProblems);
+			predictorSemaphore.release();
+		}
 	}
 
 	public static void daemonLoop(CoffeeSaint coffeeSaint, Config config) throws Exception
@@ -685,15 +693,13 @@ public class CoffeeSaint
 
 			if (!config.getRunGui() && config.getPerformanceDataFileName() != null)
 			{
-				coffeeSaint.lockProblems();
 				try
 				{
-					coffeeSaint.loadNagiosData(null, -1, null);
-					coffeeSaint.collectPerformanceData();
+					JavNag javNag = loadNagiosData(null, -1, null);
+					coffeeSaint.collectPerformanceData(javNag);
 				}
 				finally
 				{
-					coffeeSaint.unlockProblems();
 				}
 
 			}
