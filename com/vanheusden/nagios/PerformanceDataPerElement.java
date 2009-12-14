@@ -23,6 +23,11 @@ public class PerformanceDataPerElement
 		return newDataSource;
 	}
 
+	public void setDataSourceUnit(String name, String unit)
+	{
+		getDataSource(name).setUnit(unit);
+	}
+
 	public void setCheckTime(String checkTime)
 	{
 		lastCheckTime = checkTime;

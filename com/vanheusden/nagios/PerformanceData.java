@@ -89,6 +89,15 @@ public class PerformanceData
 
 				current.add(name, value);
 			}
+
+			String afterValue = currentSet.substring(data);
+			int semiColon = afterValue.indexOf(";");
+			if (semiColon > 0)
+			{
+				String unit = afterValue.substring(0, semiColon);
+
+				current.setDataSourceUnit(name, unit);
+			}
 		}
 	}
 

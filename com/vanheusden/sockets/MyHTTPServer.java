@@ -93,10 +93,13 @@ public class MyHTTPServer
 
 	public static HTTPRequestData findRecord(List<HTTPRequestData> records, String what)
 	{
-		for(HTTPRequestData record : records)
+		if (records != null)
 		{
-			if (record.getName().equals(what))
-				return record;
+			for(HTTPRequestData record : records)
+			{
+				if (record.getName().equals(what))
+					return record;
+			}
 		}
 
 		return null;

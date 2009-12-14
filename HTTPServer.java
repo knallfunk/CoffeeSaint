@@ -11,7 +11,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -21,6 +23,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import javax.imageio.*;
 
@@ -28,8 +32,6 @@ class HTTPServer implements Runnable
 {
 	final Config config;
 	final CoffeeSaint coffeeSaint;
-	final String adapter;
-	final int port;
 	final Statistics statistics;
 	final Gui gui;
 	final List<HTTPLogEntry> hosts = new ArrayList<HTTPLogEntry>();
@@ -38,12 +40,10 @@ class HTTPServer implements Runnable
 	boolean configNotWrittenToDisk = false;
 	final private String defaultCharset = "US-ASCII";
 
-	public HTTPServer(Config config, CoffeeSaint coffeeSaint, String adapter, int port, Statistics statistics, Gui gui)
+	public HTTPServer(Config config, CoffeeSaint coffeeSaint, Statistics statistics, Gui gui)
 	{
 		this.config = config;
 		this.coffeeSaint = coffeeSaint;
-		this.adapter = adapter;
-		this.port = port;
 		this.statistics = statistics;
 		this.gui = gui;
 	}
@@ -408,9 +408,74 @@ class HTTPServer implements Runnable
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
+		reply.add("<H2>Network parameters</H2>\n");
+		reply.add("Please note that after you click on submit, the new network-settings are applied immeditately.<BR>\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<TR><TD>Network interface to listen on:</TD><TD><SELECT NAME=\"network-interface\"><OPTION VALUE=\"0.0.0.0\"" + (config.getHTTPServerListenAdapter().equals("0.0.0.0") == true ? " SELECTED" : "") + ">All interfaces</OPTION>");
+		Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+		for (NetworkInterface netint : Collections.list(nets))
+		{
+			Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
+			for (InetAddress inetAddress : Collections.list(inetAddresses))
+			{
+				String address = inetAddress.toString().substring(1);
+				int percent = address.indexOf("%");
+				if (percent != -1)
+					address = address.substring(0, percent);
+				reply.add("<OPTION VALUE\"" + address + "\"" + (config.getHTTPServerListenAdapter().equals(address) == true ? " SELECTED" : "") + ">" + address + "</OPTION>");
+			}
+		}
+		reply.add("</TD></TR>\n");
+		reply.add("<TR><TD>Port to listen on:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"network-port\" VALUE=\"" + config.getHTTPServerListenPort() + "\"></TD></TR>\n");
+		reply.add("</TABLE>\n");
+		reply.add("<BR>\n");
+
+		reply.add("<H2>Nagios server(s)</H2>\n");
+		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD></TR>\n");
+		for(NagiosDataSource dataSource : config.getNagiosDataSources())
+		{
+			String type = "?";
+			if (dataSource.getType() == NagiosDataSourceType.TCP)
+				type = "tcp";
+			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
+				type = "compressed tcp";
+			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+				type = "http";
+			else if (dataSource.getType() == NagiosDataSourceType.FILE)
+				type = "file";
+
+			String version = "?";
+			if (dataSource.getVersion() == NagiosVersion.V1)
+				version = "1";
+			else if (dataSource.getVersion() == NagiosVersion.V2)
+				version = "2";
+			else if (dataSource.getVersion() == NagiosVersion.V3)
+				version = "3";
+
+			String parameters = "?";
+			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP)
+				parameters = dataSource.getHost() + " " + dataSource.getPort();
+			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+				parameters = dataSource.getURL().toString();
+			else if (dataSource.getType() == NagiosDataSourceType.FILE)
+				parameters = dataSource.getFile();
+
+			String serverString = parameters;
+			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD></TR>\n");
+		}
+		reply.add("<TR>\n");
+		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"ztcp\">compressed tcp</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
+		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\">3</OPTION></SELECT></TD>\n");
+		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"server-add-parameters\"></TD>\n");
+		reply.add("</TR>\n");
+		reply.add("<TR><TD>Use HTTP compression:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"disable-http-compression\" VALUE=\"on\" " + isChecked(config.getAllowHTTPCompression()) + "></TD></TR>\n");
+		reply.add("</TABLE>\n");
+		reply.add("TCP requires an ip-address followed by a space and a port-number in the parameters field.<BR>\n");
+		reply.add("<BR>\n");
+
 		reply.add("<H2>Look and feel parameters</H2>\n");
 		reply.add("<TABLE CLASS=\"b\">\n");
-
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
@@ -497,50 +562,6 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Services filter exclude list:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"services-filter-exclude-list\" VALUE=\"" + config.getServicesFilterExcludeList() + "\"></TD><TD>See host-filter comments</TD></TR>\n");
 		reply.add("<TR><TD>Services filter include list:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"services-filter-include-list\" VALUE=\"" + config.getServicesFilterIncludeList() + "\"></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
-		reply.add("<BR>\n");
-
-		reply.add("<H2>Nagios server(s)</H2>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
-		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD></TR>\n");
-		for(NagiosDataSource dataSource : config.getNagiosDataSources())
-		{
-			String type = "?";
-			if (dataSource.getType() == NagiosDataSourceType.TCP)
-				type = "tcp";
-			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
-				type = "compressed tcp";
-			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
-				type = "http";
-			else if (dataSource.getType() == NagiosDataSourceType.FILE)
-				type = "file";
-
-			String version = "?";
-			if (dataSource.getVersion() == NagiosVersion.V1)
-				version = "1";
-			else if (dataSource.getVersion() == NagiosVersion.V2)
-				version = "2";
-			else if (dataSource.getVersion() == NagiosVersion.V3)
-				version = "3";
-
-			String parameters = "?";
-			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP)
-				parameters = dataSource.getHost() + " " + dataSource.getPort();
-			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
-				parameters = dataSource.getURL().toString();
-			else if (dataSource.getType() == NagiosDataSourceType.FILE)
-				parameters = dataSource.getFile();
-
-			String serverString = parameters;
-			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD></TR>\n");
-		}
-		reply.add("<TR>\n");
-		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"ztcp\">compressed tcp</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
-		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\">3</OPTION></SELECT></TD>\n");
-		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"server-add-parameters\"></TD>\n");
-		reply.add("</TR>\n");
-		reply.add("<TR><TD>Use HTTP compression:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"disable-http-compression\" VALUE=\"on\" " + isChecked(config.getAllowHTTPCompression()) + "></TD></TR>\n");
-		reply.add("</TABLE>\n");
-		reply.add("TCP requires an ip-address followed by a space and a port-number in the parameters field.<BR>\n");
 		reply.add("<BR>\n");
 
 		reply.add("<H2>Webcams</H2>\n");
@@ -644,6 +665,9 @@ class HTTPServer implements Runnable
 		config.setMaxQualityGraphics(getCheckBox(socket, requestData, "max-quality-graphics"));
 
 		config.setFontName(getFieldDecoded(socket, requestData, "font"));
+
+		config.setHTTPServerListenAdapter(getFieldDecoded(socket, requestData, "network-interface"));
+		config.setHTTPServerListenPort(Integer.valueOf(getFieldDecoded(socket, requestData, "network-port")));
 
 		config.setWarningFontName(getFieldDecoded(socket, requestData, "warning-font"));
 
@@ -870,6 +894,12 @@ class HTTPServer implements Runnable
 
 		reply.add("<BR>\n");
 		reply.add("Form processed.<BR>\n");
+		reply.add("<BR>\n");
+		if (config.getHTTPServerListenAdapter().equals("0.0.0.0") == false)
+		{
+			String listenAddress = "http://" + config.getHTTPServerListenAdapter() + ":" + config.getHTTPServerListenPort() + "/";
+			reply.add("If you changed the networking parameters, please connect to <A HREF=\"" + listenAddress + "\">" + listenAddress + "</A><BR>\n");
+		}
 
 		reply.add("<BR>\n");
 		reply.add("<A HREF=\"/cgi-bin/config-menu.cgi\">Back to the configuration menu</A>");
@@ -1287,7 +1317,8 @@ class HTTPServer implements Runnable
 					else
 						host = currentHost.getHostName();
 
-					reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
+					String unit = dataSource.getUnit();
+					reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
 				}
 			}
 			for(Service currentService : currentHost.getServices())
@@ -1310,7 +1341,8 @@ class HTTPServer implements Runnable
 						else
 							service = currentService.getServiceName();
 
-						reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + service + "</TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
+						String unit = dataSource.getUnit();
+						reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + service + "</TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
 					}
 				}
 			}
@@ -1375,9 +1407,9 @@ class HTTPServer implements Runnable
 				{
 					if (socket == null)
 					{
-						CoffeeSaint.log.add("Listening on " + adapter + ":" + port);
+						CoffeeSaint.log.add("Listening on " + config.getHTTPServerListenAdapter() + ":" + config.getHTTPServerListenPort());
 
-						socket = new MyHTTPServer(adapter, port);
+						socket = new MyHTTPServer(config.getHTTPServerListenAdapter(), config.getHTTPServerListenPort());
 					}
 
 					List<HTTPRequestData> request = socket.acceptConnectionGetRequest();
@@ -1439,6 +1471,8 @@ class HTTPServer implements Runnable
 					{
 						List<HTTPRequestData> requestData = socket.getRequestData(request);
 						sendReply_cgibin_configdo_cgi(socket, requestData);
+						socket.closeServer();
+						socket = null;
 					}
 					else if (url.equals("/cgi-bin/reload-config.cgi"))
 						sendReply_cgibin_reloadconfig_cgi(socket);

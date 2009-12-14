@@ -1097,7 +1097,7 @@ public class CoffeeSaint
 			if (config.getHTTPServerListenPort() != -1)
 			{
 				System.out.println("Start HTTP server");
-				new Thread(new HTTPServer(config, coffeeSaint, config.getHTTPServerListenAdapter(), config.getHTTPServerListenPort(), statistics, gui)).start();
+				new Thread(new HTTPServer(config, coffeeSaint, statistics, gui)).start();
 			}
 
 			if (config.getRunGui())

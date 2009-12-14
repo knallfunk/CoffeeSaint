@@ -9,10 +9,21 @@ public class DataSource
 	final protected int maxN = 1000;
 	final protected String dataSourceName;
 	final protected List<Double> data = new ArrayList<Double>();
+	protected String unit = "";
 
 	public DataSource(String dataSourceName)
 	{
 		this.dataSourceName = dataSourceName;
+	}
+
+	public void setUnit(String unit)
+	{
+		this.unit = unit;
+	}
+
+	public String getUnit()
+	{
+		return unit;
 	}
 
 	public String getDataSourceName()
