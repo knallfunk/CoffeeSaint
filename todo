@@ -3,6 +3,7 @@
 - die andere monitoring dinges, zabbix
 - toggle fullscreen @ runtime
 
-- sparklines in web-interface opnemen, mbv GET
+- sparklines: filter op welke te graphen. pull down met "inclusive" en "exclusive" en dan invoerveld
+- datatype onthouden en in /cgi-bin/performance-data.cgi zetten
 
 - filter op inhoud van velden. numeriek, ascii, host en services

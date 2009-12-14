@@ -352,7 +352,7 @@ public class Gui extends JPanel implements ImageObserver
 				BufferedImage sparkLine = null;
 				int sparkLineWidth = config.getSparkLineWidth();
 				if (sparkLineWidth > 0)
-					sparkLine = coffeeSaint.getSparkLine(currentProblem.getHost(), currentProblem.getService(), sparkLineWidth, rowHeight - (config.getRowBorder()?1:0));
+					sparkLine = coffeeSaint.getSparkLine(currentProblem.getHost().getHostName(), currentProblem.getService().getServiceName(), sparkLineWidth, rowHeight - (config.getRowBorder()?1:0));
 
 				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, curNColumns, colNr, config.getTransparency(), sparkLine);
 
@@ -471,7 +471,7 @@ public class Gui extends JPanel implements ImageObserver
 				coffeeSaint.cleanUp();
 			}
 
-			if (currentHeader != null && config.getScrollingHeader())
+			if (currentHeader != null && config.getScrollingHeader() && config.getShowHeader())
 			{
 				int imgWidth = currentHeader.getWidth();
 				int pixelsNeeded = getWidth() - 100;

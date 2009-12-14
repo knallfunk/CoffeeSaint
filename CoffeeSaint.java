@@ -76,16 +76,11 @@ public class CoffeeSaint
 		}
 	}
 
-	protected java.util.List<DataSource> getPerformanceData(Host host, Service service)
+	protected java.util.List<DataSource> getPerformanceData(String host, String service)
 	{
-		String hostName = host.getHostName();
-		String serviceName = null;
+		String entity = host;
 		if (service != null)
-			serviceName = service.getServiceName();
-
-		String entity = hostName;
-		if (serviceName != null)
-			entity += " | " + serviceName;
+			entity += " | " + service;
 		System.out.println("sparkline entity: " + entity);
 
 		PerformanceDataPerElement element = performanceData.get(entity);
@@ -96,6 +91,21 @@ public class CoffeeSaint
 	}
 
 	BufferedImage getSparkLine(Host host, Service service, int width, int height)
+	{
+		return getSparkLine(host.getHostName(), service.getServiceName(), null, width, height);
+	}
+
+	BufferedImage getSparkLine(Host host, Service service, String selectedDataSourceName, int width, int height)
+	{
+		return getSparkLine(host.getHostName(), service.getServiceName(), selectedDataSourceName, width, height);
+	}
+
+	BufferedImage getSparkLine(String host, String service, int width, int height)
+	{
+		return getSparkLine(host, service, null, width, height);
+	}
+
+	BufferedImage getSparkLine(String host, String service, String selectedDataSourceName, int width, int height)
 	{
 		performanceDataSemaphore.acquireUninterruptibly();
 
@@ -117,6 +127,9 @@ public class CoffeeSaint
 
 		for(DataSource dataSource : dataSources)
 		{
+			if (selectedDataSourceName != null && dataSource.getDataSourceName().equals(selectedDataSourceName) == false)
+				continue;
+
 			DataInfo stats = dataSource.getStats();
 			double min = stats.getMin();
 			double max = stats.getMax();

@@ -220,9 +220,6 @@ class HTTPServer implements Runnable
 	{
 		try
 		{
-			JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
-			coffeeSaint.collectPerformanceData(javNag);
-
 			int width = 400;
 			HTTPRequestData widthData = MyHTTPServer.findRecord(getData, "width");
 			if (widthData != null && widthData.getData() != null)
@@ -243,15 +240,16 @@ class HTTPServer implements Runnable
 			if (serviceData != null && serviceData.getData() != null)
 				service = URLDecoder.decode(serviceData.getData(), defaultCharset);
 
-			System.out.println("" + width + "x" + height + ", " + host + " | " + service);
+			String dataSource = null;
+			HTTPRequestData dataSourceData = MyHTTPServer.findRecord(getData, "dataSource");
+			if (dataSourceData != null && dataSourceData.getData() != null)
+				dataSource = URLDecoder.decode(dataSourceData.getData(), defaultCharset);
+
+			System.out.println("" + width + "x" + height + ", " + host + " | " + service + " | " + dataSource);
 			if (host != null)
 			{
 				socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n".getBytes());
-				Host hostRecord = javNag.getHost(host);
-				Service serviceRecord = null;
-				if (service != null)
-					serviceRecord = hostRecord.getService(service);
-				BufferedImage sparkLine = coffeeSaint.getSparkLine(hostRecord, serviceRecord, width, height);
+				BufferedImage sparkLine = coffeeSaint.getSparkLine(host, service, dataSource, width, height);
 				ImageIO.write(sparkLine, "png", socket.getOutputStream());
 			}
 		}
@@ -926,7 +924,10 @@ class HTTPServer implements Runnable
 
 			String host;
 			if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
-				host = "<A HREF=\"/cgi-bin/sparkline.cgi?width=400&height=240&host=" + URLDecoder.decode(currentHost.getHostName(), defaultCharset) + "\">" + currentHost.getHostName() + "</A>";
+			{
+				String url = sparkLineUrl(currentHost.getHostName(), null, null, 400, 240);
+				host = "<A HREF=\"" + url + "\">" + currentHost.getHostName() + "</A>";
+			}
 			else
 				host = currentHost.getHostName();
 
@@ -940,7 +941,10 @@ class HTTPServer implements Runnable
 
 				String service;
 				if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
-					service = "<A HREF=\"/cgi-bin/sparkline.cgi?width=400&height=240&host=" + URLDecoder.decode(currentHost.getHostName(), defaultCharset) + "&service=" + URLDecoder.decode(currentService.getServiceName(), defaultCharset) + "\">" + currentService.getServiceName() + "</A>";
+				{
+					String url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), null, 400, 240);
+					service = "<A HREF=\"" + url + "\">" + currentService.getServiceName() + "</A>";
+				}
 				else
 					service = currentService.getServiceName();
 
@@ -1237,6 +1241,17 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+	public String sparkLineUrl(String host, String service, String dataSource, int width, int height) throws Exception
+	{
+		String url = "/cgi-bin/sparkline.cgi?width=" + width + "&height=" + height + "&host=" + URLEncoder.encode(host, defaultCharset);
+		if (service != null)
+			url += "&service=" + URLEncoder.encode(service, defaultCharset);
+		if (dataSource != null)
+			url += "&dataSource=" + URLEncoder.encode(dataSource, defaultCharset);
+
+		return url;
+	}
+
 	public void sendReply_cgibin_performancedata_cgi(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -1251,41 +1266,51 @@ class HTTPServer implements Runnable
 
 		reply.add("<H2>Performance data</H2>\n");
 		reply.add("<TABLE CLASS=\"b\">\n");
-		reply.add("<TR><TD><B>host</B></TD><TD><B>service</B></TD><TD><B>parameter</B></TD><TD><B>min</B></TD><TD><B>max</B></TD><TD><B>avg</B></TD><TD><B>std.dev.</B></TD><TD><B># samples</B></TD></TR>\n");
+		reply.add("<TR><TD><B>host</B></TD><TD><B>service</B></TD><TD><B>parameter</B></TD><TD><B>min</B></TD><TD><B>max</B></TD><TD><B>avg</B></TD><TD><B>std.dev.</B></TD><TD><B># samples</B></TD><TD><B>sparkline</B></TD></TR>\n");
 		for(Host currentHost : javNag.getListOfHosts())
 		{
-			List<DataSource> dataSources = coffeeSaint.getPerformanceData(currentHost, null);
+			List<DataSource> dataSources = coffeeSaint.getPerformanceData(currentHost.getHostName(), null);
 			if (dataSources != null)
 			{
 				for(DataSource dataSource : dataSources)
 				{
 					DataInfo dataInfo = dataSource.getStats();
 
-					String host;
+					String host, sparkCol = "<TD></TD>";
 					if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
-						host = "<A HREF=\"/cgi-bin/sparkline.cgi?width=400&height=240&host=" + URLDecoder.decode(currentHost.getHostName(), defaultCharset) + "\">" + currentHost.getHostName() + "</A>";
+					{
+						String url = sparkLineUrl(currentHost.getHostName(), null, dataSource.getDataSourceName(), 400, 240);
+						host = "<A HREF=\"" + url + "\">" + currentHost.getHostName() + "</A>";
+						url = sparkLineUrl(currentHost.getHostName(), null, dataSource.getDataSourceName(), 100, 15);
+						sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
+					}
 					else
 						host = currentHost.getHostName();
 
-					reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
+					reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
 				}
 			}
 			for(Service currentService : currentHost.getServices())
 			{
-				dataSources = coffeeSaint.getPerformanceData(currentHost, currentService);
+				dataSources = coffeeSaint.getPerformanceData(currentHost.getHostName(), currentService.getServiceName());
 				if (dataSources != null)
 				{
 					for(DataSource dataSource : dataSources)
 					{
 						DataInfo dataInfo = dataSource.getStats();
 
-						String service;
+						String service, sparkCol = "<TD></TD>";
 						if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
-							service = "<A HREF=\"/cgi-bin/sparkline.cgi?width=400&height=240&host=" + URLDecoder.decode(currentHost.getHostName(), defaultCharset) + "&service=" + URLDecoder.decode(currentService.getServiceName(), defaultCharset) + "\">" + currentService.getServiceName() + "</A>";
+						{
+							String url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName(), 400, 240);
+							service = "<A HREF=\"" + url + "\">" + currentService.getServiceName() + "</A>";
+							url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName(), 100, 15);
+							sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
+						}
 						else
 							service = currentService.getServiceName();
 
-						reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + service + "</TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD></TR>\n");
+						reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + service + "</TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
 					}
 				}
 			}
