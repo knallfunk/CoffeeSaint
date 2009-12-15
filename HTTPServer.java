@@ -1057,7 +1057,7 @@ class HTTPServer implements Runnable
 
 		addHTTP200(reply);
 		addPageHeader(reply, "");
-		reply.add("Please select an action in the menu at the left.");
+		reply.add("<br /><br /><br />Please select an action in the menu at the left.");
 		addPageTail(reply, false);
 
 		socket.sendReply(reply);
