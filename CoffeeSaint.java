@@ -993,6 +993,8 @@ public class CoffeeSaint
 						config.setAlsoAcknowledged(true);
 					else if (arg[loop].equals("--font"))
 						config.setFontName(arg[++loop]);
+					else if (arg[loop].equals("--no-network-change"))
+						config.setNoNetworkChange(true);
 					else if (arg[loop].equals("--critical-font"))
 						config.setCriticalFontName(arg[++loop]);
 					else if (arg[loop].equals("--warning-font"))

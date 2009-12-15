@@ -60,10 +60,65 @@ class HTTPServer implements Runnable
 
 	public void addPageHeader(List<String> whereTo, String head)
 	{
-		whereTo.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD>" + head + "<link rel=\"shortcut icon\" href=\"/favicon.ico\" type=\"image/x-icon\" /><link href=\"/stylesheet.css\" rel=\"stylesheet\" media=\"screen\"></HEAD><BODY><table width=\"100%\" bgcolor=\"#000000\" cellpadding=\"0\" cellspacing=\"0\"><tr><td><A HREF=\"/\"><img src=\"/images/vanheusden02.jpg\" BORDER=\"0\"></A></td></tr></table><BR>\n");
-		whereTo.add("<TABLE><TR VALIGN=TOP><TD VALIGN=TOP ALIGN=LEFT WIDTH=225><IMG SRC=\"/images/the_coffee_saint.jpg\" BORDER=\"0\" ALT=\"logo (C) Bas Schuiling\"></TD><TD ALIGN=LEFT>\n");
-
-		whereTo.add("<BR><H1>" + CoffeeSaint.getVersion() + "</H1><BR><BR>");
+		whereTo.add("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n");
+		whereTo.add("<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" >\n");
+		whereTo.add("<head>\n");
+		whereTo.add("<meta http-equiv=\"content-type\" content=\"text/html; charset=iso-8859-1\" />\n");
+		whereTo.add("<meta name=\"author\" content=\"Bastiaan Schuiling Konings\" />\n");
+		whereTo.add("<meta name=\"keywords\" content=\"coffeesaint admin\" />\n");
+		whereTo.add("<meta name=\"description\" content=\"CoffeeSaint remote configuration panel\" /\n");
+		whereTo.add("	<title>CoffeeSaint admin</title>\n");
+		whereTo.add("	<script type=\"text/javascript\"></script>\n");
+		whereTo.add("<link href=\"/design.css\" rel=\"stylesheet\" media=\"screen\">\n");
+		if (head != null && head.equals("") == false)
+			whereTo.add(head);
+		whereTo.add("</head>\n");
+		whereTo.add("<body id=\"css-coffeesaint\">\n");
+		whereTo.add("	<div id=\"coffee\"><img src=\"/images/coffee.png\" /></div>\n");
+		whereTo.add("	<div id=\"container\">\n");
+		whereTo.add("		<div id=\"column_navigation\">\n");
+		whereTo.add("			<div id=\"navigation\">\n");
+		whereTo.add("				<strong>Nagios</strong><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/performance-data.cgi\">Performance data</a><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/list-all.cgi\">List of hosts/services</a><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/nagios_status.cgi\">Problems overview</a><br />\n");
+		whereTo.add("				<br /><strong>Logging</strong><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</a><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/log.cgi\">List of connecting hosts</a><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/list-log.cgi\">Show log</a><br />\n");
+		whereTo.add("				<br /><strong>Configuration</strong><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</a><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/reload-config.cgi\">Reload configuration</a><br />\n");
+		whereTo.add("				<a href=\"/cgi-bin/select_configfile.cgi\">Select configuration file</a><br />\n");
+                if (config.getConfigFilename() == null)
+                        whereTo.add("No configuration-file selected, save disabled<br />\n");
+                else
+                {
+                        String line = "<A HREF=\"/cgi-bin/write-config.cgi\">Write config to " + config.getConfigFilename() + "</A>";
+                        if (configNotWrittenToDisk == true)
+                                line += " (changes pending!)";
+                        line += "<br />\n";
+                        whereTo.add(line);
+                }
+		whereTo.add("				<br /><strong>Actions</strong><br />\n");
+                if (config.getRunGui())
+                        whereTo.add("<<A HREF=\"/cgi-bin/force_reload.cgi\">Force reload</A><br />\n");
+                else
+                        whereTo.add("Force reload disabled, not running GUI<br />\n");
+                String sample = config.getProblemSound();
+                if (sample != null)
+                        whereTo.add("<A HREF=\"/cgi-bin/test-sound.cgi\">Test sound (" + sample + ")</A><br />\n");
+                else
+                        whereTo.add("No sound selected<br />\n");
+		whereTo.add("				<br /><strong>Links</strong><br />\n");
+		whereTo.add("				<a href=\"/links.html\">Links relevant to this program</a><br />\n");
+		whereTo.add("				<br />\n");
+		whereTo.add("				<br />\n");
+		whereTo.add("				<a href=\"http://www.vanheusden.com\" target=\"_blank\"><img src=\"/images/footer01.png\" border=\"0\" /></a>\n");
+		whereTo.add("			</div>\n");
+		whereTo.add("		</div>\n");
+		whereTo.add("		<div id=\"column_main\">\n");
+		whereTo.add("			<div id=\"main\">\n");
 	}
 
 	public String formatDate(Calendar when)
@@ -74,13 +129,15 @@ class HTTPServer implements Runnable
 	}
 
 	public void addPageTail(List<String> whereTo, boolean mainMenu)
-	{
-		whereTo.add("<BR><BR><BR>");
+	{ 
+		whereTo.add("				<br />\n");
+		whereTo.add("			</div>\n");
+		whereTo.add("		</div>\n");
+		whereTo.add("	</div>\n");
+		whereTo.add("</body>\n");
+		whereTo.add("</html>\n");
 
-		if (mainMenu)
-			whereTo.add("<A HREF=\"/\">Back to main menu</A><BR>");
-
-		whereTo.add(formatDate(Calendar.getInstance()) + "</TD></TR></TABLE></BODY></HTML>");
+//		whereTo.add(formatDate(Calendar.getInstance()) + "</TD></TR></TABLE></BODY></HTML>");
 	}
 
 	public BufferedImage createBufferedImage(Image image)
@@ -159,39 +216,34 @@ class HTTPServer implements Runnable
 		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/favicon.ico", "image/x-icon", headRequest);
 	}
 
-	public void sendReply_images_configure_png(MyHTTPServer socket, boolean headRequest) throws Exception
+	public void sendReply_images_bg01_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_configure.png", "image/png", headRequest);
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/bg01.png", "image/png", headRequest);
 	}
 
-	public void sendReply_stylesheet_css(MyHTTPServer socket, boolean headRequest) throws Exception
+	public void sendReply_images_coffee_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/stylesheet.css", "text/css", headRequest);
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/coffee.png", "image/png", headRequest);
 	}
 
-	public void sendReply_images_statistics_png(MyHTTPServer socket, boolean headRequest) throws Exception
+	public void sendReply_images_footer01_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_mimetype_log.png", "image/png", headRequest);
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/footer01.png", "image/png", headRequest);
 	}
 
-	public void sendReply_images_actions_png(MyHTTPServer socket, boolean headRequest) throws Exception
+	public void sendReply_images_saint01_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_action_player_play.png", "image/png", headRequest);
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/saint01.png", "image/png", headRequest);
 	}
 
-	public void sendReply_images_links_png(MyHTTPServer socket, boolean headRequest) throws Exception
+	public void sendReply_images_title01_png(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/Crystal_Clear_mimetype_html.png", "image/png", headRequest);
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/title01.png", "image/png", headRequest);
 	}
 
-	public void sendReply_images_the_coffee_saint_jpg(MyHTTPServer socket, boolean headRequest) throws Exception
+	public void sendReply_design_css(MyHTTPServer socket, boolean headRequest) throws Exception
 	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/the_coffee_saint.jpg", "image/jpeg", headRequest);
-	}
-
-	public void sendReply_images_vanheusden02_jpg(MyHTTPServer socket, boolean headRequest) throws Exception
-	{
-		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/vanheusden02.jpg", "image/jpeg", headRequest);
+		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/design.css", "text/css", headRequest);
 	}
 
 	public void sendReply_robots_txt(MyHTTPServer socket, boolean headRequest) throws Exception
@@ -334,7 +386,7 @@ class HTTPServer implements Runnable
 			reply.add("Current path: <B>" + dir.getAbsolutePath() + "</B><BR><BR>\n");
 
 			String currentFile = config.getConfigFilename();
-			reply.add("<TABLE CLASS=\"b\">\n");
+			reply.add("<TABLE>\n");
 			reply.add("<TR><TD>Configuration file:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"config-file\" VALUE=\"" + (currentFile != null?currentFile:"") + "\"></TD></TR>\n");
 			reply.add("<TR><TD>or select from:</TD><TD>\n");
 			FilenameFilter fileFilter = new FilenameFilter() {
@@ -396,8 +448,8 @@ class HTTPServer implements Runnable
 
 		reply.add("<FORM ACTION=\"/cgi-bin/config-do.cgi\" METHOD=\"POST\">\n");
 
-		reply.add("<H2>Nagios handling parameters</H2>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<H1>Nagios handling parameters</H1>\n");
+		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + isChecked(config.getAlwaysNotify()) + "></TD><TD>Also display when notifications are disabled</TD></TR>\n");
 		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + isChecked(config.getAlsoAcknowledged()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also scheduled downtime</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_scheduled_downtime\" VALUE=\"on\" " + isChecked(config.getAlsoScheduledDowntime()) + "></TD><TD>Also display problems for which downtime has been scheduled</TD></TR>\n");
@@ -408,9 +460,9 @@ class HTTPServer implements Runnable
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
-		reply.add("<H2>Network parameters</H2>\n");
+		reply.add("<H1>Network parameters</H1>\n");
 		reply.add("Please note that after you click on submit, the new network-settings are applied immeditately.<BR>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Network interface to listen on:</TD><TD><SELECT NAME=\"network-interface\"><OPTION VALUE=\"0.0.0.0\"" + (config.getHTTPServerListenAdapter().equals("0.0.0.0") == true ? " SELECTED" : "") + ">All interfaces</OPTION>");
 		Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
 		for (NetworkInterface netint : Collections.list(nets))
@@ -430,8 +482,8 @@ class HTTPServer implements Runnable
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
-		reply.add("<H2>Nagios server(s)</H2>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<H1>Nagios server(s)</H1>\n");
+		reply.add("<TABLE>\n");
 		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD></TR>\n");
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
 		{
@@ -474,8 +526,8 @@ class HTTPServer implements Runnable
 		reply.add("TCP requires an ip-address followed by a space and a port-number in the parameters field.<BR>\n");
 		reply.add("<BR>\n");
 
-		reply.add("<H2>Look and feel parameters</H2>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<H1>Look and feel parameters</H1>\n");
+		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
@@ -546,16 +598,16 @@ class HTTPServer implements Runnable
 
 		if (config.getDisableHTTPFileselect() == false)
 		{
-			reply.add("<H2>Files</H2>\n");
-			reply.add("<TABLE CLASS=\"b\">\n");
+			reply.add("<H1>Files</H1>\n");
+			reply.add("<TABLE>\n");
 			reply.add("<TR><TD>File to store prediction data in:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"brain-file\" VALUE=\"" + (config.getBrainFileName() != null ? config.getBrainFileName() : "")+ "\"></TD><TD>Used for predicting problem count</TD></TR>\n");
 			reply.add("<TR><TD>File to store performance data in:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"performance-data\" VALUE=\"" + (config.getPerformanceDataFileName() != null ? config.getPerformanceDataFileName() : "") + "\"></TD><TD>Used for sparklines</TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 		}
 
-		reply.add("<H2>Filters</H2>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<H1>Filters</H1>\n");
+		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Hosts to place at the top:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"prefer\" VALUE=\"" + config.getPrefersList() + "\"></TD><TD>Comma-seperated list (can be regular expressions)</TD></TR>\n");
 		reply.add("<TR><TD>Hosts filter exclude list:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"hosts-filter-exclude-list\" VALUE=\"" + config.getHostsFilterExcludeList() + "\"></TD><TD>Comma-seperated list (can be regular expressions)</TD></TR>\n");
 		reply.add("<TR><TD>Hosts filter include list:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"hosts-filter-include-list\" VALUE=\"" + config.getHostsFilterIncludeList() + "\"></TD><TD>(are applied after processing the exclude list)</TD></TR>\n");
@@ -564,8 +616,8 @@ class HTTPServer implements Runnable
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
-		reply.add("<H2>Webcams</H2>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<H1>Webcams</H1>\n");
+		reply.add("<TABLE>\n");
 		for(String image : config.getImageUrls())
 			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
 		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
@@ -577,7 +629,7 @@ class HTTPServer implements Runnable
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
-		reply.add("<H2>Submit changes</H2>\n");
+		reply.add("<H1>Submit changes</H1>\n");
 		reply.add("<INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes!\"><BR>\n");
 		reply.add("<BR>\n");
 
@@ -666,8 +718,11 @@ class HTTPServer implements Runnable
 
 		config.setFontName(getFieldDecoded(socket, requestData, "font"));
 
-		config.setHTTPServerListenAdapter(getFieldDecoded(socket, requestData, "network-interface"));
-		config.setHTTPServerListenPort(Integer.valueOf(getFieldDecoded(socket, requestData, "network-port")));
+		if (!config.getNoNetworkChange())
+		{
+			config.setHTTPServerListenAdapter(getFieldDecoded(socket, requestData, "network-interface"));
+			config.setHTTPServerListenPort(Integer.valueOf(getFieldDecoded(socket, requestData, "network-port")));
+		}
 
 		config.setWarningFontName(getFieldDecoded(socket, requestData, "warning-font"));
 
@@ -920,7 +975,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<H2>Log</H2>");
+		reply.add("<H1>Log</H1>");
 		reply.add("<PRE>\n");
 		List<String> log = CoffeeSaint.log.get();
 		for(int index=log.size()-1; index>=0; index--)
@@ -939,7 +994,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<TABLE>\n");
 		reply.add("<TR><TD><B>Host</B></TD><TD><B>host status</B></TD><TD><B>Service</B></TD><TD><B>service status</B></TD></TR>\n");
 
 		JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
@@ -1002,50 +1057,7 @@ class HTTPServer implements Runnable
 
 		addHTTP200(reply);
 		addPageHeader(reply, "");
-
-		reply.add("<TABLE CLASS=\"b\">\n");
-
-		// stats
-		reply.add("<TR><TH ROWSPAN=\"5\"><IMG SRC=\"/images/statistics.png\" ALT=\"Statistics\"></TH><TD><A HREF=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</A></TD></TR>\n");
-		reply.add("<TR><TD><A HREF=\"/cgi-bin/log.cgi\">List of connecting hosts</A></TD></TR>\n");
-		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-all.cgi\">List of hosts/services</A></TD></TR>\n");
-		reply.add("<TR><TD><A HREF=\"/cgi-bin/list-log.cgi\">Show log</A></TD></TR>\n");
-		reply.add("<TR><TD><A HREF=\"/cgi-bin/performance-data.cgi\">Performance data</A></TD></TR>\n");
-
-		// configure
-		reply.add("<TR><TH ROWSPAN=\"4\"><IMG SRC=\"/images/configure.png\" ALT=\"Configuration\"></TH><TD><A HREF=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</A></TD></TR>\n");
-		reply.add("<TR><TD><A HREF=\"/cgi-bin/reload-config.cgi\">Reload configuration</A></TD></TR>\n");
-		reply.add("<TR><TD><A HREF=\"/cgi-bin/select_configfile.cgi\">Select configuration file</A></TD></TR>\n");
-		if (config.getConfigFilename() == null)
-			reply.add("<TR><TD>No configuration-file selected (use --config or the link<BR>above), save configuration disabled</TD></TR>\n");
-		else
-		{
-			String line = "<TR><TD><A HREF=\"/cgi-bin/write-config.cgi\">Write configuration to " + config.getConfigFilename() + "</A>";
-			if (configNotWrittenToDisk == true)
-				line += " (changes pending!)";
-			line += "</TD></TR>\n";
-			reply.add(line);
-		}
-
-		// actions
-		reply.add("<TR><TH ROWSPAN=\"3\"><IMG SRC=\"/images/actions.png\" ALT=\"Actions\"></TH>");
-		if (config.getRunGui())
-			reply.add("<TD><A HREF=\"/cgi-bin/force_reload.cgi\">Force reload</A></TD>\n");
-		else
-			reply.add("<TD>Force reload disabled, not running GUI</TD></TR>\n");
-		reply.add("</TR>\n");
-		reply.add("<TR><TD><A HREF=\"/cgi-bin/nagios_status.cgi\">Nagios status</A></TD></TR>\n");
-		String sample = config.getProblemSound();
-		if (sample != null)
-			reply.add("<TR><TD><A HREF=\"/cgi-bin/test-sound.cgi\">Test sound (" + sample + ")</A></TD></TR>\n");
-		else
-			reply.add("<TR><TD>No sound selected</TD></TR>\n");
-
-		// links
-		reply.add("<TR><TH ROWSPAN=\"1\"><IMG SRC=\"/images/links.png\" ALT=\"Links\"></TH><TD><A HREF=\"/links.html\">Links relevant to this program</A></TD></TR>\n");
-
-		//
-		reply.add("</TABLE>\n");
+		reply.add("Please select an action in the menu at the left.");
 		addPageTail(reply, false);
 
 		socket.sendReply(reply);
@@ -1075,14 +1087,12 @@ class HTTPServer implements Runnable
 		addPageHeader(reply, "");
 
 		reply.add("<H1>Links</H1>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>CoffeeSaint website (for updates):</TD><TD><A HREF=\"http://vanheusden.com/java/CoffeeSaint/\">http://vanheusden.com/java/CoffeeSaint/</A></TD></TR>\n");
-		reply.add("<TR><TD>Designer of the CoffeeSaint logo:</TD><TD><A HREF=\"http://www.properlydecent.com/\">http://www.properlydecent.com/</A></TD></TR>\n");
-		reply.add("<TR><TD>Source of icons used in web-interface:</TD><TD><A HREF=\"http://commons.wikimedia.org/wiki/Crystal_Clear\">http://commons.wikimedia.org/wiki/Crystal_Clear</A></TD></TR>\n");
+		reply.add("<TR><TD>Designer of the logo/web-interface looks:</TD><TD><A HREF=\"http://www.properlydecent.com/\">http://www.properlydecent.com/</A></TD></TR>\n");
 		reply.add("<TR><TD>Source of Nagios related software (1):</TD><TD><A HREF=\"http://nagiosexchange.org/\">http://nagiosexchange.org/</A></TD></TR>\n");
 		reply.add("<TR><TD>Source of Nagios related software (2):</TD><TD><A HREF=\"http://exchange.nagios.org/\">http://exchange.nagios.org/</A></TD></TR>\n");
 		reply.add("<TR><TD>Site of Nagios itself:</TD><TD><A HREF=\"http://www.nagios.org/\">http://www.nagios.org/</A></TD></TR>\n");
-		reply.add("<TR><TD>Stylesheet generator:</TD><TD><A HREF=\"http://www.somacon.com/p141.php\">http://www.somacon.com/p141.php</A></TD></TR>\n");
 		// reply.add("<TR><TD></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 
@@ -1097,7 +1107,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<TABLE CLASS=\"b\">\n");
+		reply.add("<TABLE>\n");
 		int nRefreshes = statistics.getNRefreshes();
 		reply.add("<TR><TD>Total number of refreshes:</TD><TD>" + nRefreshes + "</TD></TR>\n");
 		reply.add("<TR><TD>Total refresh time:</TD><TD>" + statistics.getTotalRefreshTime() + "</TD></TR>\n");
@@ -1147,7 +1157,7 @@ class HTTPServer implements Runnable
 		else
 			bgColor = coffeeSaint.predictWithColor(rightNow);
 
-		reply.add("<TABLE CLASS=\"b\" WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
+		reply.add("<TABLE WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
 
 		for(Problem currentProblem : problems)
 		{
@@ -1195,7 +1205,7 @@ class HTTPServer implements Runnable
 		{
 			config.loadConfig(fileName);
 			reply.add("Configuration re-loaded from file: " + fileName +".<BR>\n");
-			if (config.getRunGui())
+			if (config.getRunGui() && gui != null)
 				gui.paint(gui.getGraphics());
 		}
 		else
@@ -1260,7 +1270,7 @@ class HTTPServer implements Runnable
 		addPageHeader(reply, "");
 
 		reply.add("Last connected hosts:<BR>");
-		reply.add("<TABLE CLASS=\"b\">");
+		reply.add("<TABLE>");
 		reply.add("<TR><TD><B>host</B></TD><TD><B>when</B></TD></TR>");
 		for(int index=hosts.size() - 1; index>=0; index--)
 			reply.add("<TR><TD>" + hosts.get(index).getAddress().toString().substring(1) + "</TD><TD>" + formatDate(hosts.get(index).getTimestamp()) + "</TD></TR>");
@@ -1294,9 +1304,9 @@ class HTTPServer implements Runnable
 		coffeeSaint.learnProblemCount(problems.size());
 		coffeeSaint.collectPerformanceData(javNag);
 
-		reply.add("<H2>Performance data</H2>\n");
-		reply.add("<TABLE CLASS=\"b\">\n");
-		reply.add("<TR><TD><B>host</B></TD><TD><B>service</B></TD><TD><B>parameter</B></TD><TD><B>min</B></TD><TD><B>max</B></TD><TD><B>avg</B></TD><TD><B>std.dev.</B></TD><TD><B># samples</B></TD><TD><B>sparkline</B></TD></TR>\n");
+		reply.add("<H1>Performance data</H1>\n");
+		reply.add("<TABLE>\n");
+		reply.add("<TR><TD><B>host</B></TD><TD><B>service</B></TD><TD><B>parameter</B></TD><TD><B>min</B></TD><TD><B>max</B></TD><TD><B>avg</B></TD><TD><B>std.dev.</B></TD><TD><B>samples</B></TD><TD><B>sparkline</B></TD></TR>\n");
 		for(Host currentHost : javNag.getListOfHosts())
 		{
 			List<DataSource> dataSources = coffeeSaint.getPerformanceData(currentHost.getHostName(), null);
@@ -1361,7 +1371,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		reply.add("<H2>Escapes</H2>\n");
+		reply.add("<H1>Escapes</H1>\n");
 		reply.add("<PRE>\n");
 		reply.add("  %CRITICAL/%WARNING/%OK, %UP/%DOWN/%UNREACHABLE/%PENDING\n");
 		reply.add("  %H:%M       Current hour/minute\n");
@@ -1448,6 +1458,9 @@ class HTTPServer implements Runnable
 					if (requestType.equals("HEAD"))
 						isHeadRequest = true;
 
+					if (url.charAt(0) != '/')
+						url = "/" + url;
+
 					if (url.equals("/") || url.equals("/index.html"))
 						sendReply_root(socket);
 					else if (url.equals("/cgi-bin/force_reload.cgi"))
@@ -1482,18 +1495,16 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_testsound_cgi(socket);
 					else if (url.equals("/cgi-bin/log.cgi"))
 						sendReply_cgibin_log_cgi(socket);
-					else if (url.equals("/images/statistics.png"))
-						sendReply_images_statistics_png(socket, isHeadRequest);
-					else if (url.equals("/images/configure.png"))
-						sendReply_images_configure_png(socket, isHeadRequest);
-					else if (url.equals("/images/actions.png"))
-						sendReply_images_actions_png(socket, isHeadRequest);
-					else if (url.equals("/images/links.png"))
-						sendReply_images_links_png(socket, isHeadRequest);
-					else if (url.equals("/images/the_coffee_saint.jpg"))
-						sendReply_images_the_coffee_saint_jpg(socket, isHeadRequest);
-					else if (url.equals("/images/vanheusden02.jpg"))
-						sendReply_images_vanheusden02_jpg(socket, isHeadRequest);
+					else if (url.equals("/images/bg01.png"))
+						sendReply_images_bg01_png(socket, isHeadRequest);
+					else if (url.equals("/images/coffee.png"))
+						sendReply_images_coffee_png(socket, isHeadRequest);
+					else if (url.equals("/images/footer01.png"))
+						sendReply_images_footer01_png(socket, isHeadRequest);
+					else if (url.equals("/images/saint01.png"))
+						sendReply_images_saint01_png(socket, isHeadRequest);
+					else if (url.equals("/images/title01.png"))
+						sendReply_images_title01_png(socket, isHeadRequest);
 					else if (url.equals("/robots.txt"))
 						sendReply_robots_txt(socket, isHeadRequest);
 					else if (url.equals("/favicon.ico"))
@@ -1508,8 +1519,8 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_listlog_cgi(socket);
 					else if (url.equals("/cgi-bin/performance-data.cgi"))
 						sendReply_cgibin_performancedata_cgi(socket);
-					else if (url.equals("/stylesheet.css"))
-						sendReply_stylesheet_css(socket, isHeadRequest);
+					else if (url.equals("/design.css"))
+						sendReply_design_css(socket, isHeadRequest);
 					else if (url.equals("/cgi-bin/sparkline.cgi"))
 						sendReply_cgibin_sparkline_cgi(socket, getData);
 					else
@@ -1527,7 +1538,6 @@ class HTTPServer implements Runnable
 					CoffeeSaint.showException(e);
 					if (socket != null)
 					{
-						socket.close();
 						socket.closeServer();
 						socket = null;
 					}

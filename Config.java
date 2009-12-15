@@ -83,6 +83,7 @@ public class Config
 	private boolean showFlapping;
 	private int sparkLineWidth;
 	private SparklineGraphMode sparklineGraphMode;
+	private boolean noNetworkChange = false;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -2023,5 +2024,21 @@ public class Config
 		lock();
 		sparklineGraphMode = newMode;
 		unlock();
+	}
+
+	public void setNoNetworkChange(boolean value)
+	{
+		lock();
+		noNetworkChange = value;
+		unlock();
+	}
+
+	public boolean getNoNetworkChange()
+	{
+		boolean copy;
+		lock();
+		copy = noNetworkChange;
+		unlock();
+		return copy;
 	}
 }
