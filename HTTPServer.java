@@ -118,7 +118,7 @@ class HTTPServer implements Runnable
 		whereTo.add("			</div>\n");
 		whereTo.add("		</div>\n");
 		whereTo.add("		<div id=\"column_main\">\n");
-		whereTo.add("			<img src=\"images/title01.png\" />\n");
+		whereTo.add("			<img src=\"/images/title01.png\" />\n");
 		whereTo.add("			<font size=\"5\">" + CoffeeSaint.getVersionNr() + "</font>\n");
 		whereTo.add("			<div id=\"main\">\n");
 	}
