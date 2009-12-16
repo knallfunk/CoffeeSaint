@@ -17,7 +17,8 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String version = "CoffeeSaint v2.3-beta002, (C) 2009 by folkert@vanheusden.com";
+	static String versionNr = "v2.3-beta003";
+	static String version = "CoffeeSaint " + versionNr + ", (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
 
@@ -90,22 +91,22 @@ public class CoffeeSaint
 		return null;
 	}
 
-	BufferedImage getSparkLine(Host host, Service service, int width, int height)
+	BufferedImage getSparkLine(Host host, Service service, int width, int height, boolean withMeta)
 	{
-		return getSparkLine(host.getHostName(), service.getServiceName(), null, width, height);
+		return getSparkLine(host.getHostName(), service.getServiceName(), null, width, height, withMeta);
 	}
 
-	BufferedImage getSparkLine(Host host, Service service, String selectedDataSourceName, int width, int height)
+	BufferedImage getSparkLine(Host host, Service service, String selectedDataSourceName, int width, int height, boolean withMeta)
 	{
-		return getSparkLine(host.getHostName(), service.getServiceName(), selectedDataSourceName, width, height);
+		return getSparkLine(host.getHostName(), service.getServiceName(), selectedDataSourceName, width, height, withMeta);
 	}
 
-	BufferedImage getSparkLine(String host, String service, int width, int height)
+	BufferedImage getSparkLine(String host, String service, int width, int height, boolean withMeta)
 	{
-		return getSparkLine(host, service, null, width, height);
+		return getSparkLine(host, service, null, width, height, withMeta);
 	}
 
-	BufferedImage getSparkLine(String host, String service, String selectedDataSourceName, int width, int height)
+	BufferedImage getSparkLine(String host, String service, String selectedDataSourceName, int width, int height, boolean withMeta)
 	{
 		performanceDataSemaphore.acquireUninterruptibly();
 
@@ -122,8 +123,8 @@ public class CoffeeSaint
 		g.setColor(Color.WHITE);
 		g.fillRect(0, 0, width, height);
 
-		Color [] colors = { Color.RED, Color.GREEN, Color.BLUE, Color.BLACK };
-		int colorIndex = 0;
+//		Color [] colors = { new Color(0x59432E), Color.RED, Color.BLACK, Color.GREEN, Color.BLUE };
+//		int colorIndex = 0;
 
 		for(DataSource dataSource : dataSources)
 		{
@@ -143,9 +144,10 @@ public class CoffeeSaint
 			java.util.List<Double> values = dataSource.getValues();
 			int px = -1, py = -1;
 
-			g.setColor(colors[colorIndex++]);
-			if (colorIndex == colors.length)
-				colorIndex = 0;
+			g.setColor(config.getGraphColor());
+//			g.setColor(colors[colorIndex++]);
+//			if (colorIndex == colors.length)
+//				colorIndex = 0;
 
 			for(int offset=0; offset<width; offset++)
 			{
@@ -247,6 +249,11 @@ public class CoffeeSaint
 	static public String getVersion()
 	{
 		return version;
+	}
+
+	static public String getVersionNr()
+	{
+		return versionNr;
 	}
 
 	public static void showException(Exception e)
@@ -782,6 +789,8 @@ public class CoffeeSaint
 		System.out.println("--service-issue x  String defining how to format service-issues");
 		System.out.println("--no-header   Do not display the statistics line in the upper row");
 		System.out.println("--row-border  Draw a line between each row");
+		System.out.println("--row-border-color Color of the row border");
+		System.out.println("--graph-color Color of the graphs (e.g. performance data sparkline)");
 		System.out.println("--sort-order [y] [z] x  Sort on field x. y and z can be 'numeric' and 'reverse'");
 		System.out.println("              E.g. --sort-order numeric last_state_change (= default)");
 		System.out.println("--cam-cols    Number of cams per row");
@@ -1003,6 +1012,10 @@ public class CoffeeSaint
 						config.setWarningTextColor(arg[++loop]);
 					else if (arg[loop].equals("--critical-textcolor"))
 						config.setCriticalTextColor(arg[++loop]);
+					else if (arg[loop].equals("--row-border-color"))
+						config.setRowBorderColor(arg[++loop]);
+					else if (arg[loop].equals("--graph-color"))
+						config.setGraphColor(arg[++loop]);
 					else if (arg[loop].equals("--ignore-aspect-ratio"))
 						config.setKeepAspectRatio(false);
 					else if (arg[loop].equals("--also-scheduled-downtime"))

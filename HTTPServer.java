@@ -118,6 +118,8 @@ class HTTPServer implements Runnable
 		whereTo.add("			</div>\n");
 		whereTo.add("		</div>\n");
 		whereTo.add("		<div id=\"column_main\">\n");
+		whereTo.add("			<img src=\"images/title01.png\" />\n");
+		whereTo.add("			<font size=\"5\">" + CoffeeSaint.getVersionNr() + "</font>\n");
 		whereTo.add("			<div id=\"main\">\n");
 	}
 
@@ -275,7 +277,7 @@ class HTTPServer implements Runnable
 		addHTTP200(reply);
 		addPageHeader(reply, "");
 
-		int width = 640;
+		int width = 920;
 		int height = 150;
 
 		String host = null;
@@ -340,7 +342,7 @@ class HTTPServer implements Runnable
 			if (host != null)
 			{
 				socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n".getBytes());
-				BufferedImage sparkLine = coffeeSaint.getSparkLine(host, service, dataSource, width, height);
+				BufferedImage sparkLine = coffeeSaint.getSparkLine(host, service, dataSource, width, height, true);
 				ImageIO.write(sparkLine, "png", socket.getOutputStream());
 			}
 		}
@@ -591,6 +593,9 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Row border color:</TD><TD>\n");
 		colorSelectorHTML(reply, "row-border-color", config.getRowBorderColorName());
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Graph color:</TD><TD>\n");
+		colorSelectorHTML(reply, "graph-color", config.getGraphColorName());
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Text color:</TD><TD>\n");
 		colorSelectorHTML(reply, "textColor", config.getTextColorName());
@@ -890,6 +895,7 @@ class HTTPServer implements Runnable
 
 		config.setRowBorder(getCheckBox(socket, requestData, "row-border"));
 		config.setRowBorderColor(getField(socket, requestData, "row-border-color"));
+		config.setGraphColor(getField(socket, requestData, "graph-color"));
 
 		// add server
 		String server_add_parameters = getFieldDecoded(socket, requestData, "server-add-parameters");
@@ -1380,7 +1386,7 @@ class HTTPServer implements Runnable
 		coffeeSaint.collectPerformanceData(javNag);
 
 		reply.add("<H1>Performance data</H1>\n");
-		reply.add("<TABLE>\n");
+		reply.add("<TABLE WIDTH=\"100%\">\n");
 		reply.add("<TR><TD><B>host</B></TD><TD><B>service</B></TD><TD><B>parameter</B></TD><TD><B>min</B></TD><TD><B>max</B></TD><TD><B>avg</B></TD><TD><B>std.dev.</B></TD><TD><B>samples</B></TD><TD><B>sparkline</B></TD></TR>\n");
 		for(Host currentHost : javNag.getListOfHosts())
 		{

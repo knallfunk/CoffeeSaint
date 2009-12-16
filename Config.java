@@ -84,6 +84,8 @@ public class Config
 	private int sparkLineWidth;
 	private SparklineGraphMode sparklineGraphMode;
 	private boolean noNetworkChange = false;
+	private Color graphColor;
+	private String graphColorName;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -168,7 +170,8 @@ public class Config
 		showFlapping = true;
 		sparkLineWidth = 0;
 		sparklineGraphMode = SparklineGraphMode.AVG_SD;
-
+		graphColor = new Color(0x59432E);
+		graphColorName = "CoffeeSaint";
 		unlock();
 	}
 
@@ -355,6 +358,8 @@ public class Config
 						setWarningTextColor(data);
 					else if (name.equals("critical-textcolor"))
 						setCriticalTextColor(data);
+					else if (name.equals("graph-color"))
+						setGraphColor(data);
 
 					else if (name.equals("hosts-filter-exclude"))
 						setHostsFilterExclude(data);
@@ -493,6 +498,7 @@ public class Config
 		writeLine(out, "max-quality-graphics = " + (getMaxQualityGraphics() ? "true" : "false"));
 		writeLine(out, "row-border = " + (getRowBorder() ? "true" : "false"));
 		writeLine(out, "row-border-color = " + getRowBorderColorName());
+		writeLine(out, "graph-color = " + getGraphColorName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
 		writeLine(out, "fullscreen = " + (getFullscreen() ? "true" : "false"));
 		writeLine(out, "reduce-textwidth = " + (getReduceTextWidth() ? "true" : "false"));
@@ -606,6 +612,7 @@ public class Config
 		colorPairs.add(new ColorPair("cadetblue", 0x5f9ea0));
 		colorPairs.add(new ColorPair("chartreuse", 0x7fff00));
 		colorPairs.add(new ColorPair("chocolate", 0xd2691e));
+		colorPairs.add(new ColorPair("CoffeeSaint", 0x59432E));
 		colorPairs.add(new ColorPair("coral", 0xff7f50));
 		colorPairs.add(new ColorPair("cornflowerblue", 0x6495ed));
 		colorPairs.add(new ColorPair("cornsilk", 0xfff8dc));
@@ -2038,6 +2045,35 @@ public class Config
 		boolean copy;
 		lock();
 		copy = noNetworkChange;
+		unlock();
+		return copy;
+	}
+
+	public void setGraphColor(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		graphColor = color;
+		graphColorName = colorName;
+		unlock();
+	}
+
+	public Color getGraphColor()
+	{
+		Color copy;
+		lock();
+		copy = graphColor;
+		unlock();
+		return copy;
+	}
+
+	public String getGraphColorName()
+	{
+		String copy;
+		lock();
+		copy = graphColorName;
 		unlock();
 		return copy;
 	}
