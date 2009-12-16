@@ -268,6 +268,45 @@ class HTTPServer implements Runnable
 		}
 	}
 
+	public void sendReply_cgibin_zoomin_cgi(MyHTTPServer socket, List<HTTPRequestData> getData) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply);
+		addPageHeader(reply, "");
+
+		int width = 640;
+		int height = 150;
+
+		String host = null;
+		HTTPRequestData hostData = MyHTTPServer.findRecord(getData, "host");
+		if (hostData != null && hostData.getData() != null)
+			host = URLDecoder.decode(hostData.getData(), defaultCharset);
+
+		String service = null;
+		HTTPRequestData serviceData = MyHTTPServer.findRecord(getData, "service");
+		if (serviceData != null && serviceData.getData() != null)
+			service = URLDecoder.decode(serviceData.getData(), defaultCharset);
+
+		String dataSource = null;
+		HTTPRequestData dataSourceData = MyHTTPServer.findRecord(getData, "dataSource");
+		if (dataSourceData != null && dataSourceData.getData() != null)
+			dataSource = URLDecoder.decode(dataSourceData.getData(), defaultCharset);
+
+		String heading = host;
+		if (service != null)
+			heading += " | " + service;
+		if (dataSource != null)
+			heading += " | " + dataSource;
+
+		reply.add("<H1>" + heading + "</H1>");
+		reply.add("<IMG SRC=\"" + sparkLineUrl(host, service, dataSource, width, height) + "\" BORDER=\"1\"><BR>");
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
 	public void sendReply_cgibin_sparkline_cgi(MyHTTPServer socket, List<HTTPRequestData> getData) throws Exception
 	{
 		try
@@ -1292,6 +1331,42 @@ class HTTPServer implements Runnable
 		return url;
 	}
 
+	public String graphZoomInUrl(String host, String service, String dataSource) throws Exception
+	{
+		String url = "/cgi-bin/graph-zoomin.cgi?host=" + URLEncoder.encode(host, defaultCharset);
+		if (service != null)
+			url += "&service=" + URLEncoder.encode(service, defaultCharset);
+		if (dataSource != null)
+			url += "&dataSource=" + URLEncoder.encode(dataSource, defaultCharset);
+
+		return url;
+	}
+
+	public String formatValue(double value)
+	{
+		if (value == Math.floor(value))
+			return String.format("%.0f", value);
+
+		return String.format("%.4f", value);
+	}
+
+	public String abreviateString(String in, int maxLen)
+	{
+		int len = in.length();
+		if (len > maxLen)
+		{
+			int halfLenRight = maxLen / 2;
+			int halfLenLeft  = maxLen - halfLenRight;
+
+			halfLenLeft -= 1;
+			halfLenRight -= 2;
+
+			return in.substring(0, halfLenLeft) + "..." + in.substring(len - halfLenRight);
+		}
+
+		return in;
+	}
+
 	public void sendReply_cgibin_performancedata_cgi(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -1319,16 +1394,16 @@ class HTTPServer implements Runnable
 					String host, sparkCol = "<TD></TD>";
 					if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
 					{
-						String url = sparkLineUrl(currentHost.getHostName(), null, dataSource.getDataSourceName(), 400, 240);
-						host = "<A HREF=\"" + url + "\">" + currentHost.getHostName() + "</A>";
+						String url = graphZoomInUrl(currentHost.getHostName(), null, dataSource.getDataSourceName());
+						host = "<A HREF=\"" + url + "\">" + abreviateString(currentHost.getHostName(), 16) + "</A>";
 						url = sparkLineUrl(currentHost.getHostName(), null, dataSource.getDataSourceName(), 100, 15);
 						sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
 					}
 					else
-						host = currentHost.getHostName();
+						host = abreviateString(currentHost.getHostName(), 16);
 
 					String unit = dataSource.getUnit();
-					reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
+					reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + abreviateString(dataSource.getDataSourceName(), 17) + "</TD><TD>" + formatValue(dataInfo.getMin()) + unit + "</TD><TD>" + formatValue(dataInfo.getMax()) + unit + "</TD><TD>" + formatValue(dataInfo.getAvg()) + unit + "</TD><TD>" + formatValue(dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
 				}
 			}
 			for(Service currentService : currentHost.getServices())
@@ -1343,16 +1418,16 @@ class HTTPServer implements Runnable
 						String service, sparkCol = "<TD></TD>";
 						if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
 						{
-							String url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName(), 400, 240);
-							service = "<A HREF=\"" + url + "\">" + currentService.getServiceName() + "</A>";
+							String url = graphZoomInUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName());
+							service = "<A HREF=\"" + url + "\">" + abreviateString(currentService.getServiceName(), 20) + "</A>";
 							url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName(), 100, 15);
 							sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
 						}
 						else
-							service = currentService.getServiceName();
+							service = abreviateString(currentService.getServiceName(), 20);
 
 						String unit = dataSource.getUnit();
-						reply.add("<TR><TD>" + currentHost.getHostName() + "</TD><TD>" + service + "</TD><TD>" + dataSource.getDataSourceName() + "</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + unit + "</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
+						reply.add("<TR><TD>" + abreviateString(currentHost.getHostName(), 16) + "</TD><TD>" + service + "</TD><TD>" + abreviateString(dataSource.getDataSourceName(), 17) + "</TD><TD>" + formatValue(dataInfo.getMin()) + unit + "</TD><TD>" + formatValue(dataInfo.getMax()) + unit + "</TD><TD>" + formatValue(dataInfo.getAvg()) + unit + "</TD><TD>" + formatValue(dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
 					}
 				}
 			}
@@ -1523,6 +1598,8 @@ class HTTPServer implements Runnable
 						sendReply_design_css(socket, isHeadRequest);
 					else if (url.equals("/cgi-bin/sparkline.cgi"))
 						sendReply_cgibin_sparkline_cgi(socket, getData);
+					else if (url.equals("/cgi-bin/graph-zoomin.cgi"))
+						sendReply_cgibin_zoomin_cgi(socket, getData);
 					else
 					{
 						sendReply_404(socket, url);

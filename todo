@@ -6,6 +6,4 @@
 - sparklines: filter op welke te graphen. pull down met "inclusive" en "exclusive" en dan invoerveld
   critical als max voor min/max?
 
-- performance tabel in webinterface: dingen afkorten "bl...a"
-
 - filter op inhoud van velden. numeriek, ascii, host en services
