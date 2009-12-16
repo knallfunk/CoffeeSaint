@@ -102,7 +102,7 @@ class HTTPServer implements Runnable
                 }
 		whereTo.add("				<br /><strong>Actions</strong><br />\n");
                 if (config.getRunGui())
-                        whereTo.add("<<A HREF=\"/cgi-bin/force_reload.cgi\">Force reload</A><br />\n");
+                        whereTo.add("<A HREF=\"/cgi-bin/force_reload.cgi\">Force reload</A><br />\n");
                 else
                         whereTo.add("Force reload disabled, not running GUI<br />\n");
                 String sample = config.getProblemSound();

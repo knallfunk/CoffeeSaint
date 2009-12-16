@@ -8,4 +8,7 @@
   meta-data in grafieken
   kleur lijnen configureerbaar
 
+- bij services alleen servicenaam+output scrollen
+  bij hosts alelen output scrollen
+
 - filter op inhoud van velden. numeriek, ascii, host en services
