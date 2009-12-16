@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.3-beta003";
+	static String versionNr = "v2.3";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
