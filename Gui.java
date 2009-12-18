@@ -23,6 +23,7 @@ public class Gui extends JPanel implements ImageObserver
 	//
 	Semaphore movingPartsSemaphore = new Semaphore(1);
 	ScrollableContent currentHeader = new ScrollableContent(0, 0, 0);
+	BordersParameters bordersParameters = null;
 	java.util.List<ScrollableContent> windowMovingParts = new ArrayList<ScrollableContent>();
 
 	boolean lastState = false;	// false: no problems
@@ -297,6 +298,36 @@ public class Gui extends JPanel implements ImageObserver
 		prepareRow(g, windowWidth, 0, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1.0f, null, false);
 	}
 
+	public void drawBorders(Graphics2D g, BordersParameters bordersParameters)
+	{
+		configureRendered(g, false);
+
+		int verticalNRows = Math.min(config.getNRows(), bordersParameters.getNProblems() + (config.getShowHeader() ? 1 : 0));
+
+		g.setColor(config.getRowBorderColor());
+		if (bordersParameters.getNColumns() > 1)
+		{
+			for(int rowColumns=0; rowColumns < bordersParameters.getNColumns(); rowColumns++)
+			{
+				int x = (bordersParameters.getWindowWidth() * rowColumns) / bordersParameters.getNColumns();
+				int y =  config.getShowHeader() ? bordersParameters.getRowHeight() : 0;
+				g.drawLine(x, y, x, bordersParameters.getRowHeight() * verticalNRows);
+			}
+		}
+
+		if (bordersParameters.getNProblems() > 0)
+		{
+			for(int rowsRow=0; rowsRow < verticalNRows; rowsRow++)
+			{
+				int drawY = bordersParameters.getRowHeight() + rowsRow * bordersParameters.getRowHeight();
+				g.drawLine(0, drawY, bordersParameters.getWindowWidth(), drawY);
+			}
+
+		}
+
+		configureRendered((Graphics2D)g, true);
+	}
+
 	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
 	{
 		System.out.println(">>> DRAW PROBLEMS START <<<");
@@ -309,6 +340,7 @@ public class Gui extends JPanel implements ImageObserver
 
 			movingPartsSemaphore.acquireUninterruptibly();
 			windowMovingParts = new ArrayList<ScrollableContent>();
+			bordersParameters = null;
 			movingPartsSemaphore.release();
 
 			/* block in upper right to inform about load */
@@ -412,32 +444,8 @@ public class Gui extends JPanel implements ImageObserver
 
 			if (config.getRowBorder())
 			{
-				configureRendered((Graphics2D)g, false);
-
-				int verticalNRows = Math.min(config.getNRows(), problems.size() + (config.getShowHeader() ? 1 : 0));
-
-				g.setColor(config.getRowBorderColor());
-				if (curNColumns > 1)
-				{
-					for(int rowColumns=0; rowColumns < curNColumns; rowColumns++)
-					{
-						int x = (windowWidth * rowColumns) / curNColumns;
-						int y =  config.getShowHeader() ? rowHeight : 0;
-						g.drawLine(x, y, x, rowHeight * verticalNRows);
-					}
-				}
-
-				if (problems.size() > 0)
-				{
-					for(int rowsRow=0; rowsRow < verticalNRows; rowsRow++)
-					{
-						int drawY = rowHeight + rowsRow * rowHeight;
-						g.drawLine(0, drawY, windowWidth, drawY);
-					}
-
-				}
-
-				configureRendered((Graphics2D)g, true);
+				bordersParameters = new BordersParameters(problems.size(), curNColumns, windowWidth, rowHeight);
+				drawBorders((Graphics2D)g, bordersParameters);
 			}
 
 			if (problems.size() > 0)
@@ -525,6 +533,8 @@ public class Gui extends JPanel implements ImageObserver
 			{
 				currentMovingPart.scrollView(g2d, config.getScrollingPixelsPerSecond());
 			}
+			if (bordersParameters != null)
+				drawBorders((Graphics2D)g, bordersParameters);
 			movingPartsSemaphore.release();
 
 			if (config.getCounter() && lastLeft != left && currentHeader == null)
