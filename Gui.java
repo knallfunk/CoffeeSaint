@@ -20,7 +20,10 @@ public class Gui extends JPanel implements ImageObserver
 	final Config config;
 	final CoffeeSaint coffeeSaint;
 	final Statistics statistics;
-	BufferedImage currentHeader;
+	//
+	Semaphore movingPartsSemaphore = new Semaphore(1);
+	ScrollableContent currentHeader = new ScrollableContent(0, 0, 0);
+	java.util.List<ScrollableContent> windowMovingParts = new ArrayList<ScrollableContent>();
 
 	boolean lastState = false;	// false: no problems
 	// because making a frame visible already causes
@@ -68,24 +71,9 @@ public class Gui extends JPanel implements ImageObserver
 		}
 	}
 
-	void drawRow(Graphics gTo, int windowWidth, String msg, int row, String state, Color bgColor, int nCols, int colNr, float seeThrough, BufferedImage sparkLine)
+	void prepareRow(Graphics gTo, int windowWidth, int xStart, String msg, int row, String state, Color bgColor, float seeThrough, BufferedImage sparkLine, boolean addToScrollersIfNotFit)
 	{
-		System.out.println("DRAW ROW: " + msg + " " + row);
-		final int totalNRows = config.getNRows();
-		final int rowHeight = getHeight() / totalNRows;
-		final int rowColWidth = windowWidth / nCols;
-		final int xStart = rowColWidth * colNr;
-		boolean shrunkMore = false;
-
-		BufferedImage output = new BufferedImage(rowColWidth, rowHeight, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g = output.createGraphics();
-
-		configureRendered(g, true);
-
-		g.setColor(coffeeSaint.stateToColor(state));
-		g.fillRect(0, 0, rowColWidth, rowHeight);
-
-		g.setColor(config.getTextColor());
+		final int rowHeight = getHeight() / config.getNRows();
 
 		String font = config.getFontName();
 		if (state.equals("1"))
@@ -93,41 +81,49 @@ public class Gui extends JPanel implements ImageObserver
 		else if (state.equals("2"))
 			font = config.getCriticalFontName();
 
-		// stuff to set the font-size and found out where to put it
-		Font f = new Font(font, Font.PLAIN, rowHeight);
-		g.setFont(f);
-		FontMetrics fm = g.getFontMetrics();
-		double shrink = ((double)rowHeight / (double)fm.getHeight());
+		Integer reduceWidth = null;
 		if (config.getReduceTextWidth())
-		{
-			Rectangle2D boundingRectangle = f.getStringBounds(msg, 0, msg.length(), new FontRenderContext(null, false, false));
+			reduceWidth = Math.max(0, windowWidth - (sparkLine != null ? sparkLine.getWidth() : 0));
+		RowParameters rowParameters = fitText(font, msg, rowHeight, reduceWidth);
 
-			double newShrink = (double)(Math.max(0, rowColWidth - (sparkLine != null ? sparkLine.getWidth() : 0))) / (double)boundingRectangle.getWidth();
-			if (newShrink < shrink)
-			{
-				shrink = newShrink;
-				shrunkMore = true;
-			}
+		if (config.getReduceTextWidth() == false && rowParameters.getTextWidth() > windowWidth && addToScrollersIfNotFit == true)
+		{
+			windowMovingParts.add(new ScrollableContent(createRowImage(font, msg, state, bgColor, rowHeight, null), xStart, rowHeight * row, windowWidth));
 		}
-		double newSize = (double)rowHeight * shrink;
-		double newAsc  = (double)fm.getAscent() * shrink;
-		f = f.deriveFont((float)newSize);
-		g.setFont(f);
-
-		if (shrunkMore == true)
+		else
 		{
-			double heightDiff = (double)fm.getAscent() - newAsc;
-			int newY = (int)(heightDiff / 2.0 + newAsc);
+			drawRow(gTo, windowWidth, xStart, rowParameters, rowHeight, msg, row, state, bgColor, seeThrough, sparkLine);
+		}
+	}
 
-			// System.out.println("newAsc: " + newAsc + ", heightDiff: " + heightDiff + ", rowHeight: " + rowHeight + ", newy: " + newY + " " + msg);
+	void drawRow(Graphics gTo, int windowWidth, int xStart, RowParameters rowParameters, int rowHeight, String msg, int row, String state, Color bgColor, float seeThrough, BufferedImage sparkLine)
+	{
+		System.out.println("DRAW ROW: " + msg + " " + row + " | " + rowParameters.getShrunkMore());
+
+		BufferedImage output = new BufferedImage(windowWidth, rowHeight, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = output.createGraphics();
+
+		configureRendered(g, true);
+
+		g.setColor(coffeeSaint.stateToColor(state));
+		g.fillRect(0, 0, windowWidth, rowHeight);
+
+		g.setColor(config.getTextColor());
+
+		g.setFont(rowParameters.getAdjustedFont());
+
+		if (rowParameters.getShrunkMore() == true)
+		{
+			double heightDiff = rowParameters.getHeightDiff();
+			int newY = (int)(heightDiff / 2.0 + rowParameters.getAsc());
 
 			g.drawString(msg, 1, newY);
 		}
 		else
-			g.drawString(msg, 1, (int)newAsc);
+			g.drawString(msg, 1, (int)rowParameters.getAsc());
 
 		if (sparkLine != null)
-			g.drawImage(sparkLine, rowColWidth - sparkLine.getWidth(), 0, null);
+			g.drawImage(sparkLine, windowWidth - sparkLine.getWidth(), 0, null);
 
 		Graphics2D gTo2D = (Graphics2D)gTo;
 
@@ -145,16 +141,46 @@ public class Gui extends JPanel implements ImageObserver
 		}
 	}
 
-	public BufferedImage createHeaderImage(String header, String state, Color bgColor, int rowHeight)
+	public BufferedImage createRowImage(String font, String header, String state, Color bgColor, int rowHeight, Integer fitWidth)
 	{
-		BufferedImage dummy = new BufferedImage(65536, rowHeight, BufferedImage.TYPE_INT_RGB);
-		Graphics g2 = dummy.createGraphics();
-		int imageWidth = g2.getFontMetrics(new Font(config.getFontName(), Font.PLAIN, rowHeight)).stringWidth(header);
-		BufferedImage output = new BufferedImage(imageWidth, rowHeight, BufferedImage.TYPE_INT_RGB);
+		RowParameters rowParameters = fitText(font, header + " ", rowHeight, fitWidth);
 
-		drawRow(output.createGraphics(), imageWidth, header, 0, state, bgColor, 1, 0, 1.0f, null);
+		BufferedImage output = new BufferedImage(rowParameters.getTextWidth(), rowHeight, BufferedImage.TYPE_INT_RGB);
+
+		drawRow(output.createGraphics(), rowParameters.getTextWidth(), 0, rowParameters, rowHeight, header, 0, state, bgColor, 1.0f, null);
 
 		return output;
+	}
+
+	public static RowParameters fitText(String font, String text, int rowHeight, Integer fitWidth)
+	{
+		Graphics g2 = new BufferedImage(10, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
+		Font f = new Font(font, Font.PLAIN, rowHeight);
+		g2.setFont(f);
+		FontMetrics fm = g2.getFontMetrics();
+		double shrink = ((double)rowHeight / (double)fm.getHeight());
+		boolean shrunkMore = false;
+		if (fitWidth != null)
+		{
+			Rectangle2D boundingRectangle = f.getStringBounds(text, 0, text.length(), new FontRenderContext(null, false, false));
+
+			double newShrink = (double)Math.max(0, fitWidth) / (double)boundingRectangle.getWidth();
+			if (newShrink < shrink)
+			{
+				shrink = newShrink;
+				shrunkMore = true;
+			}
+		}
+		double newSize = (double)rowHeight * shrink;
+		double newAsc  = (double)fm.getAscent() * shrink;
+		double heightDiff = (double)fm.getAscent() - newAsc;
+		f = f.deriveFont((float)newSize);
+		g2.setFont(f);
+		fm = g2.getFontMetrics();
+
+		int textWidth = fm.stringWidth(text + " ");
+
+		return new RowParameters(textWidth, shrunkMore, newAsc, f, heightDiff);
 	}
 
 	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize, int counter)
@@ -268,7 +294,7 @@ public class Gui extends JPanel implements ImageObserver
 		g.setColor(Color.RED);
 		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
-		drawRow(g, windowWidth, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1, 0, 1.0f, null);
+		prepareRow(g, windowWidth, 0, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1.0f, null, false);
 	}
 
 	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
@@ -281,12 +307,16 @@ public class Gui extends JPanel implements ImageObserver
 			double took;
 			Color bgColor = config.getBackgroundColor();
 
+			movingPartsSemaphore.acquireUninterruptibly();
+			windowMovingParts = new ArrayList<ScrollableContent>();
+			movingPartsSemaphore.release();
+
 			/* block in upper right to inform about load */
 			g.setColor(Color.BLUE);
 			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
 			if (config.getVerbose())
-				drawRow(g, windowWidth, "Loading image(s)", 0, "0", bgColor, 1, 0, 1.0f, null);
+				prepareRow(g, windowWidth, 0, "Loading image(s)", 0, "0", bgColor, 1.0f, null, false);
 			startLoadTs = System.currentTimeMillis();
 			ImageParameters [] imageParameters = coffeeSaint.loadImage(this, windowWidth, g);
 			endLoadTs = System.currentTimeMillis();
@@ -301,7 +331,7 @@ public class Gui extends JPanel implements ImageObserver
 
 			/* find the problems in the nagios data */
 			if (config.getVerbose())
-				drawRow(g, windowWidth, "Loading Nagios data", 0, "0", bgColor, 1, 0, 1.0f, null);
+				prepareRow(g, windowWidth, 0, "Loading Nagios data", 0, "0", bgColor, 1.0f, null, false);
 			JavNag javNag = CoffeeSaint.loadNagiosData(this, windowWidth, g);
 			coffeeSaint.collectPerformanceData(javNag);
 			java.util.List<Problem> problems = CoffeeSaint.findProblems(javNag);
@@ -325,9 +355,13 @@ public class Gui extends JPanel implements ImageObserver
 			{
 				String header = coffeeSaint.getScreenHeader(javNag, rightNow);
 				if (config.getScrollingHeader())
-					currentHeader = createHeaderImage(header, problems.size() == 0 ? "0" : "255", bgColor, rowHeight);
+				{
+					movingPartsSemaphore.acquireUninterruptibly();
+					currentHeader.setImage(createRowImage(fontName, header, problems.size() == 0 ? "0" : "255", bgColor, rowHeight, null));
+					movingPartsSemaphore.release();
+				}
 				else
-					drawRow(g, windowWidth, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor, 1, 0, 1.0f, null);
+					prepareRow(g, windowWidth, 0, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor, 1.0f, null, false);
 				curNRows++;
 			}
 
@@ -338,6 +372,8 @@ public class Gui extends JPanel implements ImageObserver
 				curNColumns = Math.min(config.getNProblemCols(), (problems.size() + dummyNRows - 1) / dummyNRows);
 			else
 				curNColumns = config.getNProblemCols();
+			curNColumns = Math.max(curNColumns, 1);
+			final int rowColWidth = windowWidth / curNColumns;
 			for(Problem currentProblem : problems)
 			{
 				String escapeString;
@@ -357,7 +393,11 @@ public class Gui extends JPanel implements ImageObserver
 					sparkLine = coffeeSaint.getSparkLine(currentProblem.getHost().getHostName(), currentService != null ? currentService.getServiceName() : null, sparkLineWidth, rowHeight - (config.getRowBorder()?1:0), false);
 				}
 
-				drawRow(g, windowWidth, output, curNRows, currentProblem.getCurrent_state(), bgColor, curNColumns, colNr, config.getTransparency(), sparkLine);
+				int xStart = rowColWidth * colNr;
+
+				movingPartsSemaphore.acquireUninterruptibly();
+				prepareRow(g, rowColWidth, xStart, output, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
+				movingPartsSemaphore.release();
 
 				curNRows++;
 
@@ -374,20 +414,22 @@ public class Gui extends JPanel implements ImageObserver
 			{
 				configureRendered((Graphics2D)g, false);
 
+				int verticalNRows = Math.min(config.getNRows(), problems.size() + (config.getShowHeader() ? 1 : 0));
+
 				g.setColor(config.getRowBorderColor());
-				if (problems.size() > config.getNRows())
+				if (curNColumns > 1)
 				{
-					for(int rowColumns=0; rowColumns < config.getNProblemCols(); rowColumns++)
+					for(int rowColumns=0; rowColumns < curNColumns; rowColumns++)
 					{
 						int x = (windowWidth * rowColumns) / curNColumns;
 						int y =  config.getShowHeader() ? rowHeight : 0;
-						g.drawLine(x, y, x, rowHeight * config.getNRows());
+						g.drawLine(x, y, x, rowHeight * verticalNRows);
 					}
 				}
 
 				if (problems.size() > 0)
 				{
-					for(int rowsRow=0; rowsRow < Math.min(config.getNRows(), problems.size() + (config.getShowHeader() ? 1 : 0)); rowsRow++)
+					for(int rowsRow=0; rowsRow < verticalNRows; rowsRow++)
 					{
 						int drawY = rowHeight + rowsRow * rowHeight;
 						g.drawLine(0, drawY, windowWidth, drawY);
@@ -457,6 +499,8 @@ public class Gui extends JPanel implements ImageObserver
 		int headerScrollerX = 0;
 		double scrollTs = (double)System.currentTimeMillis() / 1000.0;
 
+		currentHeader = new ScrollableContent(0, 0, getWidth());
+
 		for(;;)
 		{
 			long now = System.currentTimeMillis();
@@ -474,39 +518,14 @@ public class Gui extends JPanel implements ImageObserver
 				coffeeSaint.cleanUp();
 			}
 
-			if (currentHeader != null && config.getScrollingHeader() && config.getShowHeader())
+			movingPartsSemaphore.acquireUninterruptibly();
+			if (currentHeader.hasImage() && config.getScrollingHeader() && config.getShowHeader())
+				currentHeader.scrollView(g2d, config.getScrollingPixelsPerSecond());
+			for(ScrollableContent currentMovingPart : windowMovingParts)
 			{
-				int imgWidth = currentHeader.getWidth();
-				int pixelsNeeded = getWidth() - 100;
-				int pixelsAvail = imgWidth - headerScrollerX;
-				int drawX = 0, sourceX = headerScrollerX;
-				while(pixelsNeeded > 0)
-				{
-					int plotN = Math.min(pixelsNeeded, pixelsAvail);
-
-					g2d.drawImage((Image)currentHeader, drawX, 0, drawX + pixelsAvail, rowHeight, sourceX, 0, sourceX + pixelsAvail, rowHeight, Color.GRAY, null);
-
-					pixelsNeeded -= plotN;
-					pixelsAvail -= plotN;
-					drawX += plotN;
-					sourceX += plotN;
-
-					if (pixelsAvail <= 0)
-					{
-						pixelsAvail = imgWidth;
-						sourceX = 0;
-					}
-				}
-
-				double scrollTsNow = (double)System.currentTimeMillis() / 1000.0;
-				double scrollMultiplier = (scrollTsNow - scrollTs) / (40.0 / 1000.0);
-
-				headerScrollerX += (int)(((double)config.getScrollingHeaderPixelsPerSecond() / 25.0) * scrollMultiplier);
-				while(headerScrollerX >= imgWidth)
-					headerScrollerX -= imgWidth;
-
-				scrollTs = scrollTsNow;
+				currentMovingPart.scrollView(g2d, config.getScrollingPixelsPerSecond());
 			}
+			movingPartsSemaphore.release();
 
 			if (config.getCounter() && lastLeft != left && currentHeader == null)
 			{
@@ -514,8 +533,8 @@ public class Gui extends JPanel implements ImageObserver
 				lastLeft = left;
 			}
 
-			if (currentHeader != null && config.getScrollingHeader())
-				Thread.sleep(40);
+			if ((currentHeader.hasImage() && config.getScrollingHeader()) || windowMovingParts.size() != 0)
+				Thread.sleep(5);
 			else
 				Thread.sleep(1000);
 		}

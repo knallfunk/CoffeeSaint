@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.3";
+	static String versionNr = "v2.4-beta001";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -485,7 +485,7 @@ public class CoffeeSaint
 	public static void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.drawRow(g, windowWidth, message, 0, "0", config.getBackgroundColor(), 1, 0, 1.0f, null);
+			gui.prepareRow(g, windowWidth, 0, message, 0, "0", config.getBackgroundColor(), 1.0f, null, false);
 	}
 
 	public ImageParameters [] loadImage(Gui gui, int windowWidth, Graphics g) throws Exception
@@ -753,6 +753,7 @@ public class CoffeeSaint
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--fullscreen  Run in fullscreen mode, e.g. without any borders");
 		System.out.println("--problem-columns x  Split the screen in x columns so that it can display x * nrows");
+		System.out.println("--flexible-n-columns Dynamically adjust number of columns (up to the maximum set with --problem-columns)");
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin");
 		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems");
 		System.out.println("--random-img  Randomize order of images shown");
@@ -797,6 +798,8 @@ public class CoffeeSaint
 		System.out.println("--cam-rows    Number of rows with cams");
 		System.out.println("--ignore-aspect-ratio Grow/shrink all webcams with the same factor. In case you have webcams with different dimensions");
 		System.out.println("--scrolling-header  In case there's more information to put into it than what fits on the screen");
+		System.out.println("--scroll-pixels-per-sec x  Number of pixels to scroll per second (default: 100)");
+		System.out.println("--scroll-if-not-fitting    If problems do not fit, scroll them");
 		System.out.println("--anti-alias  Anti-alias graphics");
 		System.out.println("--verbose     Show what it is doing");
 		System.out.println("--warning-bg-color x Background color for warnings (yellow)");
@@ -913,6 +916,8 @@ public class CoffeeSaint
 						config.setAntiAlias(true);
 					else if (arg[loop].equals("--scrolling-header"))
 						config.setScrollingHeader(true);
+					else if (arg[loop].equals("--scroll-pixels-per-sec"))
+						config.setScrollingPixelsPerSecond(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--fullscreen"))
 						config.setFullscreen(true);
 					else if (arg[loop].equals("--header"))
@@ -1040,6 +1045,8 @@ public class CoffeeSaint
 						config.setServicesFilterInclude(arg[++loop]);
 					else if (arg[loop].equals("--sparkline-width"))
 						config.setSparkLineWidth(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--scroll-if-not-fitting"))
+						config.setScrollIfNotFit(true);
 					else if (arg[loop].equals("--sparkline-mode"))
 					{
 						String mode = arg[++loop];

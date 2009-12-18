@@ -64,7 +64,7 @@ public class Config
 	private boolean fullscreen = false;
 	private boolean keepAspectRatio;
 	private boolean scrollingHeader;
-	private int scrollingHeaderPixelsPerSecond;
+	private int scrollingPixelsPerSecond;
 	private boolean reduceTextWidth;
 	private boolean rowBorder;
 	private Color rowBorderColor;
@@ -86,6 +86,7 @@ public class Config
 	private boolean noNetworkChange = false;
 	private Color graphColor;
 	private String graphColorName;
+	private boolean scrollIfNotFit;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -147,7 +148,7 @@ public class Config
 		verbose = false;
 		keepAspectRatio = true;
 		scrollingHeader = false;
-		scrollingHeaderPixelsPerSecond = 100;
+		scrollingPixelsPerSecond = 100;
 		reduceTextWidth = false;
 		rowBorder = false;
 		rowBorderColor = Color.BLACK;
@@ -172,6 +173,7 @@ public class Config
 		sparklineGraphMode = SparklineGraphMode.AVG_SD;
 		graphColor = new Color(0x59432E);
 		graphColorName = "CoffeeSaint";
+		scrollIfNotFit = false;
 		unlock();
 	}
 
@@ -379,7 +381,7 @@ public class Config
 					else if (name.equals("scrolling-header"))
 						setScrollingHeader(isTrue);
 					else if (name.equals("scroll-pixels-per-sec"))
-						setScrollingHeaderPixelsPerSecond(Integer.valueOf(data));
+						setScrollingPixelsPerSecond(Integer.valueOf(data));
 					else if (name.equals("transparency"))
 						setTransparency(Float.valueOf(data));
 					else if (name.equals("image"))
@@ -414,6 +416,8 @@ public class Config
 						setAlsoAcknowledged(isTrue);
 					else if (name.equals("show-header"))
 						setShowHeader(isTrue);
+					else if (name.equals("scroll-if-not-fitting"))
+						setScrollIfNotFit(isTrue);
 					else if (name.equals("font"))
 						setFontName(data);
 					else if (name.equals("critical-font"))
@@ -506,7 +510,7 @@ public class Config
 			writeLine(out, "header = " + getHeader());
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
 		writeLine(out, "scrolling-header = " + (getScrollingHeader() ? "true" : "false"));
-		writeLine(out, "scroll-pixels-per-sec = " + getScrollingHeaderPixelsPerSecond());
+		writeLine(out, "scroll-pixels-per-sec = " + getScrollingPixelsPerSecond());
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
 		writeLine(out, "transparency = " + getTransparency());
@@ -514,6 +518,7 @@ public class Config
 		writeLine(out, "hosts-filter-include = " + getHostsFilterIncludeList());
 		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
 		writeLine(out, "services-filter-include = " + getServicesFilterIncludeList());
+		writeLine(out, "scroll-if-not-fitting = " + (getScrollIfNotFit() ? "true" : "false"));
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
 		String sparkMode = "sparkline-graph-mode = ";
 		if (getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
@@ -1591,18 +1596,18 @@ public class Config
 		return copy;
 	}
 
-	public void setScrollingHeaderPixelsPerSecond(int pps)
+	public void setScrollingPixelsPerSecond(int pps)
 	{
 		lock();
-		this.scrollingHeaderPixelsPerSecond = pps;
+		this.scrollingPixelsPerSecond = pps;
 		unlock();
 	}
 
-	public int getScrollingHeaderPixelsPerSecond()
+	public int getScrollingPixelsPerSecond()
 	{
 		int copy;
 		lock();
-		copy = scrollingHeaderPixelsPerSecond;
+		copy = scrollingPixelsPerSecond;
 		unlock();
 		return copy;
 	}
@@ -2076,5 +2081,21 @@ public class Config
 		copy = graphColorName;
 		unlock();
 		return copy;
+	}
+
+	public boolean getScrollIfNotFit()
+	{
+		boolean copy;
+		lock();
+		copy = scrollIfNotFit;
+		unlock();
+		return copy;
+	}
+
+	public void setScrollIfNotFit(boolean what)
+	{
+		lock();
+		scrollIfNotFit = what;
+		unlock();
 	}
 }

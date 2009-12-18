@@ -73,7 +73,7 @@ class HTTPServer implements Runnable
 		if (head != null && head.equals("") == false)
 			whereTo.add(head);
 		whereTo.add("</head>\n");
-		whereTo.add("<body id=\"css-coffeesaint\">\n");
+		whereTo.add("<body id=\"css-coffeesaint\" BGCOLOR=\"#ffffff\">\n");
 		whereTo.add("	<div id=\"coffee\"><img src=\"/images/coffee.png\" /></div>\n");
 		whereTo.add("	<div id=\"container\">\n");
 		whereTo.add("		<div id=\"column_navigation\">\n");
@@ -626,7 +626,8 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingHeaderPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Scroll problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scroll-if-not-fitting\" VALUE=\"on\" " + isChecked(config.getScrollIfNotFit()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD>\n");
 		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder(), false);
 		reply.add("</TD><TD></TD></TR>");
@@ -870,6 +871,7 @@ class HTTPServer implements Runnable
 		config.setServicesFilterInclude(getFieldDecoded(socket, requestData, "services-filter-include-list"));
 
 		config.setScrollingHeader(getCheckBox(socket, requestData, "scrolling-header"));
+		config.setScrollIfNotFit(getCheckBox(socket, requestData, "scroll-if-not-fitting"));
 
 		String scrollSpeed = getField(socket, requestData, "scroll-pixels-per-sec");
 		if (scrollSpeed.equals("") == false)
@@ -878,7 +880,7 @@ class HTTPServer implements Runnable
 			if (newScrollSpeed < 1)
 				reply.add("New pixels/sec-value is invalid, must be >= 1<BR>\n");
 			else
-				config.setScrollingHeaderPixelsPerSecond(newScrollSpeed);
+				config.setScrollingPixelsPerSecond(newScrollSpeed);
 		}
 
 		config.setHostIssue(getFieldDecoded(socket, requestData, "host-issue"));
