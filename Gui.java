@@ -184,8 +184,10 @@ public class Gui extends JPanel implements ImageObserver
 		return new RowParameters(textWidth, shrunkMore, newAsc, f, heightDiff);
 	}
 
-	public void drawCounter(Graphics g, int windowWidth, int windowHeight, int rowHeight, int characterSize, int counter)
+	public void drawCounter(Graphics g, Position counterPosition, int windowWidth, int windowHeight, int rowHeight, int counter)
 	{
+		int xOffset = 0, yOffset = 0, yBase = 0;
+
 		/* counter upto the next reload */
 		Font f = new Font(config.getFontName(), Font.PLAIN, rowHeight);
 		g.setFont(f);
@@ -199,13 +201,42 @@ public class Gui extends JPanel implements ImageObserver
 		String str = "" + config.getSleepTime();
 		Rectangle2D boundingRectangle = f.getStringBounds(str, 0, str.length(), new FontRenderContext(null, false, false));
 
-		int startX = windowWidth - (int)boundingRectangle.getWidth();
+		if (counterPosition == Position.UPPER_LEFT)
+		{
+			xOffset = 0;
+			yBase = 0;
+			yOffset = (int)newAsc;
+		}
+		else if (counterPosition == Position.UPPER_RIGHT)
+		{
+			xOffset = windowWidth - (int)boundingRectangle.getWidth();
+			yBase = 0;
+			yOffset = (int)newAsc;
+		}
+		else if (counterPosition == Position.LOWER_LEFT)
+		{
+			xOffset = 0;
+			yBase = windowHeight - rowHeight;
+			yOffset = windowHeight - rowHeight + (int)newAsc;
+		}
+		else if (counterPosition == Position.LOWER_RIGHT)
+		{
+			xOffset = windowWidth - (int)boundingRectangle.getWidth();
+			yBase = windowHeight - rowHeight;
+			yOffset = windowHeight - rowHeight + (int)newAsc;
+		}
+		else if (counterPosition == Position.CENTER)
+		{
+			xOffset = (windowWidth / 2) - (int)(boundingRectangle.getWidth() / 2.0);
+			yBase = (windowHeight / 2) - (rowHeight / 2);
+			yOffset = (windowHeight / 2) - (rowHeight  / 2) + (int)newAsc;
+		}
 
 		g.setColor(config.getBackgroundColor());
-		g.fillRect(startX, 0, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
+		g.fillRect(xOffset, yBase, (int)boundingRectangle.getWidth(), (int)boundingRectangle.getHeight());
 
 		g.setColor(config.getTextColor());
-		g.drawString("" + counter, startX, (int)newAsc);
+		g.drawString("" + counter, xOffset, yOffset);
 	}
 
 	public void displayImage(ImageParameters [] imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
@@ -537,9 +568,10 @@ public class Gui extends JPanel implements ImageObserver
 				drawBorders((Graphics2D)g, bordersParameters);
 			movingPartsSemaphore.release();
 
-			if (config.getCounter() && lastLeft != left && currentHeader == null)
+			Position counterPosition = config.getCounterPosition();
+			if (config.getCounter() && lastLeft != left && counterPosition != null)
 			{
-				drawCounter(g, getWidth(), getHeight(), rowHeight, characterSize, (int)left);
+				drawCounter(g, counterPosition, getWidth(), getHeight(), rowHeight, (int)left);
 				lastLeft = left;
 			}
 

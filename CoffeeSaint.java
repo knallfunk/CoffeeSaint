@@ -1047,6 +1047,8 @@ public class CoffeeSaint
 						config.setSparkLineWidth(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--scroll-if-not-fitting"))
 						config.setScrollIfNotFit(true);
+					else if (arg[loop].equals("--counter-position"))
+						config.setCounterPosition(arg[++loop]);
 					else if (arg[loop].equals("--sparkline-mode"))
 					{
 						String mode = arg[++loop];

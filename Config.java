@@ -87,6 +87,7 @@ public class Config
 	private Color graphColor;
 	private String graphColorName;
 	private boolean scrollIfNotFit;
+	private Position counterPosition;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -174,6 +175,7 @@ public class Config
 		graphColor = new Color(0x59432E);
 		graphColorName = "CoffeeSaint";
 		scrollIfNotFit = false;
+		counterPosition = Position.LOWER_RIGHT;
 		unlock();
 	}
 
@@ -291,6 +293,8 @@ public class Config
 					}
 					else if (name.equals("predict"))
 						setBrainFileName(data);
+					else if (name.equals("counter-position"))
+						setCounterPosition(data);
 					else if (name.equals("exec"))
 						setExec(data);
 					else if (name.equals("fullscreen"))
@@ -519,6 +523,7 @@ public class Config
 		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
 		writeLine(out, "services-filter-include = " + getServicesFilterIncludeList());
 		writeLine(out, "scroll-if-not-fitting = " + (getScrollIfNotFit() ? "true" : "false"));
+		writeLine(out, "counter-position = " + getCounterPositionName());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
 		String sparkMode = "sparkline-graph-mode = ";
 		if (getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
@@ -2097,5 +2102,43 @@ public class Config
 		lock();
 		scrollIfNotFit = what;
 		unlock();
+	}
+
+	public void setCounterPosition(String where) throws Exception
+	{
+		Position newPosition = null;
+		if (where.equalsIgnoreCase("upper-left"))
+			newPosition = Position.UPPER_LEFT;
+		else if (where.equalsIgnoreCase("upper-right"))
+			newPosition = Position.UPPER_RIGHT;
+		else if (where.equalsIgnoreCase("lower-left"))
+			newPosition = Position.LOWER_LEFT;
+		else if (where.equalsIgnoreCase("lower-right"))
+			newPosition = Position.LOWER_RIGHT;
+		else if (where.equalsIgnoreCase("center"))
+			newPosition = Position.CENTER;
+		if (newPosition == null)
+			throw new Exception("Position " + where + " is not understood");
+		lock();
+		counterPosition = newPosition;
+		unlock();
+	}
+
+	public Position getCounterPosition()
+	{
+		Position copy;
+		lock();
+		copy = counterPosition;
+		unlock();
+		return copy;
+	}
+
+	public String getCounterPositionName()
+	{
+		Position copy;
+		lock();
+		copy = counterPosition;
+		unlock();
+		return copy.toString();
 	}
 }

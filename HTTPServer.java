@@ -480,6 +480,15 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+	public String selectField(String current, String newValue)
+	{
+		String out = "<OPTION VALUE=\"" + newValue + "\"";
+		if (newValue.equals(current))
+			out += " SELECTED";
+		out += ">" + newValue + "</OPTION>\n";
+		return out;
+	}
+
 	public void sendReply_cgibin_configmenu_cgi(MyHTTPServer socket) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -571,6 +580,13 @@ class HTTPServer implements Runnable
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Counter position:</TD><TD><SELECT NAME=\"counter-position\">\n");
+		reply.add(selectField(config.getCounterPositionName(), "upper-left"));
+		reply.add(selectField(config.getCounterPositionName(), "upper-right"));
+		reply.add(selectField(config.getCounterPositionName(), "lower-left"));
+		reply.add(selectField(config.getCounterPositionName(), "lower-right"));
+		reply.add(selectField(config.getCounterPositionName(), "center"));
+		reply.add("</SELECT></TD></TR>\n");
 		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD>&gt;= 3</TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD>&gt;= 1</TD></TR>\n");
@@ -766,6 +782,7 @@ class HTTPServer implements Runnable
 		if (!config.getNoNetworkChange())
 		{
 			config.setHTTPServerListenAdapter(getFieldDecoded(socket, requestData, "network-interface"));
+			System.out.println("PORT: " + getFieldDecoded(socket, requestData, "network-port") + "|");
 			config.setHTTPServerListenPort(Integer.valueOf(getFieldDecoded(socket, requestData, "network-port")));
 		}
 
@@ -821,6 +838,10 @@ class HTTPServer implements Runnable
 		config.setShowFlapping(getCheckBox(socket, requestData, "show-flapping"));
 
 		config.setCounter(getCheckBox(socket, requestData, "counter"));
+
+		String counterPosition = getField(socket, requestData, "counter-position");
+		if (counterPosition != null)
+			config.setCounterPosition(counterPosition);
 
 		if (config.getDisableHTTPFileselect() == false)
 		{
