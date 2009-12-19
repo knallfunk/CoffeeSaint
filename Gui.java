@@ -476,7 +476,10 @@ public class Gui extends JPanel implements ImageObserver
 			if (config.getRowBorder())
 			{
 				bordersParameters = new BordersParameters(problems.size(), curNColumns, windowWidth, rowHeight);
-				drawBorders((Graphics2D)g, bordersParameters);
+				movingPartsSemaphore.acquireUninterruptibly();
+				if (windowMovingParts.size() == 0)
+					drawBorders((Graphics2D)g, bordersParameters);
+				movingPartsSemaphore.release();
 			}
 
 			if (problems.size() > 0)
