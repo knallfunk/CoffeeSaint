@@ -6,6 +6,5 @@
 - sparklines: filter op welke te graphen. pull down met "inclusive" en "exclusive" en dan invoerveld
   critical als max voor min/max?
   meta-data in grafieken
-  kleur lijnen configureerbaar
 
 - filter op inhoud van velden. numeriek, ascii, host en services
