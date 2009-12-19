@@ -78,10 +78,10 @@ public class ScrollableContent
 		}
 
 		double scrollTsNow = (double)System.currentTimeMillis() / 1000.0;
-		// double scrollMultiplier = (scrollTsNow - scrollTs) / (5.0 / 1000.0);
-		double scrollMultiplier = 1.0;
+		double scrollMultiplier = (scrollTsNow - scrollTs) / (5.0 / 1000.0);
+		// double scrollMultiplier = 1.0;
 
-		curPos += (int)(((double)scrollSpeed / (1000.0 / 5.0)) * scrollMultiplier);
+		curPos += Math.max(1, (int)(((double)scrollSpeed / (1000.0 / 5.0)) * scrollMultiplier));
 
 		adjustCurPos();
 
