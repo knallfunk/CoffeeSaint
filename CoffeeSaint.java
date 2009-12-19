@@ -1124,7 +1124,9 @@ public class CoffeeSaint
 			if (config.getHTTPServerListenPort() != -1)
 			{
 				System.out.println("Start HTTP server");
-				new Thread(new HTTPServer(config, coffeeSaint, statistics, gui)).start();
+				Thread httpServer = new Thread(new HTTPServer(config, coffeeSaint, statistics, gui));
+				httpServer.setPriority(Thread.MAX_PRIORITY);
+				httpServer.start();
 			}
 
 			if (config.getRunGui())

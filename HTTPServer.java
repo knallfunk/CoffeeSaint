@@ -178,39 +178,32 @@ class HTTPServer implements Runnable
 
 	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType, boolean headRequest) throws Exception
 	{
-		try
-		{
-			String reply = "HTTP/1.0 200 OK\r\n";
-			reply += "Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n";
-			reply += "Server: " + CoffeeSaint.getVersion() + "\r\n";
-			reply += "Last-Modified: " + getModificationDateString(fileName) + "\r\n";
-			reply += "Connection: close\r\n";
-			reply += "Content-Type: " + mimeType + "\r\n";
-			reply += "\r\n";
-			socket.getOutputStream().write(reply.getBytes());
+		String reply = "HTTP/1.0 200 OK\r\n";
+		reply += "Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n";
+		reply += "Server: " + CoffeeSaint.getVersion() + "\r\n";
+		reply += "Last-Modified: " + getModificationDateString(fileName) + "\r\n";
+		reply += "Connection: close\r\n";
+		reply += "Content-Type: " + mimeType + "\r\n";
+		reply += "\r\n";
+		socket.getOutputStream().write(reply.getBytes());
 
-			if (!headRequest)
-			{
-				InputStream is = getClass().getClassLoader().getResourceAsStream(fileName);
-				int length = is.available();
-				CoffeeSaint.log.add("Sending " + fileName + " which is " + length + " bytes long and of type " + mimeType + ".");
-				byte [] icon = new byte[length];
-				while(length > 0)
-				{
-					int nRead = is.read(icon);
-					if (nRead < 0)
-						break;
-					socket.getOutputStream().write(icon, 0, nRead);
-					length -= nRead;
-				}
-			}
-			socket.close();
-		}
-		catch(SocketException se)
+		if (!headRequest)
 		{
-			// really don't care if the transmit failed; browser
-			// probably closed session
+			InputStream is = getClass().getClassLoader().getResourceAsStream(fileName);
+			int length = is.available();
+			CoffeeSaint.log.add("Sending " + fileName + " which is " + length + " bytes long and of type " + mimeType + ".");
+			byte [] icon = new byte[length];
+			while(length > 0)
+			{
+				int nRead = is.read(icon);
+				if (nRead < 0)
+					break;
+				socket.getOutputStream().write(icon, 0, nRead);
+				length -= nRead;
+			}
 		}
+
+		socket.close();
 	}
 
 	public void sendReply_favicon_ico(MyHTTPServer socket, boolean headRequest) throws Exception
@@ -491,6 +484,7 @@ class HTTPServer implements Runnable
 
 	public void sendReply_cgibin_configmenu_cgi(MyHTTPServer socket) throws Exception
 	{
+		System.out.println("sendReply_cgibin_configmenu_cgi START");
 		List<String> reply = new ArrayList<String>();
 
 		addHTTP200(reply);
@@ -700,6 +694,7 @@ class HTTPServer implements Runnable
 		addPageTail(reply, true);
 
 		socket.sendReply(reply);
+		System.out.println("sendReply_cgibin_configmenu_cgi END");
 	}
 
 	public boolean getCheckBox(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName)
@@ -1648,10 +1643,14 @@ class HTTPServer implements Runnable
 						webServer404++;
 					}
 				}
+				catch(SocketException se)
+				{
+					CoffeeSaint.log.add("Exception: " + se);
+					socket.close();
+				}
 				catch(Exception e)
 				{
-					if (!(e instanceof SocketException))
-						statistics.incExceptions();
+					statistics.incExceptions();
 
 					CoffeeSaint.log.add("Exception during command processing");
 					CoffeeSaint.showException(e);
