@@ -72,7 +72,7 @@ public class Gui extends JPanel implements ImageObserver
 		}
 	}
 
-	void prepareRow(Graphics gTo, int windowWidth, int xStart, String msg, int row, String state, Color bgColor, float seeThrough, BufferedImage sparkLine, boolean addToScrollersIfNotFit)
+	int prepareRow(Graphics gTo, int windowWidth, int xStart, String msg, int row, String state, Color bgColor, float seeThrough, BufferedImage sparkLine, boolean addToScrollersIfNotFit)
 	{
 		final int rowHeight = getHeight() / config.getNRows();
 
@@ -95,12 +95,12 @@ public class Gui extends JPanel implements ImageObserver
 		{
 			drawRow(gTo, windowWidth, xStart, rowParameters, rowHeight, msg, row, state, bgColor, seeThrough, sparkLine);
 		}
+
+		return rowParameters.getTextWidth();
 	}
 
 	void drawRow(Graphics gTo, int windowWidth, int xStart, RowParameters rowParameters, int rowHeight, String msg, int row, String state, Color bgColor, float seeThrough, BufferedImage sparkLine)
 	{
-		System.out.println("DRAW ROW: " + msg + " " + row + " | " + rowParameters.getShrunkMore());
-
 		BufferedImage output = new BufferedImage(windowWidth, rowHeight, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = output.createGraphics();
 
@@ -459,7 +459,27 @@ public class Gui extends JPanel implements ImageObserver
 				int xStart = rowColWidth * colNr;
 
 				movingPartsSemaphore.acquireUninterruptibly();
-				prepareRow(g, rowColWidth, xStart, output, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
+				Character splitChar = config.getLineScrollSplitter();
+				if (splitChar != null)
+				{
+					int splitIndex = output.indexOf(splitChar);
+					if (splitIndex == -1)
+					{
+						prepareRow(g, rowColWidth, xStart, output, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
+					}
+					else
+					{
+						String before = output.substring(0, splitIndex) + splitChar;
+						String after = output.substring(splitIndex + 1);
+
+						int beforeWidth = prepareRow(g, rowColWidth, xStart, before, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
+						prepareRow(g, Math.max(0, rowColWidth - beforeWidth), xStart + beforeWidth, after, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
+					}
+				}
+				else
+				{
+					prepareRow(g, rowColWidth, xStart, output, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
+				}
 				movingPartsSemaphore.release();
 
 				curNRows++;
@@ -556,7 +576,8 @@ public class Gui extends JPanel implements ImageObserver
 			{
 				lastRefresh = now;
 				CoffeeSaint.log.add("*** Update PROBLEMS " + left);
-				drawProblems(g, getWidth(), getHeight(), rowHeight);
+				g.fillRect(0, 0, getWidth(), getHeight());
+				repaint();
 				coffeeSaint.cleanUp();
 			}
 

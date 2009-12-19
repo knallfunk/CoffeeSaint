@@ -88,6 +88,7 @@ public class Config
 	private String graphColorName;
 	private boolean scrollIfNotFit;
 	private Position counterPosition;
+	private Character lineScrollSplitter;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -176,6 +177,7 @@ public class Config
 		graphColorName = "CoffeeSaint";
 		scrollIfNotFit = false;
 		counterPosition = Position.LOWER_RIGHT;
+		lineScrollSplitter = null;
 		unlock();
 	}
 
@@ -293,6 +295,13 @@ public class Config
 					}
 					else if (name.equals("predict"))
 						setBrainFileName(data);
+					else if (name.equals("scroll-splitter"))
+					{
+						if (data.equalsIgnoreCase("none"))
+							setLineScrollSplitter(null);
+						else
+							setLineScrollSplitter(data.charAt(0));
+					}
 					else if (name.equals("counter-position"))
 						setCounterPosition(data);
 					else if (name.equals("exec"))
@@ -523,6 +532,7 @@ public class Config
 		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
 		writeLine(out, "services-filter-include = " + getServicesFilterIncludeList());
 		writeLine(out, "scroll-if-not-fitting = " + (getScrollIfNotFit() ? "true" : "false"));
+		writeLine(out, "scroll-splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
 		writeLine(out, "counter-position = " + getCounterPositionName());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
 		String sparkMode = "sparkline-graph-mode = ";
@@ -2140,5 +2150,21 @@ public class Config
 		copy = counterPosition;
 		unlock();
 		return copy.toString();
+	}
+
+	public Character getLineScrollSplitter()
+	{
+		Character copy;
+		lock();
+		copy = lineScrollSplitter;
+		unlock();
+		return copy;
+	}
+
+	public void setLineScrollSplitter(Character which)
+	{
+		lock();
+		lineScrollSplitter = which;
+		unlock();
 	}
 }

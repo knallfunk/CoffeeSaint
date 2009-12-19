@@ -643,6 +643,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scroll-if-not-fitting\" VALUE=\"on\" " + isChecked(config.getScrollIfNotFit()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Problems scroll splitter:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-splitter\" VALUE=\"" + (config.getLineScrollSplitter() == null ? "" + config.getLineScrollSplitter() : "") + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD>\n");
 		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder(), false);
@@ -894,8 +895,19 @@ class HTTPServer implements Runnable
 		config.setScrollingHeader(getCheckBox(socket, requestData, "scrolling-header"));
 		config.setScrollIfNotFit(getCheckBox(socket, requestData, "scroll-if-not-fitting"));
 
+		String splitter = getField(socket, requestData, "scroll-splitter");
+		if (splitter != null)
+		{
+			splitter = splitter.trim();
+
+			if (splitter.equals(""))
+				config.setLineScrollSplitter(null);
+			else
+				config.setLineScrollSplitter(splitter.charAt(0));
+		}
+
 		String scrollSpeed = getField(socket, requestData, "scroll-pixels-per-sec");
-		if (scrollSpeed.equals("") == false)
+		if (scrollSpeed != null && scrollSpeed.trim().equals("") == false)
 		{
 			int newScrollSpeed = Integer.valueOf(scrollSpeed);
 			if (newScrollSpeed < 1)

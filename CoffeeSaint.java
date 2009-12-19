@@ -800,6 +800,7 @@ public class CoffeeSaint
 		System.out.println("--scrolling-header  In case there's more information to put into it than what fits on the screen");
 		System.out.println("--scroll-pixels-per-sec x  Number of pixels to scroll per second (default: 100)");
 		System.out.println("--scroll-if-not-fitting    If problems do not fit, scroll them");
+		System.out.println("--scroll-splitter x        When scrolling problems, on what character to split. Left from the split-character no scrolling takes place, right from that character the text is scrolled.");
 		System.out.println("--anti-alias  Anti-alias graphics");
 		System.out.println("--verbose     Show what it is doing");
 		System.out.println("--warning-bg-color x Background color for warnings (yellow)");
@@ -1043,6 +1044,8 @@ public class CoffeeSaint
 						config.setServicesFilterExclude(arg[++loop]);
 					else if (arg[loop].equals("--services-filter-include"))
 						config.setServicesFilterInclude(arg[++loop]);
+					else if (arg[loop].equals("--scroll-splitter"))
+						config.setLineScrollSplitter(arg[++loop].trim().charAt(0));
 					else if (arg[loop].equals("--sparkline-width"))
 						config.setSparkLineWidth(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--scroll-if-not-fitting"))
