@@ -303,7 +303,6 @@ public class Gui extends JPanel implements ImageObserver
 						}
 						plotX += Math.max(0, spacingX - newWidth) / 2;
 						plotY += Math.max(0, spacingY - newHeight) / 2;
-						CoffeeSaint.log.add("Draw image: " + imageParameters[nr].getImage() + " (" + imageParameters[nr].getFileName() + ")");
 						if (g.drawImage(imageParameters[nr].getImage(), plotX, plotY, newWidth, newHeight, this) == false)
 							CoffeeSaint.log.add("drawImage " + imageParameters[nr].getImage() + " returns false");
 					}
@@ -576,7 +575,7 @@ public class Gui extends JPanel implements ImageObserver
 			{
 				lastRefresh = now;
 				CoffeeSaint.log.add("*** Update PROBLEMS " + left);
-				g.fillRect(0, 0, getWidth(), getHeight());
+				// g.fillRect(0, 0, getWidth(), getHeight());
 				repaint();
 				coffeeSaint.cleanUp();
 			}
