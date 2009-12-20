@@ -1135,19 +1135,23 @@ public class CoffeeSaint
 
 			CoffeeSaint coffeeSaint = new CoffeeSaint();
 			Gui gui = null;
+			GraphicsEnvironment ge = null;
+			GraphicsDevice gd = null;
+			JFrame f = null;
 			if (config.getRunGui())
 			{
 				System.out.println("Start gui");
 
 				gui = new Gui(config, coffeeSaint, statistics);
 
-				GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-				JFrame f = new JFrame();
-				if (config.getFullscreen())
+				ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+				gd = ge.getDefaultScreenDevice();
+				f = new JFrame();
+				if (config.getFullscreen() && gd.isFullScreenSupported())
 				{
 					System.out.println("FULLSCREEN");
 					f.setUndecorated(true);
-					GraphicsDevice gd = ge.getDefaultScreenDevice();
+					f.setResizable(false);
 					gd.setFullScreenWindow(f);
 				}
 				else
@@ -1175,7 +1179,7 @@ public class CoffeeSaint
 			if (config.getHTTPServerListenPort() != -1)
 			{
 				System.out.println("Start HTTP server");
-				Thread httpServer = new Thread(new HTTPServer(config, coffeeSaint, statistics, gui));
+				Thread httpServer = new Thread(new HTTPServer(config, coffeeSaint, statistics, gui, gd, f));
 				httpServer.setPriority(Thread.MAX_PRIORITY);
 				httpServer.start();
 			}

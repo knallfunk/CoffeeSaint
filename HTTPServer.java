@@ -5,6 +5,7 @@ import com.vanheusden.nagios.*;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -27,6 +28,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import javax.imageio.*;
+import javax.swing.JFrame;
 
 class HTTPServer implements Runnable
 {
@@ -35,17 +37,21 @@ class HTTPServer implements Runnable
 	final Statistics statistics;
 	final Gui gui;
 	final List<HTTPLogEntry> hosts = new ArrayList<HTTPLogEntry>();
+	final GraphicsDevice gd;
+	final JFrame frame;
 	//
 	int webServerHits, webServer404;
 	boolean configNotWrittenToDisk = false;
 	final private String defaultCharset = "US-ASCII";
 
-	public HTTPServer(Config config, CoffeeSaint coffeeSaint, Statistics statistics, Gui gui)
+	public HTTPServer(Config config, CoffeeSaint coffeeSaint, Statistics statistics, Gui gui, GraphicsDevice gd, JFrame frame)
 	{
 		this.config = config;
 		this.coffeeSaint = coffeeSaint;
 		this.statistics = statistics;
 		this.gui = gui;
+		this.gd = gd;
+		this.frame = frame;
 	}
 
 	public void addHTTP200(List<String> whereTo)
@@ -578,6 +584,12 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Look and feel parameters</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
+		String fsMode = "";
+		if (gd == null)
+			fsMode = "Running headless";
+		else if (gd.isFullScreenSupported() == false)
+			fsMode = "Not supported";
+		reply.add("<TR><TD>Fullscreen mode:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"fullscreen\" VALUE=\"on\" " + isChecked(config.getFullscreen()) + "></TD><TD>" + fsMode + "</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Counter position:</TD><TD><SELECT NAME=\"counter-position\">\n");
 		reply.add(selectField(config.getCounterPositionName(), "upper-left"));
@@ -839,6 +851,14 @@ class HTTPServer implements Runnable
 		config.setShowFlapping(getCheckBox(socket, requestData, "show-flapping"));
 
 		config.setCounter(getCheckBox(socket, requestData, "counter"));
+
+		boolean newFSMode = getCheckBox(socket, requestData, "fullscreen");
+		if (newFSMode != config.getFullscreen())
+		{
+			if (gd != null)
+				gd.setFullScreenWindow(newFSMode ? frame : null);
+			config.setFullscreen(newFSMode);
+		}
 
 		String counterPosition = getField(socket, requestData, "counter-position");
 		if (counterPosition != null)
