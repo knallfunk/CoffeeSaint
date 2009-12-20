@@ -295,7 +295,7 @@ class HTTPServer implements Runnable
 			heading += " | " + dataSource;
 
 		reply.add("<H1>" + heading + "</H1>");
-		reply.add("<IMG SRC=\"" + sparkLineUrl(host, service, dataSource, width, height) + "\" BORDER=\"1\"><BR>");
+		reply.add("<IMG SRC=\"" + sparkLineUrl(host, service, dataSource, width, height, true) + "\" BORDER=\"1\"><BR>");
 
 		addPageTail(reply, true);
 
@@ -331,11 +331,16 @@ class HTTPServer implements Runnable
 			if (dataSourceData != null && dataSourceData.getData() != null)
 				dataSource = URLDecoder.decode(dataSourceData.getData(), defaultCharset);
 
+			boolean withMetaData = false;
+			HTTPRequestData withMetaDataData = MyHTTPServer.findRecord(getData, "metadata");
+			if (withMetaDataData != null && withMetaDataData.getData() != null)
+				withMetaData = URLDecoder.decode(withMetaDataData.getData(), defaultCharset).equalsIgnoreCase("true");
+
 			System.out.println("" + width + "x" + height + ", " + host + " | " + service + " | " + dataSource);
 			if (host != null)
 			{
 				socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n".getBytes());
-				BufferedImage sparkLine = coffeeSaint.getSparkLine(host, service, dataSource, width, height, true);
+				BufferedImage sparkLine = coffeeSaint.getSparkLine(host, service, dataSource, width, height, withMetaData);
 				ImageIO.write(sparkLine, "png", socket.getOutputStream());
 			}
 		}
@@ -1085,7 +1090,7 @@ class HTTPServer implements Runnable
 			String host;
 			if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
 			{
-				String url = sparkLineUrl(currentHost.getHostName(), null, null, 400, 240);
+				String url = sparkLineUrl(currentHost.getHostName(), null, null, 400, 240, true);
 				host = "<A HREF=\"" + url + "\">" + currentHost.getHostName() + "</A>";
 			}
 			else
@@ -1102,7 +1107,7 @@ class HTTPServer implements Runnable
 				String service;
 				if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
 				{
-					String url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), null, 400, 240);
+					String url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), null, 400, 240, true);
 					service = "<A HREF=\"" + url + "\">" + currentService.getServiceName() + "</A>";
 				}
 				else
@@ -1357,13 +1362,14 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public String sparkLineUrl(String host, String service, String dataSource, int width, int height) throws Exception
+	public String sparkLineUrl(String host, String service, String dataSource, int width, int height, boolean withMetaData) throws Exception
 	{
 		String url = "/cgi-bin/sparkline.cgi?width=" + width + "&height=" + height + "&host=" + URLEncoder.encode(host, defaultCharset);
 		if (service != null)
 			url += "&service=" + URLEncoder.encode(service, defaultCharset);
 		if (dataSource != null)
 			url += "&dataSource=" + URLEncoder.encode(dataSource, defaultCharset);
+		url += "&metadata=" + (withMetaData ? "true" : "false");
 
 		return url;
 	}
@@ -1375,6 +1381,7 @@ class HTTPServer implements Runnable
 			url += "&service=" + URLEncoder.encode(service, defaultCharset);
 		if (dataSource != null)
 			url += "&dataSource=" + URLEncoder.encode(dataSource, defaultCharset);
+		url += "&metadata=true";
 
 		return url;
 	}
@@ -1433,7 +1440,7 @@ class HTTPServer implements Runnable
 					{
 						String url = graphZoomInUrl(currentHost.getHostName(), null, dataSource.getDataSourceName());
 						host = "<A HREF=\"" + url + "\">" + abreviateString(currentHost.getHostName(), 16) + "</A>";
-						url = sparkLineUrl(currentHost.getHostName(), null, dataSource.getDataSourceName(), 100, 15);
+						url = sparkLineUrl(currentHost.getHostName(), null, dataSource.getDataSourceName(), 100, 15, false);
 						sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
 					}
 					else
@@ -1457,7 +1464,7 @@ class HTTPServer implements Runnable
 						{
 							String url = graphZoomInUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName());
 							service = "<A HREF=\"" + url + "\">" + abreviateString(currentService.getServiceName(), 20) + "</A>";
-							url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName(), 100, 15);
+							url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName(), 100, 15, false);
 							sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
 						}
 						else
@@ -1646,7 +1653,14 @@ class HTTPServer implements Runnable
 				catch(SocketException se)
 				{
 					CoffeeSaint.log.add("Exception: " + se);
-					socket.close();
+					try
+					{
+						socket.close();
+					}
+					catch(SocketException se2)
+					{
+						CoffeeSaint.log.add("Could not close socket after SocketException, continuing");
+					}
 				}
 				catch(Exception e)
 				{

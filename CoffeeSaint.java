@@ -106,6 +106,26 @@ public class CoffeeSaint
 		return getSparkLine(host, service, null, width, height, withMeta);
 	}
 
+	int calcY(double value, double min, double max, double avg, double sd, double scale, int height)
+	{
+		double scaledValue;
+
+		if (config.getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
+			scaledValue = (value - (avg - sd)) * scale;
+		else
+			scaledValue = (value - min) * scale;
+		scaledValue = Math.max(scaledValue, 0.0);
+		scaledValue = Math.min(scaledValue, height - 1.0);
+
+		return (height - 1) - (int)scaledValue;
+	}
+
+	void dottedLine(BufferedImage output, int y, int width, int color)
+	{
+		for(int x=0; x<width; x+=4)
+			output.setRGB(x, y, color);
+	}
+
 	BufferedImage getSparkLine(String host, String service, String selectedDataSourceName, int width, int height, boolean withMeta)
 	{
 		performanceDataSemaphore.acquireUninterruptibly();
@@ -136,11 +156,21 @@ public class CoffeeSaint
 			double max = stats.getMax();
 			double avg = stats.getAvg();
 			double sd  = stats.getSd();
-			double scale;
+			double scale, half, quarter, quarter3;
 			if (config.getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
+			{
 				scale = height / (2.0 * sd);
+				half = avg;
+				quarter = avg - (sd / 2.0);
+				quarter3 = avg + (sd / 2.0);
+			}
 			else
+			{
 				scale = height / (max - min);
+				half = (min + max) / 2.0;
+				quarter = (max - min) / 4.0 + min;
+				quarter3 = ((max - min) / 4.0) * 3.0 + min;
+			}
 			java.util.List<Double> values = dataSource.getValues();
 			int px = -1, py = -1;
 
@@ -155,24 +185,38 @@ public class CoffeeSaint
 				if (dataOffset >= 0)
 				{
 					double value = values.get(dataOffset);
-					double scaledValue;
-					if (config.getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
-						scaledValue = (value - (avg - sd)) * scale;
-					else
-						scaledValue = (value - min) * scale;
-					scaledValue = Math.max(scaledValue, 0.0);
-					scaledValue = Math.min(scaledValue, height - 1.0);
+					double scaledValue = calcY(value, min, max, avg, sd, scale, height);
 					int y = (height - 1) - (int)scaledValue;
 					int x = offset;
 
 					if (px == -1 || py == -1)
-						output.setRGB(x, y, 0);
+						output.setRGB(x, y, g.getColor().getRGB());
 					else
 						g.drawLine(px, py, x, y);
 
 					px = x;
 					py = y;
 				}
+			}
+
+			if (withMeta)
+			{
+				int y = calcY(half, min, max, avg, sd, scale, height);
+				g.setColor(Color.RED);
+				dottedLine(output, y, width, g.getColor().getRGB());
+				g.drawLine(0, y, 2, y);
+				g.setFont(new Font(config.getFontName(), Font.BOLD, (int)(height / 7.5)));
+				g.drawString(String.format("%g", half), 5, y + ((Graphics2D)g).getFontMetrics().getAscent() / 2);
+
+				y = calcY(quarter, min, max, avg, sd, scale, height);
+				dottedLine(output, y, width, g.getColor().getRGB());
+				g.drawLine(0, y, 2, y);
+				g.drawString(String.format("%g", quarter), 5, y + ((Graphics2D)g).getFontMetrics().getAscent() / 2);
+
+				y = calcY(quarter3, min, max, avg, sd, scale, height);
+				dottedLine(output, y, width, g.getColor().getRGB());
+				g.drawLine(0, y, 2, y);
+				g.drawString(String.format("%g", quarter3), 5, y + ((Graphics2D)g).getFontMetrics().getAscent() / 2);
 			}
 		}
 		performanceDataSemaphore.release();
@@ -1095,18 +1139,25 @@ public class CoffeeSaint
 			{
 				System.out.println("Start gui");
 
+				gui = new Gui(config, coffeeSaint, statistics);
+
 				GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 				JFrame f = new JFrame();
 				if (config.getFullscreen())
+				{
+					System.out.println("FULLSCREEN");
 					f.setUndecorated(true);
-
-				gui = new Gui(config, coffeeSaint, statistics);
-
-				/* create frame to draw in */
-				Rectangle useable = ge.getMaximumWindowBounds();
-				f.setMaximizedBounds(useable);
-				f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
-				f.setSize(useable.width, useable.height);
+					GraphicsDevice gd = ge.getDefaultScreenDevice();
+					gd.setFullScreenWindow(f);
+				}
+				else
+				{
+					/* create frame to draw in */
+					Rectangle useable = ge.getMaximumWindowBounds();
+					f.setMaximizedBounds(useable);
+					f.setSize(useable.width, useable.height);
+					f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+				}
 				f.setContentPane(gui);
 
 				RepaintManager.currentManager(gui).setDoubleBufferingEnabled(false);

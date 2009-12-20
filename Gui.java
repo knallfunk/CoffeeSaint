@@ -587,7 +587,7 @@ public class Gui extends JPanel implements ImageObserver
 			{
 				currentMovingPart.scrollView(g2d, config.getScrollingPixelsPerSecond());
 			}
-			if (bordersParameters != null)
+			if (bordersParameters != null && windowMovingParts.size() > 0)
 				drawBorders((Graphics2D)g, bordersParameters);
 			movingPartsSemaphore.release();
 

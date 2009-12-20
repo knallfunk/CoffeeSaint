@@ -307,7 +307,7 @@ public class Config
 					else if (name.equals("exec"))
 						setExec(data);
 					else if (name.equals("fullscreen"))
-						setFullscreen(true);
+						setFullscreen(isTrue);
 					else if (name.equals("adapt-img"))
 						setAdaptImageSize(isTrue);
 					else if (name.equals("random-img"))

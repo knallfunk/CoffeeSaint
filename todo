@@ -1,4 +1,3 @@
-- loadNagiosData 'synchronized' ?
 - timeout op laden image - in een aparte thread?
 - die andere monitoring dinges, zabbix
 - toggle fullscreen @ runtime
