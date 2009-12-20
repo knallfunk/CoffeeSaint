@@ -1110,8 +1110,8 @@ class HTTPServer implements Runnable
 			String host;
 			if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
 			{
-				String url = sparkLineUrl(currentHost.getHostName(), null, null, 400, 240, true);
-				host = "<A HREF=\"" + url + "\">" + currentHost.getHostName() + "</A>";
+				String url = graphZoomInUrl(currentHost.getHostName(), null, null);
+				host = "<A HREF=\"" + url + "\">" + abreviateString(currentHost.getHostName(), 16) + "</A>";
 			}
 			else
 				host = currentHost.getHostName();
@@ -1127,8 +1127,8 @@ class HTTPServer implements Runnable
 				String service;
 				if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
 				{
-					String url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), null, 400, 240, true);
-					service = "<A HREF=\"" + url + "\">" + currentService.getServiceName() + "</A>";
+					String url = graphZoomInUrl(currentHost.getHostName(), currentService.getServiceName(), null);
+					service = "<A HREF=\"" + url + "\">" + abreviateString(currentService.getServiceName(), 20) + "</A>";
 				}
 				else
 					service = currentService.getServiceName();
