@@ -179,11 +179,17 @@ public class CoffeeSaint
 //			if (colorIndex == colors.length)
 //				colorIndex = 0;
 
+			double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumX2 = 0.0;
+			Integer firstOffset = null;
+			int nElements = 0;
 			for(int offset=0; offset<width; offset++)
 			{
 				int dataOffset = offset + (values.size() - width) - 1;
 				if (dataOffset >= 0)
 				{
+					if (firstOffset == null)
+						firstOffset = offset;
+					nElements++;
 					double value = values.get(dataOffset);
 					double scaledValue = calcY(value, min, max, avg, sd, scale, height);
 					int y = (height - 1) - (int)scaledValue;
@@ -196,6 +202,13 @@ public class CoffeeSaint
 
 					px = x;
 					py = y;
+
+					// least squares line
+					int timeStamp = dataOffset;
+					sumX += timeStamp;
+					sumY += values.get(dataOffset);
+					sumXY += timeStamp * values.get(dataOffset);
+					sumX2 += Math.pow(timeStamp, 2.0);
 				}
 			}
 
@@ -217,6 +230,20 @@ public class CoffeeSaint
 				dottedLine(output, y, width, g.getColor().getRGB());
 				g.drawLine(0, y, 2, y);
 				g.drawString(String.format("%g", quarter3), 5, y + ((Graphics2D)g).getFontMetrics().getAscent() / 2);
+
+				int usedNElements = nElements;
+				double b = (usedNElements * sumXY - sumX * sumY) /
+					(usedNElements * sumX2 - sumX * sumX);
+				double a = (sumY / usedNElements) - b * (sumX / usedNElements);
+				for(int offset=firstOffset; offset<width; offset+=2)
+				{
+					int dataOffset = offset + (values.size() - width) - 1;
+					double value = a + (double)dataOffset * b;
+					y = calcY(value, min, max, avg, sd, scale, height);
+
+					output.setRGB(offset, Math.max(0, Math.min((height - 1) - y, height - 1)), Color.GREEN.getRGB());
+				}
+
 			}
 		}
 		performanceDataSemaphore.release();

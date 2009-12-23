@@ -308,11 +308,11 @@ public class Config
 						setExec(data);
 					else if (name.equals("fullscreen"))
 					{
-						if (data.equalsIgnoreCase("none"))
+						if (data.equalsIgnoreCase("none") || data.equalsIgnoreCase("false"))
 							setFullscreen(FullScreenMode.NONE);
-						else if (data.equalsIgnoreCase("undecorated"))
+						else if (data.equalsIgnoreCase("undecorated") || data.equalsIgnoreCase("true"))
 							setFullscreen(FullScreenMode.UNDECORATED);
-						else if (data.equalsIgnoreCase("fullscreen") || data.equalsIgnoreCase("true"))
+						else if (data.equalsIgnoreCase("fullscreen"))
 							setFullscreen(FullScreenMode.FULLSCREEN);
 						else
 							throw new Exception("Fullscreen mode " + data + " not recognized");
