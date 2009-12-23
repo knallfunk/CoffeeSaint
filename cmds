@@ -1,5 +1,5 @@
 java -jar PerfAnal.jar java.hprof.txt
 java -Djava.compiler= -Xrunhprof:cpu=times,depth=6,thread=y -jar CoffeeSaint.jar --source file 3 work/n3_lots_censored --row-border --listen-port 12340 --problem-columns 3 --flexible-n-columns --anti-alias  --interval 1
 
-rcsdiff *java ./build ./todo com/vanheusden/sockets/*java com/vanheusden/nagios/*java 2>&1  | more
-ci -l *java com/vanheusden/*/*java ./build Changelog ./todo ./cmds 
+rcsdiff *java ./Changelog ./build ./todo com/vanheusden/sockets/*java com/vanheusden/nagios/*java 2>&1  | more
+ci -l *java com/vanheusden/*/*java ./Changelog ./build Changelog ./todo ./cmds 

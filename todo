@@ -8,4 +8,6 @@
 
 - filter op inhoud van velden. numeriek, ascii, host en services
 
+- getWindowUndecorated httpserver/config/cmdline/etc
+
 - multiple monitor support

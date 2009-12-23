@@ -589,7 +589,11 @@ class HTTPServer implements Runnable
 			fsMode = "Running headless";
 		else if (gd.isFullScreenSupported() == false)
 			fsMode = "Not supported";
-		reply.add("<TR><TD>Fullscreen mode:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"fullscreen\" VALUE=\"on\" " + isChecked(config.getFullscreen()) + "></TD><TD>" + fsMode + "</TD></TR>\n");
+		reply.add("<TR><TD>Fullscreen mode:</TD><TD><SELECT NAME=\"fullscreen\">\n");
+		reply.add(selectField(config.getFullscreenName(), "none"));
+		reply.add(selectField(config.getFullscreenName(), "undecorated"));
+		reply.add(selectField(config.getFullscreenName(), "fullscreen"));
+		reply.add("</SELECT></TD><TD>" + fsMode + "</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Counter position:</TD><TD><SELECT NAME=\"counter-position\">\n");
 		reply.add(selectField(config.getCounterPositionName(), "upper-left"));
@@ -597,7 +601,7 @@ class HTTPServer implements Runnable
 		reply.add(selectField(config.getCounterPositionName(), "lower-left"));
 		reply.add(selectField(config.getCounterPositionName(), "lower-right"));
 		reply.add(selectField(config.getCounterPositionName(), "center"));
-		reply.add("</SELECT></TD></TR>\n");
+		reply.add("</SELECT></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD>&gt;= 3</TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD>&gt;= 1</TD></TR>\n");
@@ -852,12 +856,20 @@ class HTTPServer implements Runnable
 
 		config.setCounter(getCheckBox(socket, requestData, "counter"));
 
-		boolean newFSMode = getCheckBox(socket, requestData, "fullscreen");
-		if (newFSMode != config.getFullscreen())
+		String newFSMode = getField(socket, requestData, "fullscreen");
+		if (newFSMode != null)
 		{
-			if (gd != null)
-				gd.setFullScreenWindow(newFSMode ? frame : null);
-			config.setFullscreen(newFSMode);
+			if (newFSMode.equalsIgnoreCase("fullscreen"))
+				gd.setFullScreenWindow(frame);
+			else
+				gd.setFullScreenWindow(null);
+
+			if (newFSMode.equalsIgnoreCase("none"))
+				config.setFullscreen(FullScreenMode.NONE);
+			else if (newFSMode.equalsIgnoreCase("undecorated"))
+				config.setFullscreen(FullScreenMode.UNDECORATED);
+			else if (newFSMode.equalsIgnoreCase("fullscreen"))
+				config.setFullscreen(FullScreenMode.FULLSCREEN);
 		}
 
 		String counterPosition = getField(socket, requestData, "counter-position");
@@ -915,7 +927,7 @@ class HTTPServer implements Runnable
 		config.setScrollingHeader(getCheckBox(socket, requestData, "scrolling-header"));
 		config.setScrollIfNotFit(getCheckBox(socket, requestData, "scroll-if-not-fitting"));
 
-		String splitter = getField(socket, requestData, "scroll-splitter");
+		String splitter = getFieldDecoded(socket, requestData, "scroll-splitter");
 		if (splitter != null)
 		{
 			splitter = splitter.trim();

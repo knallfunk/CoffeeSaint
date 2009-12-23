@@ -964,7 +964,17 @@ public class CoffeeSaint
 					else if (arg[loop].equals("--scroll-pixels-per-sec"))
 						config.setScrollingPixelsPerSecond(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--fullscreen"))
-						config.setFullscreen(true);
+					{
+						String mode = arg[++loop];
+						if (mode.equalsIgnoreCase("none"))
+							config.setFullscreen(FullScreenMode.NONE);
+						else if (mode.equalsIgnoreCase("undecorated"))
+							config.setFullscreen(FullScreenMode.UNDECORATED);
+						else if (mode.equalsIgnoreCase("fullscreen"))
+							config.setFullscreen(FullScreenMode.FULLSCREEN);
+						else
+							throw new Exception("Fullscreen mode " + mode + " not recognized");
+					}
 					else if (arg[loop].equals("--header"))
 						config.setHeader(arg[++loop]);
 					else if (arg[loop].equals("--row-border"))
@@ -1147,7 +1157,7 @@ public class CoffeeSaint
 				ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 				gd = ge.getDefaultScreenDevice();
 				f = new JFrame();
-				if (config.getFullscreen() && gd.isFullScreenSupported())
+				if (config.getFullscreen() == FullScreenMode.FULLSCREEN && gd.isFullScreenSupported())
 				{
 					System.out.println("FULLSCREEN");
 					f.setUndecorated(true);
@@ -1161,6 +1171,12 @@ public class CoffeeSaint
 					f.setMaximizedBounds(useable);
 					f.setSize(useable.width, useable.height);
 					f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+
+					if (config.getFullscreen() == FullScreenMode.UNDECORATED)
+					{
+						f.setUndecorated(true);
+						f.setResizable(false);
+					}
 				}
 				f.setContentPane(gui);
 

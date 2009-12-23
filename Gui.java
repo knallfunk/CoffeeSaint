@@ -368,11 +368,6 @@ public class Gui extends JPanel implements ImageObserver
 			double took;
 			Color bgColor = config.getBackgroundColor();
 
-			movingPartsSemaphore.acquireUninterruptibly();
-			windowMovingParts = new ArrayList<ScrollableContent>();
-			bordersParameters = null;
-			movingPartsSemaphore.release();
-
 			/* block in upper right to inform about load */
 			g.setColor(Color.BLUE);
 			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
@@ -398,6 +393,11 @@ public class Gui extends JPanel implements ImageObserver
 			coffeeSaint.collectPerformanceData(javNag);
 			java.util.List<Problem> problems = CoffeeSaint.findProblems(javNag);
 			coffeeSaint.learnProblemCount(problems.size());
+
+			movingPartsSemaphore.acquireUninterruptibly();
+			windowMovingParts = new ArrayList<ScrollableContent>();
+			bordersParameters = null;
+			movingPartsSemaphore.release();
 
 			Calendar rightNow = Calendar.getInstance();
 

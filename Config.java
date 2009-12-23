@@ -61,7 +61,7 @@ public class Config
 	private String sortOrder;
 	private int camRows, camCols;
 	private boolean verbose;
-	private boolean fullscreen = false;
+	private FullScreenMode fullscreen;
 	private boolean keepAspectRatio;
 	private boolean scrollingHeader;
 	private int scrollingPixelsPerSecond;
@@ -307,7 +307,16 @@ public class Config
 					else if (name.equals("exec"))
 						setExec(data);
 					else if (name.equals("fullscreen"))
-						setFullscreen(isTrue);
+					{
+						if (data.equalsIgnoreCase("none"))
+							setFullscreen(FullScreenMode.NONE);
+						else if (data.equalsIgnoreCase("undecorated"))
+							setFullscreen(FullScreenMode.UNDECORATED);
+						else if (data.equalsIgnoreCase("fullscreen") || data.equalsIgnoreCase("true"))
+							setFullscreen(FullScreenMode.FULLSCREEN);
+						else
+							throw new Exception("Fullscreen mode " + data + " not recognized");
+					}
 					else if (name.equals("adapt-img"))
 						setAdaptImageSize(isTrue);
 					else if (name.equals("random-img"))
@@ -517,7 +526,7 @@ public class Config
 		writeLine(out, "row-border-color = " + getRowBorderColorName());
 		writeLine(out, "graph-color = " + getGraphColorName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
-		writeLine(out, "fullscreen = " + (getFullscreen() ? "true" : "false"));
+		writeLine(out, "fullscreen = " + getFullscreenName());
 		writeLine(out, "reduce-textwidth = " + (getReduceTextWidth() ? "true" : "false"));
 		if (getHeaderSet() == true)
 			writeLine(out, "header = " + getHeader());
@@ -1563,18 +1572,27 @@ public class Config
 		return copy;
 	}
 
-	public void setFullscreen(boolean fullscreen)
+	public void setFullscreen(FullScreenMode fullscreen)
 	{
 		lock();
 		this.fullscreen = fullscreen;
 		unlock();
 	}
 
-	public boolean getFullscreen()
+	public FullScreenMode getFullscreen()
 	{
-		boolean copy;
+		FullScreenMode copy;
 		lock();
 		copy = fullscreen;
+		unlock();
+		return copy;
+	}
+
+	public String getFullscreenName()
+	{
+		String copy;
+		lock();
+		copy = "" + fullscreen;
 		unlock();
 		return copy;
 	}
