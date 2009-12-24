@@ -584,16 +584,17 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Look and feel parameters</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
-		String fsMode = "";
-		if (gd == null)
-			fsMode = "Running headless";
-		else if (gd.isFullScreenSupported() == false)
-			fsMode = "Not supported";
+//		String fsMode = "";
+//		if (gd == null)
+//			fsMode = "Running headless";
+//		else if (gd.isFullScreenSupported() == false)
+//			fsMode = "Not supported";
 		reply.add("<TR><TD>Fullscreen mode:</TD><TD><SELECT NAME=\"fullscreen\">\n");
 		reply.add(selectField(config.getFullscreenName(), "none"));
 		reply.add(selectField(config.getFullscreenName(), "undecorated"));
 		reply.add(selectField(config.getFullscreenName(), "fullscreen"));
-		reply.add("</SELECT></TD><TD>" + fsMode + "</TD></TR>\n");
+//		reply.add("</SELECT></TD><TD>" + fsMode + "</TD></TR>\n");
+		reply.add("</SELECT></TD><TD>Requires restart of CoffeeSaint.</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Counter position:</TD><TD><SELECT NAME=\"counter-position\">\n");
 		reply.add(selectField(config.getCounterPositionName(), "upper-left"));
@@ -859,10 +860,10 @@ class HTTPServer implements Runnable
 		String newFSMode = getField(socket, requestData, "fullscreen");
 		if (newFSMode != null)
 		{
-			if (newFSMode.equalsIgnoreCase("fullscreen"))
-				gd.setFullScreenWindow(frame);
-			else
-				gd.setFullScreenWindow(null);
+//			if (newFSMode.equalsIgnoreCase("fullscreen"))
+//				gd.setFullScreenWindow(frame);
+//			else
+//				gd.setFullScreenWindow(null);
 
 			if (newFSMode.equalsIgnoreCase("none"))
 				config.setFullscreen(FullScreenMode.NONE);
