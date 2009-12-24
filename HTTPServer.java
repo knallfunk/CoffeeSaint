@@ -27,7 +27,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
-import javax.imageio.*;
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
 class HTTPServer implements Runnable

@@ -1,6 +1,9 @@
+/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
 import java.text.SimpleDateFormat;
-import java.util.*;
 import java.util.concurrent.Semaphore;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
 
 public class Log
 {

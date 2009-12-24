@@ -1,21 +1,35 @@
 /* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
 
-import java.awt.*;
-import javax.swing.*;
-import java.net.URL;
-import java.awt.image.*;
-import java.util.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.event.WindowEvent;
-import java.util.regex.Pattern;
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.awt.geom.Rectangle2D;
 import java.awt.font.FontRenderContext;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.FileNotFoundException;
-import java.util.concurrent.Semaphore;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Random;
+import java.util.concurrent.Semaphore;
+import java.util.regex.Pattern;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
@@ -351,6 +365,10 @@ public class CoffeeSaint
 		try
 		{
 			BufferedWriter out = new BufferedWriter(new FileWriter("exceptions.log", true));
+
+                	String ts = new SimpleDateFormat("E yyyy.MM.dd  hh:mm:ss a zzz").format(Calendar.getInstance().getTime());
+			out.write(ts, 0, ts.length());
+			out.newLine();
 
 			for(String line : exception)
 			{
@@ -823,6 +841,22 @@ public class CoffeeSaint
 		}
 	}
 
+	public Rectangle getAllScreensSizes()
+	{
+		Rectangle vBounds = new Rectangle();
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice[] gdArray = ge.getScreenDevices();
+
+		for (int i = 0; i < gdArray.length; i++)
+		{
+			GraphicsDevice gd = gdArray[i];
+			GraphicsConfiguration[] gcArray = gd.getConfigurations();
+			for (int j = 0; j < gcArray.length; j++)
+				vBounds = vBounds.union(gcArray[j].getBounds());
+		}
+
+		return vBounds;
+	}
 	public static void setIcon(CoffeeSaint coffeeSaint, JFrame f)
 	{
 		ClassLoader loader = coffeeSaint.getClass().getClassLoader();
@@ -1216,7 +1250,10 @@ public class CoffeeSaint
 					System.out.println("FULLSCREEN");
 					f.setUndecorated(true);
 					f.setResizable(false);
-					gd.setFullScreenWindow(f);
+					//gd.setFullScreenWindow(f);
+					Rectangle virtualScreenRectangle = coffeeSaint.getAllScreensSizes();
+					f.setMaximizedBounds(virtualScreenRectangle);
+					f.setSize(virtualScreenRectangle.width, virtualScreenRectangle.height);
 				}
 				else
 				{

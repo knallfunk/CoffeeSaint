@@ -1,3 +1,5 @@
+/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
+
 public class BordersParameters
 {
 	protected int nProblems, nColumns, windowWidth, rowHeight;

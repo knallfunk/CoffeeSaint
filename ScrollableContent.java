@@ -1,3 +1,4 @@
+/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
 import java.awt.Graphics2D;
 import java.awt.Color;
 import java.awt.Image;
@@ -63,7 +64,7 @@ public class ScrollableContent
 		{
 			int plotN = Math.min(pixelsNeeded, pixelsAvail);
 
-			g2d.drawImage((Image)imageData, drawX, y, drawX + plotN, y + imageData.getHeight(), sourceX, 0, sourceX + plotN, imageData.getHeight(), Color.GRAY, null);
+			g2d.drawImage(imageData, drawX, y, drawX + plotN, y + imageData.getHeight(), sourceX, 0, sourceX + plotN, imageData.getHeight(), Color.GRAY, null);
 
 			pixelsNeeded -= plotN;
 			pixelsAvail -= plotN;
