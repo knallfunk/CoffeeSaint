@@ -14,10 +14,12 @@ import java.awt.geom.Rectangle2D;
 import java.awt.font.FontRenderContext;
 import java.io.FileNotFoundException;
 import java.util.concurrent.Semaphore;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.4-beta001";
+	static String versionNr = "v2.4-beta002";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -329,16 +331,38 @@ public class CoffeeSaint
 
 	public static void showException(Exception e)
 	{
-		log.add("Exception: " + e);
-		log.add("Details: " + e.getMessage());
-		log.add("Stack-trace:");
+		java.util.List<String> exception = new ArrayList<String>();
+
+		exception.add("Exception: " + e);
+		exception.add("Details: " + e.getMessage());
+		exception.add("Stack-trace:");
 		for(StackTraceElement ste: e.getStackTrace())
 		{
-			log.add(" " + ste.getClassName() + ", "
+			exception.add(" " + ste.getClassName() + ", "
 					+ ste.getFileName() + ", "
 					+ ste.getLineNumber() + ", "
 					+ ste.getMethodName() + ", "
 					+ (ste.isNativeMethod() ? "is native method" : "NOT a native method"));
+		}
+
+		for(String line : exception)
+			log.add(line);
+
+		try
+		{
+			BufferedWriter out = new BufferedWriter(new FileWriter("exceptions.log", true));
+
+			for(String line : exception)
+			{
+				out.write(line, 0, line.length());
+				out.newLine();
+			}
+
+			out.close();
+		}
+		catch(Exception ne)
+		{
+			log.add("Exception during exception-file-write: " + ne);
 		}
 	}
 
@@ -1013,7 +1037,10 @@ public class CoffeeSaint
 					else if (arg[loop].equals("--random-img"))
 						config.setRandomWebcam(true);
 					else if (arg[loop].equals("--no-gui"))
+					{
+						System.err.println("Don't forget to invoke the JVM with -Djava.awt.headless=true !");
 						config.setRunGui(false);
+					}
 					else if (arg[loop].equals("--config"))
 						config.loadConfig(arg[++loop]);
 					else if (arg[loop].equals("--predict"))
