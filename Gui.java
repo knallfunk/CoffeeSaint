@@ -106,8 +106,32 @@ public class Gui extends JPanel implements ImageObserver
 
 		configureRendered(g, true);
 
-		g.setColor(coffeeSaint.stateToColor(state));
-		g.fillRect(0, 0, windowWidth, rowHeight);
+		Color stateColor = coffeeSaint.stateToColor(state);
+		// Color fadeToColor = config.getGraphColor(); // from config FIXME
+		Color fadeToColor = null; // from config FIXME
+		if (fadeToColor != null)
+		{
+			int scR = stateColor.getRed(), scG = stateColor.getGreen(), scB = stateColor.getBlue();
+			int ftcR = fadeToColor.getRed(), ftcG = fadeToColor.getGreen(), ftcB = fadeToColor.getBlue();
+			double stepR = (double)(ftcR - scR) / (double)rowHeight;
+			double stepG = (double)(ftcG - scG) / (double)rowHeight;
+			double stepB = (double)(ftcB - scB) / (double)rowHeight;
+
+			for(int rowY = 0; rowY<rowHeight; rowY++)
+			{
+				int curR = Math.min(Math.max(0, scR + (int)((double)rowY * stepR)), 255);
+				int curG = Math.min(Math.max(0, scG + (int)((double)rowY * stepG)), 255);
+				int curB = Math.min(Math.max(0, scB + (int)((double)rowY * stepB)), 255);
+
+				g.setColor(new Color(curR, curG, curB));
+				g.drawLine(0, rowY, windowWidth - 1, rowY);
+			}
+		}
+		else
+		{
+			g.setColor(stateColor);
+			g.fillRect(0, 0, windowWidth, rowHeight);
+		}
 
 		g.setColor(config.getTextColor());
 

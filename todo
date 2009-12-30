@@ -4,8 +4,8 @@
 
 - sparklines: filter op welke te graphen. pull down met "inclusive" en "exclusive" en dan invoerveld
   critical als max voor min/max?
-  meta-data in grafieken
+- metadata is fout!
 
 - filter op inhoud van velden. numeriek, ascii, host en services
 
-- multiple monitor support
+- iets met kleurverlopen in de problembalken

@@ -148,15 +148,15 @@ class Predictor
 
 		intervalNr = dateToIntervalMonth(nowDOM, nowSecond);
 		// nagiosErrorCountMonth[intervalNr] = (nagiosErrorCountMonth[intervalNr] * 3.0 + (double)errorCount) / 4.0;
-		nagiosErrorCountMonth[intervalNr] = (double)errorCount;
+		nagiosErrorCountMonth[intervalNr % getElementCountMonth()] = (double)errorCount;
 
 		intervalNr = dateToIntervalWeek(nowDay, nowSecond);
 		// nagiosErrorCountWeek[intervalNr] = (nagiosErrorCountWeek[intervalNr] * 3.0 + (double)errorCount) / 4.0;
-		nagiosErrorCountWeek[intervalNr] = (double)errorCount;
+		nagiosErrorCountWeek[intervalNr % getElementCountWeek()] = (double)errorCount;
 
 		intervalNr = dateToIntervalDay(nowSecond);
 		// nagiosErrorCountDay [intervalNr] = (nagiosErrorCountDay [intervalNr] * 3.0 + (double)errorCount) / 4.0;
-		nagiosErrorCountDay [intervalNr] = (double)errorCount;
+		nagiosErrorCountDay [intervalNr % getElementCountDay()] = (double)errorCount;
 	}
 
 	int fixIndex(int nr, int nElements)
@@ -201,7 +201,7 @@ class Predictor
 
 	public double getHistorical(int intervalNrDay, int intervalNrWeek, int intervalNrMonth)
 	{
-		return (nagiosErrorCountMonth[intervalNrMonth] + nagiosErrorCountWeek[intervalNrWeek] + nagiosErrorCountDay[intervalNrDay]) / 3.0;
+		return (nagiosErrorCountMonth[intervalNrMonth % getElementCountMonth()] + nagiosErrorCountWeek[intervalNrWeek % getElementCountWeek()] + nagiosErrorCountDay[intervalNrDay % getElementCountDay()]) / 3.0;
 	}
 
 	public double getHistorical(Calendar when)
