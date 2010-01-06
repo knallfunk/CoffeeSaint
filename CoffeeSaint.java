@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2010 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
 
 import java.awt.Color;
@@ -33,8 +33,8 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.5";
-	static String version = "CoffeeSaint " + versionNr + ", (C) 2009 by folkert@vanheusden.com";
+	static String versionNr = "v2.6";
+	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
 

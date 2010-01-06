@@ -9,3 +9,6 @@
 - filter op inhoud van velden. numeriek, ascii, host en services
 
 - iets met kleurverlopen in de problembalken
+
+- escapes: - output v/e extern commando
+           - inhoud v/e specifiek veld. bij services ook van parent-host

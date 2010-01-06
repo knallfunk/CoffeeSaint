@@ -297,7 +297,7 @@ public class Config
 						setBrainFileName(data);
 					else if (name.equals("scroll-splitter"))
 					{
-						if (data.equalsIgnoreCase("none"))
+						if (data.equalsIgnoreCase("none") || data.length() < 1)
 							setLineScrollSplitter(null);
 						else
 							setLineScrollSplitter(data.charAt(0));

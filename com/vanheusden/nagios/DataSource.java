@@ -49,21 +49,23 @@ public class DataSource
 		double min = Double.MAX_VALUE;
 		double max = Double.MIN_VALUE;
 		double total = 0.0, sdval = 0.0, avg = 0.0, sd = 0.0;
+		int n = data.size();
 
-		for(int index=0; index<data.size(); index++)
+		for(int index=0; index<n; index++)
 		{
-			min = Math.min(min, data.get(index));
-			max = Math.max(max, data.get(index));
-			total += data.get(index);
-			sdval += Math.pow(data.get(index), 2.0);
+			double value = data.get(index);
+			min = Math.min(min, value);
+			max = Math.max(max, value);
+			total += value;
+			sdval += Math.pow(value, 2.0);
 		}
 
-		if (data.size() != 0)
-			avg = total / (double)data.size();
+		if (n != 0)
+			avg = total / (double)n;
 
-		sd = Math.sqrt((sdval / (double)data.size()) - Math.pow(avg, 2.0));
+		sd = Math.sqrt((sdval / (double)n) - Math.pow(avg, 2.0));
 
-		return new DataInfo(min, max, avg, sd, data.size());
+		return new DataInfo(min, max, avg, sd, n);
 	}
 
 	public List<Double> getValues()

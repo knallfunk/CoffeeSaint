@@ -101,13 +101,16 @@ public class Gui extends JPanel implements ImageObserver
 
 	void drawRow(Graphics gTo, int windowWidth, int xStart, RowParameters rowParameters, int rowHeight, String msg, int row, String state, Color bgColor, float seeThrough, BufferedImage sparkLine)
 	{
+		if (windowWidth == 0)
+			return;
+
 		BufferedImage output = new BufferedImage(windowWidth, rowHeight, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = output.createGraphics();
 
 		configureRendered(g, true);
 
 		Color stateColor = coffeeSaint.stateToColor(state);
-		// Color fadeToColor = config.getGraphColor(); // from config FIXME
+		// Color fadeToColor = bgColor; // from config FIXME
 		Color fadeToColor = null; // from config FIXME
 		if (fadeToColor != null)
 		{
@@ -117,11 +120,13 @@ public class Gui extends JPanel implements ImageObserver
 			double stepG = (double)(ftcG - scG) / (double)rowHeight;
 			double stepB = (double)(ftcB - scB) / (double)rowHeight;
 
+			double piStep = Math.PI / (double)rowHeight;
 			for(int rowY = 0; rowY<rowHeight; rowY++)
 			{
-				int curR = Math.min(Math.max(0, scR + (int)((double)rowY * stepR)), 255);
-				int curG = Math.min(Math.max(0, scG + (int)((double)rowY * stepG)), 255);
-				int curB = Math.min(Math.max(0, scB + (int)((double)rowY * stepB)), 255);
+				double pos = rowY * (1.0 - Math.sin(piStep * (double)rowY));
+				int curR = Math.min(Math.max(0, scR + (int)((double)pos * stepR)), 255);
+				int curG = Math.min(Math.max(0, scG + (int)((double)pos * stepG)), 255);
+				int curB = Math.min(Math.max(0, scB + (int)((double)pos * stepB)), 255);
 
 				g.setColor(new Color(curR, curG, curB));
 				g.drawLine(0, rowY, windowWidth - 1, rowY);

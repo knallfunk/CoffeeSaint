@@ -1577,6 +1577,7 @@ class HTTPServer implements Runnable
 					List<HTTPRequestData> request = socket.acceptConnectionGetRequest();
 					if (request.size() == 0)
 						continue;
+					System.out.println(" + request start");
 					String requestType = request.get(0).getName();
 					String url = request.get(0).getData().trim();
 					int space = url.indexOf(" ");
@@ -1707,6 +1708,7 @@ class HTTPServer implements Runnable
 						socket = null;
 					}
 				}
+				System.out.println(" + request end");
 			}
 		}
 		catch(Exception e)
