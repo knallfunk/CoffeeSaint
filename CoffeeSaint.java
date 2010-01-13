@@ -34,7 +34,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.7-beta001";
+	static String versionNr = "v2.7";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);

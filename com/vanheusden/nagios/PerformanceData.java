@@ -97,7 +97,7 @@ public class PerformanceData
 
 					current.setDataSourceUnit(name, unit);
 				}
-				else if (afterValue.length() > 0)
+				else if (afterValue.length() > 0 && semiColon != 0)
 				{
 					current.setDataSourceUnit(name, afterValue);
 				}
