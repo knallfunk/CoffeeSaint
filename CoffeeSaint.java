@@ -15,6 +15,7 @@ import java.awt.Toolkit;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Rectangle2D;
 import java.awt.font.FontRenderContext;
+import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileNotFoundException;
@@ -33,7 +34,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.6";
+	static String versionNr = "v2.7-beta001";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -440,13 +441,101 @@ public class CoffeeSaint
 		if (howLongInSecs >= 86400)
 			out += "" + (howLongInSecs / 86400) + "d ";
 
-		out += "" + make2Digit("" + ((howLongInSecs / 3600) % 24)) + ":" + make2Digit("" + ((howLongInSecs / 60) % 10)) + ":" + make2Digit("" + (howLongInSecs % 60));
+		out += "" + make2Digit("" + ((howLongInSecs / 3600) % 24)) + ":" + make2Digit("" + ((howLongInSecs / 60) % 60)) + ":" + make2Digit("" + (howLongInSecs % 60));
 
 		return out;
 	}
 
+	public String execWithPars(Problem problem, String file)
+	{
+		String line;
+
+		try
+		{
+			Host host = problem.getHost();
+			Service service = problem.getService();
+
+			String pluginOutput = "";
+			if (service != null)
+				pluginOutput = service.getParameter("plugin_output");
+			else
+				pluginOutput = host.getParameter("plugin_output");
+
+			String [] args = { file, problem.getHost().getHostName(), service != null ? service.getServiceName() : "", problem.getCurrent_state(), pluginOutput };
+
+			Process p = Runtime.getRuntime().exec(args);
+			BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+			line = input.readLine();
+
+			input.close();
+
+			p.destroy();
+		}
+		catch(Exception e)
+		{
+			line = e.toString();
+		}
+
+		return line;
+	}
+
 	public String processStringEscapes(JavNag javNag, Totals totals, Calendar rightNow, Problem problem, String cmd)
 	{
+		String pars = null;
+		int splitter = cmd.indexOf("^");
+		if (splitter != -1)
+		{
+			if (cmd.length() > splitter)
+				pars = cmd.substring(splitter + 1);
+			cmd = cmd.substring(0, splitter);
+		}
+
+		if (cmd.equals("EXEC") && pars != null)
+			return execWithPars(problem, pars);
+
+		if (cmd.equals("FIELDHOST") && pars != null && pars.length() > 0)
+		{
+			String data = problem.getHost().getParameter(pars);
+			if (data != null)
+				return data;
+		}
+
+		if (cmd.equals("FIELDSERVICE") && pars != null && pars.length() > 0)
+		{
+			String data = problem.getService().getParameter(pars);
+			if (data != null)
+				return data;
+		}
+
+		if (cmd.equals("FIELDBOOLEANHOST") && pars != null && pars.length() > 0)
+		{
+			String data = problem.getHost().getParameter(pars);
+			if (data != null)
+				return data.equals("1") ? "yes" : "no";
+		}
+
+		if (cmd.equals("FIELDBOOLEANSERVICE") && pars != null && pars.length() > 0)
+		{
+			String data = problem.getService().getParameter(pars);
+			if (data != null)
+				return data.equals("1") ? "yes" : "no";
+		}
+
+		if (cmd.equals("FIELDDATEHOST") && pars != null && pars.length() > 0)
+		{
+			String data = problem.getHost().getParameter(pars);
+			if (data != null)
+				return stringTsToDate(data);
+		}
+
+		if (cmd.equals("FIELDDATESERVICE") && pars != null && pars.length() > 0)
+		{
+			String data = problem.getService().getParameter(pars);
+			if (data != null)
+				return stringTsToDate(data);
+		}
+
 		if (cmd.equals("CRITICAL"))
 			return "" + totals.getNCritical();
 		if (cmd.equals("WARNING"))
@@ -538,14 +627,16 @@ public class CoffeeSaint
 		{
 			if (loadingCmd)
 			{
-				if (!(in.charAt(index) >= 'A' && in.charAt(index) <= 'Z') && !(in.charAt(index) >= 'a' && in.charAt(index) <= 'z'))
+				char currentChar = in.charAt(index);
+
+				if (!(currentChar >= 'A' && currentChar <= 'Z') && !(currentChar >= 'a' && currentChar <= 'z') && currentChar != '^' && currentChar != '/' && currentChar != '_' && currentChar != '.')
 				{
 					output += processStringEscapes(javNag, totals, rightNow, problem, cmd);
 
 					cmd = "";
 					loadingCmd = false;
 
-					if (in.charAt(index) == '%')
+					if (currentChar == '%')
 						loadingCmd = true;
 					else
 						output += in.charAt(index);
@@ -941,6 +1032,7 @@ public class CoffeeSaint
 		System.out.println("--services-filter-include x Comma-seperated list of services to display. Use in combination with --services-filter-exclude: will be invoked after the exclude.");
 		System.out.println("--sparkline-width x Adds sparklines to the listed problems. 'x' specifies the width in pixels");
 		System.out.println("--sparkline-mode x (avg-sd or min-max) How to scale the sparkline graphcs");
+		System.out.println("--no-problems-text Messages to display when there are no problems.");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -955,6 +1047,13 @@ public class CoffeeSaint
 		System.out.println("  %PREDICT/%HISTORICAL      ");
 		System.out.println("  %HOSTDURATION/%SERVICEDURATION how long has a host/service been down");
 		System.out.println("  %OUTPUT                   Plugin output");
+		System.out.println("  %FIELDDATEHOST^field      Take 'field' from the host-fields (see 'Sort-fields' below) and convert it into a date-string");
+		System.out.println("  %FIELDDATESERVICE^field   Take 'field' from the service-fields (see 'Sort-fields' below) and convert it into a date-string");
+		System.out.println("  %FIELDBOOLEANHOST^field   Take 'field' from the host-fields (see 'Sort-fields' below) and interprete as yes/no");
+		System.out.println("  %FIELDBOOLEANSERVICE^field  Take 'field' from the service-fields (see 'Sort-fields' below) and interprete as yes/no");
+		System.out.println("  %FIELDHOST                Take 'field' from the host-fields (see 'Sort-fields' below) and display its contents");
+		System.out.println("  %FIELDSERVICE             Take 'field' from the service-fields (see 'Sort-fields' below) and display its contents");
+		System.out.println("  %EXEC^script              Invoke script 'script' with as parameters: hostname, servicename (or empty string in case of a host failure), current state, plugin-output");
 		System.out.println("");
 		System.out.println("Sort-fields:");
 		config.listSortFields();
@@ -1194,6 +1293,10 @@ public class CoffeeSaint
 						config.setScrollIfNotFit(true);
 					else if (arg[loop].equals("--counter-position"))
 						config.setCounterPosition(arg[++loop]);
+					else if (arg[loop].equals("--no-problems-text"))
+						config.setNoProblemsText(arg[++loop]);
+					else if (arg[loop].equals("--no-problems-text-position"))
+						config.setNoProblemsTextPosition(arg[++loop]);
 					else if (arg[loop].equals("--sparkline-mode"))
 					{
 						String mode = arg[++loop];

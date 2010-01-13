@@ -671,6 +671,14 @@ class HTTPServer implements Runnable
 		reply.add("<OPTION VALUE=\"avg-sd\"" + (config.getSparklineGraphMode() == SparklineGraphMode.AVG_SD ? " SELECTED" : "") + ">scale to average &amp; standard deviation</OPTION>\n");
 		reply.add("<OPTION VALUE=\"min-max\"" + (config.getSparklineGraphMode() == SparklineGraphMode.MIN_MAX ? " SELECTED" : "") + ">scale between min and max</OPTION>\n");
 		reply.add("</SELECT></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Ok message:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"no-problems-text\" VALUE=\"" + (config.getNoProblemsText() != null ? config.getNoProblemsText() : "") + "\"></TD><TD>Message to show if there are no problems.</TD></TR>\n");
+		reply.add("<TR><TD>Ok message position:</TD><TD><SELECT NAME=\"no-problems-text-position\">\n");
+		reply.add(selectField(config.getNoProblemsTextPositionName(), "upper-left"));
+		reply.add(selectField(config.getNoProblemsTextPositionName(), "upper-right"));
+		reply.add(selectField(config.getNoProblemsTextPositionName(), "lower-left"));
+		reply.add(selectField(config.getNoProblemsTextPositionName(), "lower-right"));
+		reply.add(selectField(config.getNoProblemsTextPositionName(), "center"));
+		reply.add("</SELECT></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
@@ -840,6 +848,18 @@ class HTTPServer implements Runnable
 			else if (sparkline_mode.equals("min-max"))
 				config.setSparklineGraphMode(SparklineGraphMode.MIN_MAX);
 		}
+
+		String noProblemsText = getFieldDecoded(socket, requestData, "no-problems-text");
+		if (noProblemsText != null)
+		{
+			if (noProblemsText.trim().equals(""))
+				config.setNoProblemsText(null);
+			else
+				config.setNoProblemsText(noProblemsText);
+		}
+		String noProblemsTextPosition = getField(socket, requestData, "no-problems-text-position");
+		if (noProblemsTextPosition != null)
+			config.setNoProblemsTextPosition(noProblemsTextPosition);
 
 		config.setAlwaysNotify(getCheckBox(socket, requestData, "always_notify"));
 

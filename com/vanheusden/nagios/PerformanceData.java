@@ -88,19 +88,19 @@ public class PerformanceData
 				double value = Double.valueOf(valueStr);
 
 				current.add(name, value);
-			}
 
-			String afterValue = currentSet.substring(data);
-			int semiColon = afterValue.indexOf(";");
-			if (semiColon > 0)
-			{
-				String unit = afterValue.substring(0, semiColon);
+				String afterValue = currentSet.substring(data);
+				int semiColon = afterValue.indexOf(";");
+				if (semiColon > 0)
+				{
+					String unit = afterValue.substring(0, semiColon);
 
-				current.setDataSourceUnit(name, unit);
-			}
-			else if (afterValue.length() > 0)
-			{
-				current.setDataSourceUnit(name, afterValue);
+					current.setDataSourceUnit(name, unit);
+				}
+				else if (afterValue.length() > 0)
+				{
+					current.setDataSourceUnit(name, afterValue);
+				}
 			}
 		}
 	}
@@ -110,11 +110,11 @@ public class PerformanceData
 		return new ArrayList<PerformanceDataPerElement>(map.values());
 	}
 
-        void writeLine(BufferedWriter out, String line) throws Exception
-        {
-                out.write(line, 0, line.length());
-                out.newLine();
-        }
+	void writeLine(BufferedWriter out, String line) throws Exception
+	{
+		out.write(line, 0, line.length());
+		out.newLine();
+	}
 
 	public void dump(String fileName) throws Exception
 	{

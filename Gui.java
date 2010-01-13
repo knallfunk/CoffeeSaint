@@ -521,6 +521,49 @@ public class Gui extends JPanel implements ImageObserver
 				}
 			}
 
+			if (problems.size() == 0)
+			{
+				String okMsg = config.getNoProblemsText();
+				if (okMsg != null)
+				{
+					int x = 0;
+					int y = 0;
+					if (config.getShowHeader())
+						y = 1;
+
+					BufferedImage allFineMsg = createRowImage(config.getFontName(), okMsg, "0", config.getBackgroundColor(), rowHeight, null);
+					int width = allFineMsg.getWidth();
+
+					switch(config.getNoProblemsTextPosition())
+					{
+						case UPPER_LEFT:
+							x = 0;
+							break;
+
+						case UPPER_RIGHT:
+							x = Math.max(0, windowWidth - width);
+							break;
+
+						case LOWER_LEFT:
+							x = 0;
+							y = (windowHeight / rowHeight) - 1;
+							break;
+
+						case LOWER_RIGHT:
+							y = (windowHeight / rowHeight) - 1;
+							x = Math.max(0, windowWidth - width);
+							break;
+
+						case CENTER:
+							y = (windowHeight / rowHeight) / 2;
+							x = Math.max(0, (windowWidth / 2) - (width / 2));
+							break;
+					}
+
+					prepareRow(g, width, x, okMsg, y, "0", bgColor, 1.0f, null, false);
+				}
+			}
+
 			if (config.getRowBorder())
 			{
 				bordersParameters = new BordersParameters(problems.size(), curNColumns, windowWidth, rowHeight);

@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2010 by folkert@vanheusden.com */
 import java.text.SimpleDateFormat;
 import java.util.concurrent.Semaphore;
 import java.util.ArrayList;

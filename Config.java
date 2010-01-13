@@ -89,6 +89,8 @@ public class Config
 	private boolean scrollIfNotFit;
 	private Position counterPosition;
 	private Character lineScrollSplitter;
+	private String noProblemsText;
+	private Position noProblemsTextPosition;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -178,6 +180,8 @@ public class Config
 		scrollIfNotFit = false;
 		counterPosition = Position.LOWER_RIGHT;
 		lineScrollSplitter = null;
+		noProblemsText = null;
+		noProblemsTextPosition = Position.CENTER;
 		unlock();
 	}
 
@@ -456,6 +460,10 @@ public class Config
 						setAllowHTTPCompression(isTrue ? false : true);
 					else if (name.equals("performance-data-filename"))
 						setPerformanceDataFileName(data);
+					else if (name.equals("no-problems-text"))
+						setNoProblemsText(data);
+					else if (name.equals("no-problems-text-position"))
+						setNoProblemsTextPosition(data);
 					else
 						throw new Exception("Unknown parameter on line " + lineNr);
 				}
@@ -544,6 +552,9 @@ public class Config
 		writeLine(out, "scroll-splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
 		writeLine(out, "counter-position = " + getCounterPositionName());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
+		if (getNoProblemsText() != null)
+			writeLine(out, "no-problems-text = " + getNoProblemsText());
+		writeLine(out, "no-problems-text-position = " + getNoProblemsTextPositionName());
 		String sparkMode = "sparkline-graph-mode = ";
 		if (getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
 			sparkMode += "avg-sd";
@@ -801,6 +812,22 @@ public class Config
 		String copy;
 		lock();
 		copy = issueHost;
+		unlock();
+		return copy;
+	}
+
+	public void setNoProblemsText(String string)
+	{
+		lock();
+		this.noProblemsText = string;
+		unlock();
+	}
+
+	public String getNoProblemsText()
+	{
+		String copy;
+		lock();
+		copy = noProblemsText;
 		unlock();
 		return copy;
 	}
@@ -2184,5 +2211,43 @@ public class Config
 		lock();
 		lineScrollSplitter = which;
 		unlock();
+	}
+
+	public void setNoProblemsTextPosition(String where) throws Exception
+	{
+		Position newPosition = null;
+		if (where.equalsIgnoreCase("upper-left"))
+			newPosition = Position.UPPER_LEFT;
+		else if (where.equalsIgnoreCase("upper-right"))
+			newPosition = Position.UPPER_RIGHT;
+		else if (where.equalsIgnoreCase("lower-left"))
+			newPosition = Position.LOWER_LEFT;
+		else if (where.equalsIgnoreCase("lower-right"))
+			newPosition = Position.LOWER_RIGHT;
+		else if (where.equalsIgnoreCase("center"))
+			newPosition = Position.CENTER;
+		if (newPosition == null)
+			throw new Exception("Position " + where + " is not understood");
+		lock();
+		noProblemsTextPosition = newPosition;
+		unlock();
+	}
+
+	public Position getNoProblemsTextPosition()
+	{
+		Position copy;
+		lock();
+		copy = noProblemsTextPosition;
+		unlock();
+		return copy;
+	}
+
+	public String getNoProblemsTextPositionName()
+	{
+		Position copy;
+		lock();
+		copy = noProblemsTextPosition;
+		unlock();
+		return copy.toString();
 	}
 }
