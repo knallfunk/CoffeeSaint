@@ -413,6 +413,37 @@ public class JavNag
 		return true;
 	}
 
+	public Double getAvgCheckLatency()
+	{
+		int n = 0;
+		double tot = 0.0;
+
+		for(Host currentHost : hosts)
+		{
+			String check_latency = currentHost.getParameter("check_latency");
+			if (check_latency != null)
+			{
+				n++;
+				tot += Double.valueOf(check_latency);
+			}
+
+			for(Service currentService : currentHost.getServices())
+			{
+				check_latency = currentService.getParameter("check_latency");
+				if (check_latency != null)
+				{
+					n++;
+					tot += Double.valueOf(check_latency);
+				}
+			}
+		}
+
+		if (n == 0)
+			return null;
+
+		return tot / (double)n;
+	}
+
 	public void loadNagiosData(String fileName, NagiosVersion nagiosVersion) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();

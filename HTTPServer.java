@@ -27,6 +27,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Random;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
@@ -43,6 +44,33 @@ class HTTPServer implements Runnable
 	int webServerHits, webServer404;
 	boolean configNotWrittenToDisk = false;
 	final private String defaultCharset = "US-ASCII";
+	final List<HTTPSession> sessions = new ArrayList<HTTPSession>();
+
+	public void expireSessions(List<HTTPSession> sessions)
+	{
+		long now = System.currentTimeMillis();
+		long maxOld = now - (config.getWebSessionExpire() * 1000);
+
+		for(int index=sessions.size() - 1; index >= 0; index--)
+		{
+			if (sessions.get(index).getLastUpdate() < maxOld)
+			{
+				CoffeeSaint.log.add("Session with " + sessions.get(index).getHost() + " expired.");
+				sessions.remove(index);
+			}
+		}
+	}
+
+	public boolean sessionValid(List<HTTPSession> sessions, String host, String authCookie)
+	{
+		for(HTTPSession session : sessions)
+		{
+			if (session.getHost().equals(host) && session.getCookie().equals(authCookie))
+				return true;
+		}
+
+		return false;
+	}
 
 	public HTTPServer(Config config, CoffeeSaint coffeeSaint, Statistics statistics, Gui gui, GraphicsDevice gd, JFrame frame)
 	{
@@ -54,11 +82,16 @@ class HTTPServer implements Runnable
 		this.frame = frame;
 	}
 
-	public void addHTTP200(List<String> whereTo)
+	public void addHTTP200(List<String> whereTo, String cookie)
 	{
 		whereTo.add("HTTP/1.0 200 OK\r\n");
 		whereTo.add("Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n");
 		whereTo.add("Server: " + CoffeeSaint.getVersion() + "\r\n");
+		if (cookie != null)
+		{
+			System.out.println("Set-Cookie: " + cookie);
+			whereTo.add("Set-Cookie: " + cookie + "\r\n");
+		}
 		whereTo.add("Connection: close\r\n");
 		whereTo.add("Content-Type: text/html\r\n");
 		whereTo.add("\r\n");
@@ -182,11 +215,13 @@ class HTTPServer implements Runnable
 		return getHTTPDate(calendar);
 	}
 
-	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType, boolean headRequest) throws Exception
+	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType, boolean headRequest/*, String cookie*/) throws Exception
 	{
 		String reply = "HTTP/1.0 200 OK\r\n";
 		reply += "Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n";
 		reply += "Server: " + CoffeeSaint.getVersion() + "\r\n";
+		// if (cookie != null)
+		// 	reply += "Set-Cookie: " + cookie + "\r\n";
 		reply += "Last-Modified: " + getModificationDateString(fileName) + "\r\n";
 		reply += "Connection: close\r\n";
 		reply += "Content-Type: " + mimeType + "\r\n";
@@ -252,11 +287,17 @@ class HTTPServer implements Runnable
 		sendReply_send_file_from_jar(socket, "com/vanheusden/CoffeeSaint/robots.txt", "text/plain", headRequest);
 	}
 
-	public void sendReply_imagejpg(MyHTTPServer socket)
+	public void sendReply_imagejpg(MyHTTPServer socket, String cookie)
 	{
+		String header;
+		if (cookie != null)
+			header = "HTTP/1.0 200 OK\r\nConnection: close\r\nSet-Cookie: " + cookie + "\r\nContent-Type: image/jpeg\r\n\r\n";
+		else
+			header = "HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/jpeg\r\n\r\n";
+		
 		try
 		{
-			socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/jpeg\r\n\r\n".getBytes());
+			socket.getOutputStream().write(header.getBytes());
 			Image img = coffeeSaint.loadImage(null, -1, null)[0].getImage();
 			ImageIO.write(createBufferedImage(img), "jpg", socket.getOutputStream());
 			socket.close();
@@ -269,11 +310,11 @@ class HTTPServer implements Runnable
 		}
 	}
 
-	public void sendReply_cgibin_zoomin_cgi(MyHTTPServer socket, List<HTTPRequestData> getData) throws Exception
+	public void sendReply_cgibin_zoomin_cgi(MyHTTPServer socket, List<HTTPRequestData> getData, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		int width = 920;
@@ -308,7 +349,7 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_sparkline_cgi(MyHTTPServer socket, List<HTTPRequestData> getData) throws Exception
+	public void sendReply_cgibin_sparkline_cgi(MyHTTPServer socket, List<HTTPRequestData> getData, String cookie) throws Exception
 	{
 		try
 		{
@@ -342,10 +383,14 @@ class HTTPServer implements Runnable
 			if (withMetaDataData != null && withMetaDataData.getData() != null)
 				withMetaData = URLDecoder.decode(withMetaDataData.getData(), defaultCharset).equalsIgnoreCase("true");
 
-			System.out.println("" + width + "x" + height + ", " + host + " | " + service + " | " + dataSource);
 			if (host != null)
 			{
-				socket.getOutputStream().write("HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n".getBytes());
+				String header;
+				if (cookie == null)
+					header = "HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n";
+				else
+					header = "HTTP/1.0 200 OK\r\nSet-Cookie: " + cookie + "\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n";
+				socket.getOutputStream().write(header.getBytes());
 				BufferedImage sparkLine = coffeeSaint.getSparkLine(host, service, dataSource, width, height, withMetaData);
 				ImageIO.write(sparkLine, "png", socket.getOutputStream());
 			}
@@ -413,12 +458,12 @@ class HTTPServer implements Runnable
 		return list;
 	}
 
-	public void sendReply_cgibin_select_configfile_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_select_configfile_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		File dir = new File(".");
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		if (config.getDisableHTTPFileselect())
@@ -456,11 +501,11 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_select_configfile_do_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData) throws Exception
+	public void sendReply_cgibin_select_configfile_do_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		if (config.getDisableHTTPFileselect())
@@ -493,12 +538,12 @@ class HTTPServer implements Runnable
 		return out;
 	}
 
-	public void sendReply_cgibin_configmenu_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_configmenu_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		System.out.println("sendReply_cgibin_configmenu_cgi START");
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		reply.add("<FORM ACTION=\"/cgi-bin/config-do.cgi\" METHOD=\"POST\">\n");
@@ -715,6 +760,15 @@ class HTTPServer implements Runnable
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
+		reply.add("<H1>Web-interface uthentication(s)</H1>\n");
+		reply.add("<FONT SIZE=-1>Leave these fields empty to disable web-interface authentication.<BR>\n");
+		reply.add("<TABLE>\n");
+		reply.add("<TR><TD>Authentication timeout:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"web-expire-time\" VALUE=\"" + config.getWebSessionExpire() + "\"></TD><TD>In seconds, &gt; 1</TD></TR>\n");
+		reply.add("<TR><TD>Username:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"web-username\" VALUE=\"" + (config.getWebUsername() != null ? config.getWebUsername() : "") + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Password:</TD><TD><INPUT TYPE=\"PASSWORD\" NAME=\"web-password\" VALUE=\"" + (config.getWebPassword() != null ? config.getWebPassword() : "") + "\"></TD><TD></TD></TR>\n");
+		reply.add("</TABLE>\n");
+		reply.add("<BR>\n");
+
 		reply.add("<H1>Submit changes</H1>\n");
 		reply.add("<INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes!\"><BR>\n");
 		reply.add("<BR>\n");
@@ -750,13 +804,13 @@ class HTTPServer implements Runnable
 		return URLDecoder.decode(getField(socket, requestData, fieldName), defaultCharset);
 	}
 
-	public void sendReply_cgibin_configdo_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData) throws Exception
+	public void sendReply_cgibin_configdo_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
 		configNotWrittenToDisk = true;
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		HTTPRequestData nRows = MyHTTPServer.findRecord(requestData, "nRows");
@@ -828,7 +882,7 @@ class HTTPServer implements Runnable
 		config.setNagiosUnknownBgColor(getField(socket, requestData, "unknown-bg-color"));
 
 		String sleepTime = getField(socket, requestData, "sleepTime");
-		if (sleepTime.equals("") == false)
+		if (sleepTime != null && sleepTime.equals("") == false)
 		{
 			int newSleepTime = Integer.valueOf(sleepTime);
 			if (newSleepTime < 1)
@@ -838,6 +892,16 @@ class HTTPServer implements Runnable
 				CoffeeSaint.log.add("Setting sleep interval to: " + newSleepTime);
 				config.setSleepTime(newSleepTime);
 			}
+		}
+
+		String webExpireTime = getField(socket, requestData, "web-expire-time");
+		if (webExpireTime != null && webExpireTime.equals("") == false)
+		{
+			int newWebExpireTime = Integer.valueOf(webExpireTime);
+			if (newWebExpireTime < 1)
+				reply.add("New authentication timeout is invalid, must be >= 1<BR>\n");
+			else
+				config.setWebSessionExpire(newWebExpireTime);
 		}
 
 		String sparkline_mode = getField(socket, requestData, "sparkline-mode");
@@ -860,6 +924,26 @@ class HTTPServer implements Runnable
 		String noProblemsTextPosition = getField(socket, requestData, "no-problems-text-position");
 		if (noProblemsTextPosition != null)
 			config.setNoProblemsTextPosition(noProblemsTextPosition);
+
+		String usernameField = getFieldDecoded(socket, requestData, "web-username");
+		if (usernameField != null)
+		{
+			usernameField = usernameField.trim();
+			if (usernameField.equals(""))
+				config.setWebUsername(null);
+			else
+				config.setWebUsername(usernameField);
+		}
+
+		String passwordField = getFieldDecoded(socket, requestData, "web-password");
+		if (passwordField != null)
+		{
+			passwordField = passwordField.trim();
+			if (passwordField.equals(""))
+				config.setWebPassword(null);
+			else
+				config.setWebPassword(passwordField);
+		}
 
 		config.setAlwaysNotify(getCheckBox(socket, requestData, "always_notify"));
 
@@ -1101,11 +1185,11 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_listlog_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_listlog_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		reply.add("<H1>Log</H1>");
@@ -1120,11 +1204,11 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_listall_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_listall_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		reply.add("<TABLE>\n");
@@ -1184,11 +1268,11 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_root(MyHTTPServer socket) throws Exception
+	public void sendReply_root(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 		reply.add("<br /><br /><br />Please select an action in the menu at the left.");
 		addPageTail(reply, false);
@@ -1196,14 +1280,14 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_forcereload_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_forcereload_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
 		if (config.getRunGui())
 			gui.paint(gui.getGraphics());
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "<meta http-equiv=\"refresh\" content=\"5;url=/\">");
 		reply.add("Nagios status reloaded.");
 		addPageTail(reply, true);
@@ -1212,11 +1296,11 @@ class HTTPServer implements Runnable
 	}
 
 
-	public void sendReply_links_html(MyHTTPServer socket) throws Exception
+	public void sendReply_links_html(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		reply.add("<H1>Links</H1>\n");
@@ -1233,11 +1317,11 @@ class HTTPServer implements Runnable
 
 		socket.sendReply(reply);
 	}
-	public void sendReply_cgibin_statistics_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_statistics_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		reply.add("<TABLE>\n");
@@ -1263,11 +1347,11 @@ class HTTPServer implements Runnable
 		return String.format("%02x", color.getRed()) + String.format("%02x", color.getGreen()) + String.format("%02x", color.getBlue());
 	}
 
-	public void sendReply_cgibin_nagiosstatus_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_nagiosstatus_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		reply.add("<HTML><!-- " + CoffeeSaint.getVersion() + "--><HEAD><meta http-equiv=\"refresh\" content=\"" + config.getSleepTime() + "\"></HEAD><BODY>");
 		reply.add("<FONT SIZE=-1>Generated by: " + CoffeeSaint.getVersion() + "</FONT><BR><BR>");
 
@@ -1324,11 +1408,11 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_reloadconfig_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_reloadconfig_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 		String fileName = config.getConfigFilename();
 
@@ -1352,11 +1436,11 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_testsound_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_testsound_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		String sample = config.getProblemSound();
@@ -1369,12 +1453,12 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_writeconfig_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_writeconfig_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
 		configNotWrittenToDisk = false;
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 		String fileName = config.getConfigFilename();
 
@@ -1396,11 +1480,11 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_log_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_log_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		reply.add("Last connected hosts:<BR>");
@@ -1464,11 +1548,11 @@ class HTTPServer implements Runnable
 		return in;
 	}
 
-	public void sendReply_cgibin_performancedata_cgi(MyHTTPServer socket) throws Exception
+	public void sendReply_cgibin_performancedata_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
@@ -1536,11 +1620,11 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_helpescapes_html(MyHTTPServer socket) throws Exception
+	public void sendReply_helpescapes_html(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
-		addHTTP200(reply);
+		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
 		reply.add("<H1>Escapes</H1>\n");
@@ -1561,6 +1645,61 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+	public void sendReply_loginhtml(MyHTTPServer socket, String cookie) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply, cookie);
+		addPageHeader(reply, "");
+
+		reply.add("<H1>Please login</H1>\n");
+		reply.add("<FORM ACTION=\"/cgi-bin/login-do.cgi\" METHOD=\"POST\">\n");
+		reply.add("<TABLE>\n");
+		reply.add("<TR><TD>Username:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"username\"></TD></TR>\n");
+		reply.add("<TR><TD>Password:</TD><TD><INPUT TYPE=\"PASSWORD\" NAME=\"password\"></TD></TR>\n");
+		reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\"></TD></TR>\n");
+		reply.add("</TABLE>\n");
+		reply.add("</FORM>\n");
+
+		addPageTail(reply, false);
+
+		socket.sendReply(reply);
+	}
+
+	public void sendReply_cgibin_logindocgi(MyHTTPServer socket, List<HTTPRequestData> requestData, String host, String cookie) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply, cookie);
+		addPageHeader(reply, "");
+
+		boolean valid = true;
+		String username = getField(socket, requestData, "username");
+		if (username == null || username.equals(config.getWebUsername()) == false)
+			valid = false;
+		String password = getField(socket, requestData, "password");
+		if (password == null || password.equals(config.getWebPassword()) == false)
+			valid = false;
+
+		reply.add("<H1>Login</H1>\n");
+		if (valid)
+		{
+			reply.add("Login success!\n");
+			CoffeeSaint.log.add("Session with " + host + " started");
+			sessions.add(new HTTPSession(host, cookie));
+		}
+		else
+		{
+			reply.add("Login <B>failed</B>.<BR>\n");
+			reply.add("<BR>\n");
+			reply.add("<A HREF=\"/login.html\">Retry</A><BR>\n");
+		}
+
+		addPageTail(reply, false);
+
+		socket.sendReply(reply);
+	}
+
 	public void sendReply_404(MyHTTPServer socket, String url) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -1574,6 +1713,42 @@ class HTTPServer implements Runnable
 		addPageTail(reply, true);
 
 		socket.sendReply(reply);
+	}
+
+	public void sendReply_redirectTo(MyHTTPServer socket, String url) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		reply.add("HTTP/1.1 302\r\n");
+		reply.add("Location: " + url + "\r\n");
+		reply.add("Connection: close\r\n");
+		reply.add("Content-Type: text/html\r\n");
+		reply.add("\r\n");
+
+		socket.sendReply(reply);
+	}
+
+	public void logEntry(InetSocketAddress remoteAddress, String requestType, String url)
+	{
+		CoffeeSaint.log.add("HTTP " + remoteAddress.toString().substring(1) + " " + requestType + "-request for: " + url);
+
+		//HTTPLogEntry
+		int nHostsKnown = hosts.size();
+		if (nHostsKnown > 0 && hosts.get(nHostsKnown - 1).getAddress().getAddress().equals(remoteAddress.getAddress()) == true)
+			hosts.get(nHostsKnown - 1).updateTimestamp(Calendar.getInstance());
+		else
+			hosts.add(new HTTPLogEntry(remoteAddress, Calendar.getInstance()));
+		if (nHostsKnown == config.getHttpRememberNHosts()) // it is actually one more due to the add in the previous line
+			hosts.remove(0);
+
+		webServerHits++;
+	}
+
+	public String mySubstring(String in, int start, int end)
+	{
+		end = Math.min(end, in.length());
+
+		return in.substring(start, end);
 	}
 
 	public void run()
@@ -1604,6 +1779,8 @@ class HTTPServer implements Runnable
 					if (space != -1)
 						url = url.substring(0, space);
 
+					expireSessions(sessions);
+
 					List<HTTPRequestData> getData = null;
 					int questionMark = url.indexOf("?");
 					if (questionMark != -1)
@@ -1616,16 +1793,23 @@ class HTTPServer implements Runnable
 					}
 
 					InetSocketAddress remoteAddress = socket.getRemoteSocketAddress();
-					CoffeeSaint.log.add("HTTP " + remoteAddress.toString().substring(1) + " " + requestType + "-request for: " + url);
-					//HTTPLogEntry
-					int nHostsKnown = hosts.size();
-					if (nHostsKnown > 0 && hosts.get(nHostsKnown - 1).getAddress().getAddress().equals(remoteAddress.getAddress()) == true)
-						hosts.get(nHostsKnown - 1).updateTimestamp(Calendar.getInstance());
-					else
-						hosts.add(new HTTPLogEntry(remoteAddress, Calendar.getInstance()));
-					if (nHostsKnown == config.getHttpRememberNHosts()) // it is actually one more due to the add in the previous line
-						hosts.remove(0);
-					webServerHits++;
+					logEntry(remoteAddress, requestType, url);
+
+					String authCookie = null;
+					HTTPRequestData cookieRD = MyHTTPServer.findRecord(request, "Cookie:");
+					if (cookieRD != null)
+					{
+						// System.out.println("Cookie string: " + cookieRD.getData());
+						authCookie = "auth=" + MyHTTPServer.getCookieData(cookieRD.getData(), "auth");
+					}
+					if (authCookie == null)
+						authCookie = "auth=" + Math.abs(new Random(System.currentTimeMillis()).nextInt());
+
+					if (!sessionValid(sessions, remoteAddress.getAddress().toString(), authCookie) && config.getAuthentication() == true && config.getWebUsername() != null && config.getWebPassword() != null && url.equals("/login.html") == false && url.equals("/cgi-bin/login-do.cgi") == false && mySubstring(url, 0, 8).equals("/images/") == false && url.equals("/design.css") == false)
+					{
+						sendReply_redirectTo(socket, "/login.html");
+						continue;
+					}
 
 					boolean isHeadRequest = false;
 					if (requestType.equals("HEAD"))
@@ -1635,39 +1819,46 @@ class HTTPServer implements Runnable
 						url = "/" + url;
 
 					if (url.equals("/") || url.equals("/index.html"))
-						sendReply_root(socket);
+						sendReply_root(socket, authCookie);
+					else if (url.equals("/login.html"))
+						sendReply_loginhtml(socket, authCookie);
+					else if (url.equals("/cgi-bin/login-do.cgi"))
+					{
+						List<HTTPRequestData> requestData = socket.getRequestData(request);
+						sendReply_cgibin_logindocgi(socket, requestData, remoteAddress.getAddress().toString(), authCookie);
+					}
 					else if (url.equals("/cgi-bin/force_reload.cgi"))
-						sendReply_cgibin_forcereload_cgi(socket);
+						sendReply_cgibin_forcereload_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/statistics.cgi"))
-						sendReply_cgibin_statistics_cgi(socket);
+						sendReply_cgibin_statistics_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/nagios_status.cgi"))
-						sendReply_cgibin_nagiosstatus_cgi(socket);
+						sendReply_cgibin_nagiosstatus_cgi(socket, authCookie);
 					else if (url.equals("/image.jpg"))
-						sendReply_imagejpg(socket);
+						sendReply_imagejpg(socket, authCookie);
 					else if (url.equals("/cgi-bin/config-menu.cgi"))
-						sendReply_cgibin_configmenu_cgi(socket);
+						sendReply_cgibin_configmenu_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/select_configfile.cgi"))
-						sendReply_cgibin_select_configfile_cgi(socket);
+						sendReply_cgibin_select_configfile_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/select_configfile-do.cgi"))
 					{
 						List<HTTPRequestData> requestData = socket.getRequestData(request);
-						sendReply_cgibin_select_configfile_do_cgi(socket, requestData);
+						sendReply_cgibin_select_configfile_do_cgi(socket, requestData, authCookie);
 					}
 					else if (url.equals("/cgi-bin/config-do.cgi"))
 					{
 						List<HTTPRequestData> requestData = socket.getRequestData(request);
-						sendReply_cgibin_configdo_cgi(socket, requestData);
+						sendReply_cgibin_configdo_cgi(socket, requestData, authCookie);
 						socket.closeServer();
 						socket = null;
 					}
 					else if (url.equals("/cgi-bin/reload-config.cgi"))
-						sendReply_cgibin_reloadconfig_cgi(socket);
+						sendReply_cgibin_reloadconfig_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/write-config.cgi"))
-						sendReply_cgibin_writeconfig_cgi(socket);
+						sendReply_cgibin_writeconfig_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/test-sound.cgi"))
-						sendReply_cgibin_testsound_cgi(socket);
+						sendReply_cgibin_testsound_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/log.cgi"))
-						sendReply_cgibin_log_cgi(socket);
+						sendReply_cgibin_log_cgi(socket, authCookie);
 					else if (url.equals("/images/bg01.png"))
 						sendReply_images_bg01_png(socket, isHeadRequest);
 					else if (url.equals("/images/coffee.png"))
@@ -1683,21 +1874,21 @@ class HTTPServer implements Runnable
 					else if (url.equals("/favicon.ico"))
 						sendReply_favicon_ico(socket, isHeadRequest);
 					else if (url.equals("/links.html"))
-						sendReply_links_html(socket);
+						sendReply_links_html(socket, authCookie);
 					else if (url.equals("/help-escapes.html"))
-						sendReply_helpescapes_html(socket);
+						sendReply_helpescapes_html(socket, authCookie);
 					else if (url.equals("/cgi-bin/list-all.cgi"))
-						sendReply_cgibin_listall_cgi(socket);
+						sendReply_cgibin_listall_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/list-log.cgi"))
-						sendReply_cgibin_listlog_cgi(socket);
+						sendReply_cgibin_listlog_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/performance-data.cgi"))
-						sendReply_cgibin_performancedata_cgi(socket);
+						sendReply_cgibin_performancedata_cgi(socket, authCookie);
 					else if (url.equals("/design.css"))
 						sendReply_design_css(socket, isHeadRequest);
 					else if (url.equals("/cgi-bin/sparkline.cgi"))
-						sendReply_cgibin_sparkline_cgi(socket, getData);
+						sendReply_cgibin_sparkline_cgi(socket, getData, authCookie);
 					else if (url.equals("/cgi-bin/graph-zoomin.cgi"))
-						sendReply_cgibin_zoomin_cgi(socket, getData);
+						sendReply_cgibin_zoomin_cgi(socket, getData, authCookie);
 					else
 					{
 						sendReply_404(socket, url);

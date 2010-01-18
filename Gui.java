@@ -531,6 +531,8 @@ public class Gui extends JPanel implements ImageObserver
 					if (config.getShowHeader())
 						y = 1;
 
+					okMsg = coffeeSaint.processStringWithEscapes(okMsg, javNag, rightNow, null);
+
 					BufferedImage allFineMsg = createRowImage(config.getFontName(), okMsg, "0", config.getBackgroundColor(), rowHeight, null);
 					int width = allFineMsg.getWidth();
 

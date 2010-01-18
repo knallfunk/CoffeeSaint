@@ -91,6 +91,9 @@ public class Config
 	private Character lineScrollSplitter;
 	private String noProblemsText;
 	private Position noProblemsTextPosition;
+	private boolean authenticate;
+	private int webExpireTime;
+	private String webUsername, webPassword;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -182,6 +185,10 @@ public class Config
 		lineScrollSplitter = null;
 		noProblemsText = null;
 		noProblemsTextPosition = Position.CENTER;
+		authenticate = true;
+		webExpireTime = 30 * 60;
+		webUsername = null;
+		webPassword = null;
 		unlock();
 	}
 
@@ -362,6 +369,8 @@ public class Config
 						setProblemSound(data);
 					else if (name.equals("problem-columns"))
 						setNProblemCols(Integer.valueOf(data));
+					else if (name.equals("web-expire-time"))
+						setWebSessionExpire(Integer.valueOf(data));
 					else if (name.equals("listen-port"))
 						setHTTPServerListenPort(Integer.valueOf(data));
 					else if (name.equals("listen-adapter"))
@@ -464,6 +473,10 @@ public class Config
 						setNoProblemsText(data);
 					else if (name.equals("no-problems-text-position"))
 						setNoProblemsTextPosition(data);
+					else if (name.equals("web-username"))
+						setWebUsername(data);
+					else if (name.equals("web-password"))
+						setWebPassword(data);
 					else
 						throw new Exception("Unknown parameter on line " + lineNr);
 				}
@@ -552,6 +565,7 @@ public class Config
 		writeLine(out, "scroll-splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
 		writeLine(out, "counter-position = " + getCounterPositionName());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
+		writeLine(out, "web-expire-time = " + getWebSessionExpire());
 		if (getNoProblemsText() != null)
 			writeLine(out, "no-problems-text = " + getNoProblemsText());
 		writeLine(out, "no-problems-text-position = " + getNoProblemsTextPositionName());
@@ -574,6 +588,10 @@ public class Config
 		writeLine(out, "show-services-for-host-with-problems = " + (getShowServicesForHostWithProblems() ? "true" : "false"));
 		writeLine(out, "show-flapping = " + (getShowFlapping() ? "true" : "false"));
 		writeLine(out, "problem-columns = " + getNProblemCols());
+		if (getWebUsername() != null)
+			writeLine(out, "web-username = " + getWebUsername());
+		if (getWebPassword() != null)
+			writeLine(out, "web-password = " + getWebPassword());
 
 		for(NagiosDataSource dataSource : getNagiosDataSources())
 		{
@@ -2249,5 +2267,69 @@ public class Config
 		copy = noProblemsTextPosition;
 		unlock();
 		return copy.toString();
+	}
+
+	public void setAuthentication(boolean doAuth)
+	{
+		lock();
+		authenticate = doAuth;
+		unlock();
+	}
+
+	public boolean getAuthentication()
+	{
+		boolean copy;
+		lock();
+		copy = authenticate;
+		unlock();
+		return copy;
+	}
+
+	public int getWebSessionExpire()
+	{
+		int copy;
+		lock();
+		copy = webExpireTime;
+		unlock();
+		return copy;
+	}
+
+	public void setWebSessionExpire(int to)
+	{
+		lock();
+		webExpireTime = to;
+		unlock();
+	}
+
+	public String getWebUsername()
+	{
+		String copy;
+		lock();
+		copy = webUsername;
+		unlock();
+		return copy;
+	}
+
+	public void setWebUsername(String newName)
+	{
+		lock();
+		webUsername = newName;
+		unlock();
+	}
+
+	public String getWebPassword()
+	{
+		String copy;
+		lock();
+		copy = webPassword;
+		unlock();
+		return copy;
+	}
+
+	public void setWebPassword(String newPassword)
+	{
+		lock();
+		webPassword = newPassword;
+		unlock();
 	}
 }

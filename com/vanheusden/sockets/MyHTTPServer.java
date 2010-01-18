@@ -91,6 +91,29 @@ public class MyHTTPServer
 		serverSocket = null;
 	}
 
+	public static String getCookieData(String cookieString, String which)
+	{
+		String [] cookies = cookieString.split(";");
+		if (cookies.length == 0)
+			return null;
+
+		for(String cookie : cookies)
+		{
+			int is = cookie.indexOf("=");
+			if (is == -1)
+				continue;
+
+			String name = cookie.substring(0, is), value = null;
+			if (cookie.length() > is + 1)
+				value = cookie.substring(is + 1);
+
+			if (name.equals(which))
+				return value;
+		}
+
+		return null;
+	}
+
 	public static HTTPRequestData findRecord(List<HTTPRequestData> records, String what)
 	{
 		if (records != null)

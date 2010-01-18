@@ -25,8 +25,8 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Random;
 import java.util.concurrent.Semaphore;
+import java.util.Random;
 import java.util.regex.Pattern;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
@@ -34,7 +34,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.7";
+	static String versionNr = "v2.8-beta002";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -55,7 +55,7 @@ public class CoffeeSaint
 	static Statistics statistics = new Statistics();
 	static Semaphore statisticsSemaphore = new Semaphore(1);
 	//
-	Random random = new Random();
+	static Random random = new Random(System.currentTimeMillis());
 
 	public CoffeeSaint() throws Exception
 	{
@@ -209,7 +209,7 @@ public class CoffeeSaint
 					nElements++;
 					double value = values.get(dataOffset);
 					double scaledValue = calcY(value, min, max, avg, sd, scale, height);
-					int y = (height - 1) - (int)scaledValue;
+					int y = (int)scaledValue;
 					int x = offset;
 
 					if (px == -1 || py == -1)
@@ -562,6 +562,13 @@ public class CoffeeSaint
 			if (dot != -1)
 				countStr = countStr.substring(0, dot + 2);
 			return countStr;
+		}
+
+		if (cmd.equals("CHECKLATENCY"))
+		{
+			Double latency = javNag.getAvgCheckLatency();
+			if (latency != null)
+				return "" + String.format("%.3f", latency);
 		}
 
 		if (cmd.equals("HISTORICAL"))
@@ -1033,6 +1040,9 @@ public class CoffeeSaint
 		System.out.println("--sparkline-width x Adds sparklines to the listed problems. 'x' specifies the width in pixels");
 		System.out.println("--sparkline-mode x (avg-sd or min-max) How to scale the sparkline graphcs");
 		System.out.println("--no-problems-text Messages to display when there are no problems.");
+		System.out.println("--no-authentication Disable authentication in the web-interface.");
+		System.out.println("--web-username      Username to use for web-interface authentication. You need to set the password as well!");
+		System.out.println("--web-password      Username to use for web-interface authentication. You need to set the username as well!");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -1054,6 +1064,7 @@ public class CoffeeSaint
 		System.out.println("  %FIELDHOST                Take 'field' from the host-fields (see 'Sort-fields' below) and display its contents");
 		System.out.println("  %FIELDSERVICE             Take 'field' from the service-fields (see 'Sort-fields' below) and display its contents");
 		System.out.println("  %EXEC^script              Invoke script 'script' with as parameters: hostname, servicename (or empty string in case of a host failure), current state, plugin-output");
+		System.out.println("  %CHECKLATENCY             Check latency");
 		System.out.println("");
 		System.out.println("Sort-fields:");
 		config.listSortFields();
@@ -1161,6 +1172,10 @@ public class CoffeeSaint
 					}
 					else if (arg[loop].equals("--header"))
 						config.setHeader(arg[++loop]);
+					else if (arg[loop].equals("--web-username"))
+						config.setWebUsername(arg[++loop]);
+					else if (arg[loop].equals("--web-password"))
+						config.setWebPassword(arg[++loop]);
 					else if (arg[loop].equals("--row-border"))
 						config.setRowBorder(true);
 					else if (arg[loop].equals("--service-issue"))
@@ -1297,6 +1312,8 @@ public class CoffeeSaint
 						config.setNoProblemsText(arg[++loop]);
 					else if (arg[loop].equals("--no-problems-text-position"))
 						config.setNoProblemsTextPosition(arg[++loop]);
+					else if (arg[loop].equals("--no-authentication"))
+						config.setAuthentication(false);
 					else if (arg[loop].equals("--sparkline-mode"))
 					{
 						String mode = arg[++loop];
