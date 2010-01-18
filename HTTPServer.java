@@ -765,7 +765,8 @@ class HTTPServer implements Runnable
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Authentication timeout:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"web-expire-time\" VALUE=\"" + config.getWebSessionExpire() + "\"></TD><TD>In seconds, &gt; 1</TD></TR>\n");
 		reply.add("<TR><TD>Username:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"web-username\" VALUE=\"" + (config.getWebUsername() != null ? config.getWebUsername() : "") + "\"></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Password:</TD><TD><INPUT TYPE=\"PASSWORD\" NAME=\"web-password\" VALUE=\"" + (config.getWebPassword() != null ? config.getWebPassword() : "") + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>New password:</TD><TD><INPUT TYPE=\"PASSWORD\" NAME=\"web-password1\" VALUE=\"" + (config.getWebPassword() != null ? config.getWebPassword() : "") + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Confirm new password:</TD><TD><INPUT TYPE=\"PASSWORD\" NAME=\"web-password2\" VALUE=\"" + (config.getWebPassword() != null ? config.getWebPassword() : "") + "\"></TD><TD>Please repeat.</TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
@@ -926,23 +927,27 @@ class HTTPServer implements Runnable
 			config.setNoProblemsTextPosition(noProblemsTextPosition);
 
 		String usernameField = getFieldDecoded(socket, requestData, "web-username");
-		if (usernameField != null)
+		String passwordField1 = getFieldDecoded(socket, requestData, "web-password1");
+		String passwordField2 = getFieldDecoded(socket, requestData, "web-password2");
+		if (usernameField != null && passwordField1 != null && passwordField2 != null)
 		{
-			usernameField = usernameField.trim();
-			if (usernameField.equals(""))
-				config.setWebUsername(null);
-			else
-				config.setWebUsername(usernameField);
-		}
+			if (passwordField1.equals(passwordField2))
+			{
+				usernameField = usernameField.trim();
+				if (usernameField.equals(""))
+					config.setWebUsername(null);
+				else
+					config.setWebUsername(usernameField);
 
-		String passwordField = getFieldDecoded(socket, requestData, "web-password");
-		if (passwordField != null)
-		{
-			passwordField = passwordField.trim();
-			if (passwordField.equals(""))
-				config.setWebPassword(null);
+				if (passwordField1.equals(""))
+					config.setWebPassword(null);
+				else
+					config.setWebPassword(passwordField1);
+			}
 			else
-				config.setWebPassword(passwordField);
+			{
+				reply.add("Passwords did not match, username+password <B>not</B> changed.<BR>\n");
+			}
 		}
 
 		config.setAlwaysNotify(getCheckBox(socket, requestData, "always_notify"));
