@@ -11,4 +11,10 @@
 
 - date-strings: configurable
 
-- iets met de check latency doen
+- maxNHostsPerPage configureerbaar
+
+- latency graph: aantal cijfers achter de komma en unit toevoegen
+
+- hosts sorteren, services ook
+
+- web-interface; sync datafiles to disk bij write config? aparte link?

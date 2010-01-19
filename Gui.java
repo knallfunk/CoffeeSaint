@@ -25,6 +25,8 @@ public class Gui extends JPanel implements ImageObserver
 	ScrollableContent currentHeader = new ScrollableContent(0, 0, 0);
 	BordersParameters bordersParameters = null;
 	java.util.List<ScrollableContent> windowMovingParts = new ArrayList<ScrollableContent>();
+	//
+	Image logo = null;
 
 	boolean lastState = false;	// false: no problems
 	// because making a frame visible already causes
@@ -420,6 +422,7 @@ public class Gui extends JPanel implements ImageObserver
 				prepareRow(g, windowWidth, 0, "Loading Nagios data", 0, "0", bgColor, 1.0f, null, false);
 			JavNag javNag = CoffeeSaint.loadNagiosData(this, windowWidth, g);
 			coffeeSaint.collectPerformanceData(javNag);
+			coffeeSaint.collectLatencyData(javNag);
 			java.util.List<Problem> problems = CoffeeSaint.findProblems(javNag);
 			coffeeSaint.learnProblemCount(problems.size());
 
@@ -566,6 +569,20 @@ public class Gui extends JPanel implements ImageObserver
 				}
 			}
 
+			if (logo != null)
+			{
+				int imgWidth  = logo.getWidth(null);
+				int imgHeight = logo.getHeight(null);
+
+				int newHeight = rowHeight;
+				int newWidth  = (int)(((double)newHeight / (double)imgHeight) * imgWidth);
+
+				int plotX = Math.max(0, windowWidth - newWidth);
+				int plotY = 0;
+
+				g.drawImage(logo, plotX, plotY, newWidth, newHeight, this);
+			}
+
 			if (config.getRowBorder())
 			{
 				bordersParameters = new BordersParameters(problems.size(), curNColumns, windowWidth, rowHeight);
@@ -635,6 +652,13 @@ public class Gui extends JPanel implements ImageObserver
 		double scrollTs = (double)System.currentTimeMillis() / 1000.0;
 
 		currentHeader = new ScrollableContent(0, 0, getWidth());
+
+		if (config.getLogo() != null)
+		{
+			logo = Toolkit.getDefaultToolkit().createImage(config.getLogo());
+                        new ImageIcon(logo); //loads the image
+                        Toolkit.getDefaultToolkit().sync();
+		}
 
 		for(;;)
 		{

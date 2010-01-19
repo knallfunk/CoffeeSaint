@@ -19,6 +19,7 @@ class FrameListener extends WindowAdapter
 		{
 			coffeeSaint.dumpPredictorBrainToFile();
 			coffeeSaint.dumpPerformanceData();
+			coffeeSaint.dumpLatencyData();
 		}
 		catch(Exception exception)
 		{

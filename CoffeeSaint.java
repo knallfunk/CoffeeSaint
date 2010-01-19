@@ -49,6 +49,10 @@ public class CoffeeSaint
 	long lastPerformanceDump = 0;
 	static Semaphore performanceDataSemaphore = new Semaphore(1);
 	//
+	static DataSource latencyData = new DataSource("LatencyData");
+	long lastLatencyDump = 0;
+	static Semaphore latencyDataSemaphore = new Semaphore(1);
+	//
 	static int currentImageFile = 0;
 	static Semaphore imageSemaphore = new Semaphore(1);
 	//
@@ -91,6 +95,20 @@ public class CoffeeSaint
 		else
 		{
 			performanceData = new PerformanceData();
+		}
+
+		latencyData.setUnit("ms");
+		if (config.getLatencyFile() != null)
+		{
+			System.out.println("Reloading latencydata from " + config.getLatencyFile());
+			try
+			{
+				latencyData = new DataSource("LatencyData", config.getLatencyFile());
+			}
+			catch(FileNotFoundException fnfe)
+			{
+				System.err.println("File " + config.getLatencyFile() + " not found, continuing(!) anyway");
+			}
 		}
 	}
 
@@ -147,14 +165,57 @@ public class CoffeeSaint
 	{
 		performanceDataSemaphore.acquireUninterruptibly();
 
-		BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		java.util.List<DataSource> dataSources = getPerformanceData(host, service);
-		if (dataSources == null)
+		java.util.List<DataSource> dataSourcesIn = getPerformanceData(host, service);
+		java.util.List<DataSource> dataSources = new ArrayList<DataSource>();
+		if (dataSourcesIn == null)
 		{
 			performanceDataSemaphore.release();
 			return null;
 		}
 
+		for(DataSource dataSource : dataSourcesIn)
+		{
+			if (selectedDataSourceName != null && dataSource.getDataSourceName().equals(selectedDataSourceName) == false)
+				continue;
+
+			dataSources.add(dataSource);
+		}
+
+		BufferedImage output = drawGraph(dataSources, width, height, withMeta);
+
+		performanceDataSemaphore.release();
+
+		return output;
+	}
+
+	public DataInfo getLatencyStats()
+	{
+		DataInfo dataInfo;
+
+		latencyDataSemaphore.acquireUninterruptibly();
+		dataInfo = latencyData.getStats();
+		latencyDataSemaphore.release();
+
+		return dataInfo;
+	}
+
+	BufferedImage getLatencyGraph(int width, int height, boolean withMeta)
+	{
+		latencyDataSemaphore.acquireUninterruptibly();
+
+		java.util.List<DataSource> dataSources = new ArrayList<DataSource>();
+		dataSources.add(latencyData);
+
+		BufferedImage output = drawGraph(dataSources, width, height, withMeta);
+
+		latencyDataSemaphore.release();
+
+		return output;
+	}
+
+	BufferedImage drawGraph(java.util.List<DataSource> dataSources, int width, int height, boolean withMeta)
+	{
+		BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		Graphics g = output.getGraphics();
 
 		g.setColor(Color.WHITE);
@@ -165,25 +226,26 @@ public class CoffeeSaint
 
 		for(DataSource dataSource : dataSources)
 		{
-			if (selectedDataSourceName != null && dataSource.getDataSourceName().equals(selectedDataSourceName) == false)
-				continue;
-
 			DataInfo stats = dataSource.getStats();
 			double min = stats.getMin();
 			double max = stats.getMax();
 			double avg = stats.getAvg();
 			double sd  = stats.getSd();
-			double scale, half, quarter, quarter3;
+			double scale = 1.0, half, quarter, quarter3;
 			if (config.getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
 			{
-				scale = height / (2.0 * sd);
+				double two_sd = 2.0 * sd;
+				if (two_sd != 0.0)
+					scale = height / two_sd;
 				half = avg;
 				quarter = avg - (sd / 2.0);
 				quarter3 = avg + (sd / 2.0);
 			}
 			else
 			{
-				scale = height / (max - min);
+				double diff = max - min;
+				if (diff != 0.0)
+					scale = height / diff;
 				half = (min + max) / 2.0;
 				quarter = (max - min) / 4.0 + min;
 				quarter3 = ((max - min) / 4.0) * 3.0 + min;
@@ -249,21 +311,22 @@ public class CoffeeSaint
 				g.drawString(String.format("%g", quarter3), 5, y + ((Graphics2D)g).getFontMetrics().getAscent() / 2);
 
 				int usedNElements = nElements;
-				double b = (usedNElements * sumXY - sumX * sumY) /
-					(usedNElements * sumX2 - sumX * sumX);
-				double a = (sumY / usedNElements) - b * (sumX / usedNElements);
-				for(int offset=firstOffset; offset<width; offset+=2)
+				double dummy = (usedNElements * sumX2 - sumX * sumX);
+				if (usedNElements != 0 && dummy != 0.0)
 				{
-					int dataOffset = offset + (values.size() - width) - 1;
-					double value = a + (double)dataOffset * b;
-					y = calcY(value, min, max, avg, sd, scale, height);
+					double b = (usedNElements * sumXY - sumX * sumY) / dummy;
+					double a = (sumY / usedNElements) - b * (sumX / usedNElements);
+					for(int offset=firstOffset; offset<width; offset+=2)
+					{
+						int dataOffset = offset + (values.size() - width) - 1;
+						double value = a + (double)dataOffset * b;
+						y = calcY(value, min, max, avg, sd, scale, height);
 
-					output.setRGB(offset, Math.max(0, Math.min((height - 1) - y, height - 1)), Color.GREEN.getRGB());
+						output.setRGB(offset, Math.max(0, Math.min(y, height - 1)), Color.GREEN.getRGB());
+					}
 				}
-
 			}
 		}
-		performanceDataSemaphore.release();
 
 		return output;
 	}
@@ -299,6 +362,33 @@ public class CoffeeSaint
 			dumpPerformanceData();
 
 			lastPerformanceDump = System.currentTimeMillis();
+		}
+	}
+
+	public void dumpLatencyData() throws Exception
+	{
+		if (config.getLatencyFile() != null)
+		{
+			System.out.println("Dumping performance data to " + config.getLatencyFile());
+			latencyDataSemaphore.acquireUninterruptibly();
+			latencyData.dump(config.getLatencyFile());
+			latencyDataSemaphore.release();
+		}
+	}
+
+	public void collectLatencyData(JavNag javNag) throws Exception
+	{
+		latencyDataSemaphore.acquireUninterruptibly();
+		Double latency = javNag.getAvgCheckLatency();
+		if (latency != null)
+			latencyData.add(latency);
+		latencyDataSemaphore.release();
+
+		if ((System.currentTimeMillis() - lastLatencyDump) > 1800000)
+		{
+			dumpLatencyData();
+
+			lastLatencyDump = System.currentTimeMillis();
 		}
 	}
 
@@ -928,6 +1018,7 @@ public class CoffeeSaint
 				{
 					JavNag javNag = loadNagiosData(null, -1, null);
 					coffeeSaint.collectPerformanceData(javNag);
+					coffeeSaint.collectLatencyData(javNag);
 				}
 				finally
 				{
@@ -1278,6 +1369,8 @@ public class CoffeeSaint
 						config.setRowBorderColor(arg[++loop]);
 					else if (arg[loop].equals("--graph-color"))
 						config.setGraphColor(arg[++loop]);
+					else if (arg[loop].equals("--latency-file"))
+						config.setLatencyFile(arg[++loop]);
 					else if (arg[loop].equals("--ignore-aspect-ratio"))
 						config.setKeepAspectRatio(false);
 					else if (arg[loop].equals("--also-scheduled-downtime"))
@@ -1314,6 +1407,8 @@ public class CoffeeSaint
 						config.setNoProblemsTextPosition(arg[++loop]);
 					else if (arg[loop].equals("--no-authentication"))
 						config.setAuthentication(false);
+					else if (arg[loop].equals("--logo"))
+						config.setLogo(arg[++loop]);
 					else if (arg[loop].equals("--sparkline-mode"))
 					{
 						String mode = arg[++loop];

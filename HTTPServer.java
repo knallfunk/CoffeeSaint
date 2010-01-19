@@ -45,6 +45,8 @@ class HTTPServer implements Runnable
 	boolean configNotWrittenToDisk = false;
 	final private String defaultCharset = "US-ASCII";
 	final List<HTTPSession> sessions = new ArrayList<HTTPSession>();
+	//
+	final int maxNHostsPerPage = 50;
 
 	public void expireSessions(List<HTTPSession> sessions)
 	{
@@ -119,6 +121,7 @@ class HTTPServer implements Runnable
 		whereTo.add("			<div id=\"navigation\">\n");
 		whereTo.add("				<strong>Nagios</strong><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/performance-data.cgi\">Performance data</a><br />\n");
+		whereTo.add("				<a href=\"/latency-graph.html\">Latency graph</a><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/list-all.cgi\">List of hosts/services</a><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/nagios_status.cgi\">Problems overview</a><br />\n");
 		whereTo.add("				<br /><strong>Logging</strong><br />\n");
@@ -394,6 +397,46 @@ class HTTPServer implements Runnable
 				BufferedImage sparkLine = coffeeSaint.getSparkLine(host, service, dataSource, width, height, withMetaData);
 				ImageIO.write(sparkLine, "png", socket.getOutputStream());
 			}
+		}
+		catch(Exception e)
+		{
+			// really don't care if the transmit failed; browser
+			// probably closed session
+			// don't care if we could display the image or not
+		}
+		finally
+		{
+			socket.close();
+		}
+	}
+
+	public void sendReply_cgibin_latency_cgi(MyHTTPServer socket, List<HTTPRequestData> getData, String cookie) throws Exception
+	{
+		try
+		{
+			int width = 920;
+			HTTPRequestData widthData = MyHTTPServer.findRecord(getData, "width");
+			if (widthData != null && widthData.getData() != null)
+				width = Integer.valueOf(widthData.getData());
+
+			int height = 150;
+			HTTPRequestData heightData = MyHTTPServer.findRecord(getData, "height");
+			if (heightData != null && heightData.getData() != null)
+				height = Integer.valueOf(heightData.getData());
+
+			boolean withMetaData = true;
+			HTTPRequestData withMetaDataData = MyHTTPServer.findRecord(getData, "metadata");
+			if (withMetaDataData != null && withMetaDataData.getData() != null)
+				withMetaData = URLDecoder.decode(withMetaDataData.getData(), defaultCharset).equalsIgnoreCase("true");
+
+			String header;
+			if (cookie == null)
+				header = "HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n";
+			else
+				header = "HTTP/1.0 200 OK\r\nSet-Cookie: " + cookie + "\r\nConnection: close\r\nContent-Type: image/png\r\n\r\n";
+			socket.getOutputStream().write(header.getBytes());
+			BufferedImage sparkLine = coffeeSaint.getLatencyGraph(width, height, withMetaData);
+			ImageIO.write(sparkLine, "png", socket.getOutputStream());
 		}
 		catch(Exception e)
 		{
@@ -733,8 +776,9 @@ class HTTPServer implements Runnable
 			reply.add("<TABLE>\n");
 			reply.add("<TR><TD>File to store prediction data in:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"brain-file\" VALUE=\"" + (config.getBrainFileName() != null ? config.getBrainFileName() : "")+ "\"></TD><TD>Used for predicting problem count</TD></TR>\n");
 			reply.add("<TR><TD>File to store performance data in:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"performance-data\" VALUE=\"" + (config.getPerformanceDataFileName() != null ? config.getPerformanceDataFileName() : "") + "\"></TD><TD>Used for sparklines</TD></TR>\n");
-		reply.add("</TABLE>\n");
-		reply.add("<BR>\n");
+			reply.add("<TR><TD>File to store latency data in:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"latency-file\" VALUE=\"" + (config.getLatencyFile() != null ? config.getLatencyFile() : "") + "\"></TD><TD></TD></TR>\n");
+			reply.add("</TABLE>\n");
+			reply.add("<BR>\n");
 		}
 
 		reply.add("<H1>Filters</H1>\n");
@@ -993,6 +1037,9 @@ class HTTPServer implements Runnable
 
 			String performanceFile = getField(socket, requestData, "performance-data").trim();
 			config.setPerformanceDataFileName(performanceFile.equals("") ? null : performanceFile);
+
+			String latencyFile = getField(socket, requestData, "latency-file").trim();
+			config.setLatencyFile(latencyFile.equals("") ? null : latencyFile);
 		}
 
 		String newWebcam = getFieldDecoded(socket, requestData, "newWebcam");
@@ -1209,7 +1256,7 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_listall_cgi(MyHTTPServer socket, String cookie) throws Exception
+	public void sendReply_cgibin_listall_cgi(MyHTTPServer socket, List<HTTPRequestData> getData, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
@@ -1223,9 +1270,44 @@ class HTTPServer implements Runnable
                 List<Problem> problems = CoffeeSaint.findProblems(javNag);
                 coffeeSaint.learnProblemCount(problems.size());
 		coffeeSaint.collectPerformanceData(javNag);
+		coffeeSaint.collectLatencyData(javNag);
 
-		for(Host currentHost : javNag.getListOfHosts())
+		List<Host> hosts = javNag.getListOfHosts();
+		int nPages = (hosts.size() + maxNHostsPerPage - 1) / maxNHostsPerPage;
+
+		int page = 1;
+		if (getData != null)
 		{
+			HTTPRequestData pageRecord = MyHTTPServer.findRecord(getData, "page");
+			if (pageRecord != null)
+			{
+				page = Integer.valueOf(pageRecord.getData().trim());
+			}
+			if (page < 1)
+				page = 1;
+		}
+		page--;
+		if (page >= nPages)
+			page = nPages;
+
+		if (nPages > 1)
+		{
+			reply.add("Page: ");
+			for(int pageNr=1; pageNr<=nPages; pageNr++)
+			{
+				if (pageNr == (page + 1))
+					reply.add("" + pageNr + "&nbsp;");
+				else
+					reply.add("<A HREF=\"/cgi-bin/list-all.cgi?page=" + pageNr + "\">" + pageNr + "</A>&nbsp;");
+			}
+			reply.add("<BR>\n");
+		}
+
+		int pageOffset = page * maxNHostsPerPage;
+		for(int index=pageOffset; index<Math.min(pageOffset + maxNHostsPerPage, hosts.size()); index++)
+		{
+			Host currentHost = hosts.get(index);
+
 			String hostState = currentHost.getParameter("state_type").equals("1") ? currentHost.getParameter("current_state") : "0";
 			String htmlHostStateColor = htmlColorString(coffeeSaint.stateToColor(hostState.equals("1") ? "2" : hostState));
 
@@ -1300,6 +1382,35 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+	public void sendReply_latencygraph_html(MyHTTPServer socket, String cookie) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply, cookie);
+		addPageHeader(reply, "");
+
+		reply.add("<H1>Latency graph</H1>\n");
+		DataInfo dataInfo = coffeeSaint.getLatencyStats();
+		if (dataInfo != null)
+		{
+			reply.add("<IMG SRC=\"/cgi-bin/latency-graph.cgi\" BORDER=\"1\"><BR>\n");
+			reply.add("<BR>\n");
+			reply.add("<TABLE>\n");
+			reply.add("<TR><TD>Minimum:</TD><TD>" + dataInfo.getMin() + "</TD></TR>\n");
+			reply.add("<TR><TD>Maximum:</TD><TD>" + dataInfo.getMax() + "</TD></TR>\n");
+			reply.add("<TR><TD>Average:</TD><TD>" + dataInfo.getAvg() + "</TD></TR>\n");
+			reply.add("<TR><TD>Standard deviation:</TD><TD>" + dataInfo.getSd() + "</TD></TR>\n");
+			reply.add("</TABLE>\n");
+		}
+		else
+		{
+			reply.add("No values measured yet.<BR>\n");
+		}
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
 
 	public void sendReply_links_html(MyHTTPServer socket, String cookie) throws Exception
 	{
@@ -1322,6 +1433,7 @@ class HTTPServer implements Runnable
 
 		socket.sendReply(reply);
 	}
+
 	public void sendReply_cgibin_statistics_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -1366,6 +1478,7 @@ class HTTPServer implements Runnable
 		List<Problem> problems = CoffeeSaint.findProblems(javNag);
 		coffeeSaint.learnProblemCount(problems.size());
 		coffeeSaint.collectPerformanceData(javNag);
+		coffeeSaint.collectLatencyData(javNag);
 
 		if (config.getShowHeader())
 		{
@@ -1553,7 +1666,7 @@ class HTTPServer implements Runnable
 		return in;
 	}
 
-	public void sendReply_cgibin_performancedata_cgi(MyHTTPServer socket, String cookie) throws Exception
+	public void sendReply_cgibin_performancedata_cgi(MyHTTPServer socket, List<HTTPRequestData> getData, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
 
@@ -1564,12 +1677,46 @@ class HTTPServer implements Runnable
 		List<Problem> problems = CoffeeSaint.findProblems(javNag);
 		coffeeSaint.learnProblemCount(problems.size());
 		coffeeSaint.collectPerformanceData(javNag);
+		coffeeSaint.collectLatencyData(javNag);
+
+		List<Host> hosts = javNag.getListOfHosts();
+		int nPages = (hosts.size() + maxNHostsPerPage - 1) / maxNHostsPerPage;
+
+		int page = 1;
+		if (getData != null)
+		{
+			HTTPRequestData pageRecord = MyHTTPServer.findRecord(getData, "page");
+			if (pageRecord != null)
+			{
+				page = Integer.valueOf(pageRecord.getData().trim());
+			}
+			if (page < 1)
+				page = 1;
+		}
+		page--;
+		if (page >= nPages)
+			page = nPages;
 
 		reply.add("<H1>Performance data</H1>\n");
+		if (nPages > 1)
+		{
+			reply.add("Page: ");
+			for(int pageNr=1; pageNr<=nPages; pageNr++)
+			{
+				if (pageNr == (page + 1))
+					reply.add("" + pageNr + "&nbsp;");
+				else
+					reply.add("<A HREF=\"/cgi-bin/performance-data.cgi?page=" + pageNr + "\">" + pageNr + "</A>&nbsp;");
+			}
+			reply.add("<BR>\n");
+		}
 		reply.add("<TABLE WIDTH=\"100%\">\n");
 		reply.add("<TR><TD><B>host</B></TD><TD><B>service</B></TD><TD><B>parameter</B></TD><TD><B>min</B></TD><TD><B>max</B></TD><TD><B>avg</B></TD><TD><B>std.dev.</B></TD><TD><B>samples</B></TD><TD><B>sparkline</B></TD></TR>\n");
-		for(Host currentHost : javNag.getListOfHosts())
+		int pageOffset = page * maxNHostsPerPage;
+		for(int index=pageOffset; index<Math.min(pageOffset + maxNHostsPerPage, hosts.size()); index++)
 		{
+			Host currentHost = hosts.get(index);
+
 			List<DataSource> dataSources = coffeeSaint.getPerformanceData(currentHost.getHostName(), null);
 			if (dataSources != null)
 			{
@@ -1577,19 +1724,26 @@ class HTTPServer implements Runnable
 				{
 					DataInfo dataInfo = dataSource.getStats();
 
-					String host, sparkCol = "<TD></TD>";
-					if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
+					String host = abreviateString(currentHost.getHostName(), 16);
+
+					if (dataInfo != null)
 					{
-						String url = graphZoomInUrl(currentHost.getHostName(), null, dataSource.getDataSourceName());
-						host = "<A HREF=\"" + url + "\">" + abreviateString(currentHost.getHostName(), 16) + "</A>";
-						url = sparkLineUrl(currentHost.getHostName(), null, dataSource.getDataSourceName(), 100, 15, false);
-						sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
+						String sparkCol = "<TD></TD>";
+						if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
+						{
+							String url = graphZoomInUrl(currentHost.getHostName(), null, dataSource.getDataSourceName());
+							host = "<A HREF=\"" + url + "\">" + abreviateString(currentHost.getHostName(), 16) + "</A>";
+							url = sparkLineUrl(currentHost.getHostName(), null, dataSource.getDataSourceName(), 100, 15, false);
+							sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
+						}
+
+						String unit = dataSource.getUnit();
+						reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + abreviateString(dataSource.getDataSourceName(), 17) + "</TD><TD>" + formatValue(dataInfo.getMin()) + unit + "</TD><TD>" + formatValue(dataInfo.getMax()) + unit + "</TD><TD>" + formatValue(dataInfo.getAvg()) + unit + "</TD><TD>" + formatValue(dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
 					}
 					else
-						host = abreviateString(currentHost.getHostName(), 16);
-
-					String unit = dataSource.getUnit();
-					reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + abreviateString(dataSource.getDataSourceName(), 17) + "</TD><TD>" + formatValue(dataInfo.getMin()) + unit + "</TD><TD>" + formatValue(dataInfo.getMax()) + unit + "</TD><TD>" + formatValue(dataInfo.getAvg()) + unit + "</TD><TD>" + formatValue(dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
+					{
+						reply.add("<TR><TD>" + host + "</TD><TD></TD><TD>" + abreviateString(dataSource.getDataSourceName(), 17) + "</TD><TD COLSPAN=\"6\">No data measured yet.</TD></TR>\n");
+					}
 				}
 			}
 			for(Service currentService : currentHost.getServices())
@@ -1601,19 +1755,26 @@ class HTTPServer implements Runnable
 					{
 						DataInfo dataInfo = dataSource.getStats();
 
-						String service, sparkCol = "<TD></TD>";
-						if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
+						String service = abreviateString(currentService.getServiceName(), 20);
+
+						if (dataInfo != null)
 						{
-							String url = graphZoomInUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName());
-							service = "<A HREF=\"" + url + "\">" + abreviateString(currentService.getServiceName(), 20) + "</A>";
-							url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName(), 100, 15, false);
-							sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
+							String sparkCol = "<TD></TD>";
+							if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
+							{
+								String url = graphZoomInUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName());
+								service = "<A HREF=\"" + url + "\">" + abreviateString(currentService.getServiceName(), 20) + "</A>";
+								url = sparkLineUrl(currentHost.getHostName(), currentService.getServiceName(), dataSource.getDataSourceName(), 100, 15, false);
+								sparkCol = "<TD><IMG SRC=\"" + url + "\" BORDER=0></TD>";
+							}
+
+							String unit = dataSource.getUnit();
+							reply.add("<TR><TD>" + abreviateString(currentHost.getHostName(), 16) + "</TD><TD>" + service + "</TD><TD>" + abreviateString(dataSource.getDataSourceName(), 17) + "</TD><TD>" + formatValue(dataInfo.getMin()) + unit + "</TD><TD>" + formatValue(dataInfo.getMax()) + unit + "</TD><TD>" + formatValue(dataInfo.getAvg()) + unit + "</TD><TD>" + formatValue(dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
 						}
 						else
-							service = abreviateString(currentService.getServiceName(), 20);
-
-						String unit = dataSource.getUnit();
-						reply.add("<TR><TD>" + abreviateString(currentHost.getHostName(), 16) + "</TD><TD>" + service + "</TD><TD>" + abreviateString(dataSource.getDataSourceName(), 17) + "</TD><TD>" + formatValue(dataInfo.getMin()) + unit + "</TD><TD>" + formatValue(dataInfo.getMax()) + unit + "</TD><TD>" + formatValue(dataInfo.getAvg()) + unit + "</TD><TD>" + formatValue(dataInfo.getSd()) + unit + "</TD><TD>" + dataInfo.getN() + "</TD>" + sparkCol + "</TR>\n");
+						{
+							reply.add("<TR><TD>" + abreviateString(currentHost.getHostName(), 16) + "</TD><TD>" + service + "</TD><TD>" + abreviateString(dataSource.getDataSourceName(), 17) + "</TD><TD COLSPAN=\"6\">No data measured yet.</TD></TR>\n");
+						}
 					}
 				}
 			}
@@ -1883,17 +2044,21 @@ class HTTPServer implements Runnable
 					else if (url.equals("/help-escapes.html"))
 						sendReply_helpescapes_html(socket, authCookie);
 					else if (url.equals("/cgi-bin/list-all.cgi"))
-						sendReply_cgibin_listall_cgi(socket, authCookie);
+						sendReply_cgibin_listall_cgi(socket, getData, authCookie);
 					else if (url.equals("/cgi-bin/list-log.cgi"))
 						sendReply_cgibin_listlog_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/performance-data.cgi"))
-						sendReply_cgibin_performancedata_cgi(socket, authCookie);
+						sendReply_cgibin_performancedata_cgi(socket, getData, authCookie);
 					else if (url.equals("/design.css"))
 						sendReply_design_css(socket, isHeadRequest);
 					else if (url.equals("/cgi-bin/sparkline.cgi"))
 						sendReply_cgibin_sparkline_cgi(socket, getData, authCookie);
 					else if (url.equals("/cgi-bin/graph-zoomin.cgi"))
 						sendReply_cgibin_zoomin_cgi(socket, getData, authCookie);
+					else if (url.equals("/cgi-bin/latency-graph.cgi"))
+						sendReply_cgibin_latency_cgi(socket, getData, authCookie);
+					else if (url.equals("/latency-graph.html"))
+						sendReply_latencygraph_html(socket, authCookie);
 					else
 					{
 						sendReply_404(socket, url);

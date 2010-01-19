@@ -1,6 +1,10 @@
 /* Released under the GPL2. See license.txt for details. */
 package com.vanheusden.nagios;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +17,20 @@ public class DataSource
 
 	public DataSource(String dataSourceName)
 	{
+		this.dataSourceName = dataSourceName;
+	}
+
+	public DataSource(String dataSourceName, String fileName) throws Exception
+	{
+                String line;
+                BufferedReader in = new BufferedReader(new FileReader(fileName));
+
+		String [] values = in.readLine().split("\\|");
+		for(String value : values)
+			add(Double.valueOf(value));
+
+		in.close();
+
 		this.dataSourceName = dataSourceName;
 	}
 
@@ -46,10 +64,13 @@ public class DataSource
 
 	public DataInfo getStats()
 	{
+		int n = data.size();
+		if (n == 0)
+			return null;
+
 		double min = Double.MAX_VALUE;
 		double max = Double.MIN_VALUE;
 		double total = 0.0, sdval = 0.0, avg = 0.0, sd = 0.0;
-		int n = data.size();
 
 		for(int index=0; index<n; index++)
 		{
@@ -71,5 +92,27 @@ public class DataSource
 	public List<Double> getValues()
 	{
 		return data;
+	}
+
+	public void dump(String fileName) throws Exception
+	{
+		boolean first = true;
+		BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
+		StringBuilder output = new StringBuilder();
+
+		for(Double currentData : data)
+		{
+			if (first)
+				first = false;
+			else
+				output.append("|");
+
+			output.append("" + currentData);
+		}
+
+		out.write(output.toString(), 0, output.length());
+		out.newLine();
+
+		out.close();
 	}
 }

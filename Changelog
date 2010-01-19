@@ -1,1 +1,5 @@
-- escapes
+- escapes: CHECKLATENCY
+- fixed performance graphs
+- login-screen for web-interface
+- latency graph in web-interface
+- can add a logo

@@ -94,6 +94,8 @@ public class Config
 	private boolean authenticate;
 	private int webExpireTime;
 	private String webUsername, webPassword;
+	private String latencyFile;
+	private String logo;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -189,6 +191,8 @@ public class Config
 		webExpireTime = 30 * 60;
 		webUsername = null;
 		webPassword = null;
+		latencyFile = null;
+		logo = null;
 		unlock();
 	}
 
@@ -351,6 +355,8 @@ public class Config
 					}
 					else if (name.equals("service-issue"))
 						setServiceIssue(data);
+					else if (name.equals("logo"))
+						setLogo(data);
 					else if (name.equals("counter"))
 						setCounter(isTrue);
 					else if (name.equals("flexible-n-columns"))
@@ -375,6 +381,8 @@ public class Config
 						setHTTPServerListenPort(Integer.valueOf(data));
 					else if (name.equals("listen-adapter"))
 						setHTTPServerListenAdapter(data);
+					else if (name.equals("latency-file"))
+						setLatencyFile(data);
 					else if (name.equals("bgcolor"))
 						setBackgroundColor(data);
 					else if (name.equals("reduce-textwidth"))
@@ -565,7 +573,11 @@ public class Config
 		writeLine(out, "scroll-splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
 		writeLine(out, "counter-position = " + getCounterPositionName());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
+		if (getLogo() != null)
+			writeLine(out, "logo = " + getLogo());
 		writeLine(out, "web-expire-time = " + getWebSessionExpire());
+		if (getLatencyFile() != null)
+			writeLine(out, "latency-file = " + getLatencyFile());
 		if (getNoProblemsText() != null)
 			writeLine(out, "no-problems-text = " + getNoProblemsText());
 		writeLine(out, "no-problems-text-position = " + getNoProblemsTextPositionName());
@@ -2331,5 +2343,37 @@ public class Config
 		lock();
 		webPassword = newPassword;
 		unlock();
+	}
+
+	public String getLatencyFile()
+	{
+		String copy;
+		lock();
+		copy = latencyFile;
+		unlock();
+		return copy;
+	}
+
+	public void setLatencyFile(String lf)
+	{
+		lock();
+		latencyFile = lf;
+		unlock();
+	}
+
+	public void setLogo(String file)
+	{
+		lock();
+		logo = file;
+		unlock();
+	}
+
+	public String getLogo()
+	{
+		String copy;
+		lock();
+		copy = logo;
+		unlock();
+		return copy;
 	}
 }
