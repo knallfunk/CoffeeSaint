@@ -747,8 +747,9 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scroll-if-not-fitting\" VALUE=\"on\" " + isChecked(config.getScrollIfNotFit()) + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Problems scroll splitter:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-splitter\" VALUE=\"" + (config.getLineScrollSplitter() == null ? "" : "" + config.getLineScrollSplitter()) + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Text splitter:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-splitter\" VALUE=\"" + (config.getLineScrollSplitter() == null ? "" : "" + config.getLineScrollSplitter()) + "\"></TD><TD>This is used for both scrolling-splitted-text<BR>and the 'draw at offset' functionality.</TD></TR>\n");
+		reply.add("<TR><TD>Draw at what offset splitted part:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"split-text-put-at-offset\" VALUE=\"" + (config.getPutSplitAtOffset() != null ? config.getPutSplitAtOffset() : 0) + "\"></TD><TD>0 = disabled</TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD>\n");
 		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder(), false);
 		reply.add("</TD><TD></TD></TR>");
@@ -766,6 +767,8 @@ class HTTPServer implements Runnable
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "lower-left"));
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "lower-right"));
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "center"));
+		reply.add(selectField(config.getNoProblemsTextPositionName(), "nowhere"));
+		reply.add("<TR><TD>Problem message:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"state-problems-text\" VALUE=\"" + (config.getStateProblemsText() != null ? config.getStateProblemsText() : "") + "\"></TD><TD>Used in the %STATE escape string.</TD></TR>\n");
 		reply.add("</SELECT></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
@@ -970,6 +973,15 @@ class HTTPServer implements Runnable
 		if (noProblemsTextPosition != null)
 			config.setNoProblemsTextPosition(noProblemsTextPosition);
 
+		String stateProblemsText = getFieldDecoded(socket, requestData, "state-problems-text");
+		if (stateProblemsText != null)
+		{
+			if (stateProblemsText.trim().equals(""))
+				config.setStateProblemsText(null);
+			else
+				config.setStateProblemsText(stateProblemsText);
+		}
+
 		String usernameField = getFieldDecoded(socket, requestData, "web-username");
 		String passwordField1 = getFieldDecoded(socket, requestData, "web-password1");
 		String passwordField2 = getFieldDecoded(socket, requestData, "web-password2");
@@ -1093,6 +1105,18 @@ class HTTPServer implements Runnable
 				config.setLineScrollSplitter(null);
 			else
 				config.setLineScrollSplitter(splitter.charAt(0));
+		}
+
+		String drawSplitAtOffset = getField(socket, requestData, "split-text-put-at-offset");
+		if (drawSplitAtOffset != null && drawSplitAtOffset.trim().equals("") == false)
+		{
+			int newOffset = Integer.valueOf(drawSplitAtOffset);
+			if (newOffset < 0)
+				reply.add("Offset must be >= 0");
+			else if (newOffset == 0)
+				config.setPutSplitAtOffset(null);
+			else
+				config.setPutSplitAtOffset(newOffset);
 		}
 
 		String scrollSpeed = getField(socket, requestData, "scroll-pixels-per-sec");
@@ -1396,10 +1420,10 @@ class HTTPServer implements Runnable
 			reply.add("<IMG SRC=\"/cgi-bin/latency-graph.cgi\" BORDER=\"1\"><BR>\n");
 			reply.add("<BR>\n");
 			reply.add("<TABLE>\n");
-			reply.add("<TR><TD>Minimum:</TD><TD>" + dataInfo.getMin() + "</TD></TR>\n");
-			reply.add("<TR><TD>Maximum:</TD><TD>" + dataInfo.getMax() + "</TD></TR>\n");
-			reply.add("<TR><TD>Average:</TD><TD>" + dataInfo.getAvg() + "</TD></TR>\n");
-			reply.add("<TR><TD>Standard deviation:</TD><TD>" + dataInfo.getSd() + "</TD></TR>\n");
+			reply.add("<TR><TD>Minimum:</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "ms</TD></TR>\n");
+			reply.add("<TR><TD>Maximum:</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "ms</TD></TR>\n");
+			reply.add("<TR><TD>Average:</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "ms</TD></TR>\n");
+			reply.add("<TR><TD>Standard deviation:</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "ms</TD></TR>\n");
 			reply.add("</TABLE>\n");
 		}
 		else
@@ -1482,7 +1506,7 @@ class HTTPServer implements Runnable
 
 		if (config.getShowHeader())
 		{
-			String header = coffeeSaint.getScreenHeader(javNag, rightNow);
+			String header = coffeeSaint.getScreenHeader(javNag, rightNow, problems.size() > 0);
 			reply.add(header + "<BR>");
 		}
 
@@ -1503,7 +1527,7 @@ class HTTPServer implements Runnable
 				escapeString = config.getHostIssue();
 			else
 				escapeString = config.getServiceIssue();
-			String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem);
+			String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem, true, true);
 
 			reply.add("<TR><TD BGCOLOR=\"#" + stateColor + "\" TEXT=\"#" + htmlColorString(config.getTextColor()) + "\">" + output + "</TD></TR>\n");
 		}

@@ -570,7 +570,7 @@ public class CoffeeSaint
 		return line;
 	}
 
-	public String processStringEscapes(JavNag javNag, Totals totals, Calendar rightNow, Problem problem, String cmd)
+	public String processStringEscapes(JavNag javNag, Totals totals, Calendar rightNow, Problem problem, boolean haveNotifiedProblems, String cmd, boolean recurse)
 	{
 		String pars = null;
 		int splitter = cmd.indexOf("^");
@@ -579,6 +579,14 @@ public class CoffeeSaint
 			if (cmd.length() > splitter)
 				pars = cmd.substring(splitter + 1);
 			cmd = cmd.substring(0, splitter);
+		}
+
+		if (cmd.equals("STATE") && recurse == true)
+		{
+			if (haveNotifiedProblems)
+				return processStringWithEscapes(config.getStateProblemsText(), javNag, rightNow, problem, haveNotifiedProblems, false);
+
+			return processStringWithEscapes(config.getNoProblemsText(), javNag, rightNow, problem, haveNotifiedProblems, false);
 		}
 
 		if (cmd.equals("EXEC") && pars != null)
@@ -641,6 +649,9 @@ public class CoffeeSaint
 			return "" + totals.getNUnreachable();
 		if (cmd.equals("PENDING"))
 			return "" + totals.getNPending();
+
+		if (cmd.equals("TOTALISSUES"))
+			return "" + (totals.getNCritical() + totals.getNWarning() + totals.getNDown() + totals.getNUnreachable());
 
 		if (predictor != null && cmd.equals("PREDICT"))
 		{
@@ -713,7 +724,7 @@ public class CoffeeSaint
 		return "?" + cmd + "?";
 	}
 
-	public String processStringWithEscapes(String in, JavNag javNag, Calendar rightNow, Problem problem)
+	public String processStringWithEscapes(String in, JavNag javNag, Calendar rightNow, Problem problem, boolean haveNotifiedProblems, boolean recurse)
 	{
 		final Totals totals = javNag.calculateStatistics();
 		log.add("" + totals.getNHosts() + " hosts, " + totals.getNServices() + " services");
@@ -728,7 +739,7 @@ public class CoffeeSaint
 
 				if (!(currentChar >= 'A' && currentChar <= 'Z') && !(currentChar >= 'a' && currentChar <= 'z') && currentChar != '^' && currentChar != '/' && currentChar != '_' && currentChar != '.')
 				{
-					output += processStringEscapes(javNag, totals, rightNow, problem, cmd);
+					output += processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
 
 					cmd = "";
 					loadingCmd = false;
@@ -753,17 +764,17 @@ public class CoffeeSaint
 		}
 
 		if (cmd.equals("") == false)
-			output += processStringEscapes(javNag, totals, rightNow, problem, cmd);
+			output += processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
 
 		return output;
 	}
 
-	public String getScreenHeader(JavNag javNag, Calendar rightNow)
+	public String getScreenHeader(JavNag javNag, Calendar rightNow, boolean haveNotifiedProblems)
 	{
 		if (config.getNagiosDataSources().size() == 0)
 			return "No Nagios servers selected!";
 		else
-			return processStringWithEscapes(config.getHeader(), javNag, rightNow, null);
+			return processStringWithEscapes(config.getHeader(), javNag, rightNow, null, haveNotifiedProblems, true);
 	}
 
 	public Color stateToColor(String state)
@@ -1131,6 +1142,7 @@ public class CoffeeSaint
 		System.out.println("--sparkline-width x Adds sparklines to the listed problems. 'x' specifies the width in pixels");
 		System.out.println("--sparkline-mode x (avg-sd or min-max) How to scale the sparkline graphcs");
 		System.out.println("--no-problems-text Messages to display when there are no problems.");
+		System.out.println("--state-problems-text Message to display when there are problems: used by %STATE escape.");
 		System.out.println("--no-authentication Disable authentication in the web-interface.");
 		System.out.println("--web-username      Username to use for web-interface authentication. You need to set the password as well!");
 		System.out.println("--web-password      Username to use for web-interface authentication. You need to set the username as well!");
@@ -1140,6 +1152,8 @@ public class CoffeeSaint
 		System.out.println("");
 		System.out.println("Escapes:");
 		System.out.println("  %CRITICAL/%WARNING/%OK, %UP/%DOWN/%UNREACHABLE/%PENDING");
+		System.out.println("  %TOTALISSUES              Sum of critical, warning, down and unreachable");
+		System.out.println("  %STATE                    Either '--no-problems-text' or --state-problems-text'");
 		System.out.println("  %H:%M       Current hour/minute");
 		System.out.println("  %HOSTNAME/%SERVICENAME    host/service with problem");
 		System.out.println("  %HOSTSTATE/%SERVICESTATE  host/service state");
@@ -1403,6 +1417,8 @@ public class CoffeeSaint
 						config.setCounterPosition(arg[++loop]);
 					else if (arg[loop].equals("--no-problems-text"))
 						config.setNoProblemsText(arg[++loop]);
+					else if (arg[loop].equals("--state-problems-text"))
+						config.setStateProblemsText(arg[++loop]);
 					else if (arg[loop].equals("--no-problems-text-position"))
 						config.setNoProblemsTextPosition(arg[++loop]);
 					else if (arg[loop].equals("--no-authentication"))

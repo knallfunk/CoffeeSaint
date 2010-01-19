@@ -447,7 +447,7 @@ public class Gui extends JPanel implements ImageObserver
 
 			if (config.getShowHeader())
 			{
-				String header = coffeeSaint.getScreenHeader(javNag, rightNow);
+				String header = coffeeSaint.getScreenHeader(javNag, rightNow, problems.size() > 0);
 				if (config.getScrollingHeader())
 				{
 					movingPartsSemaphore.acquireUninterruptibly();
@@ -475,7 +475,7 @@ public class Gui extends JPanel implements ImageObserver
 					escapeString = config.getHostIssue();
 				else
 					escapeString = config.getServiceIssue();
-				String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem);
+				String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem, problems.size() > 0, true);
 
 				CoffeeSaint.log.add(output);
 
@@ -531,14 +531,14 @@ public class Gui extends JPanel implements ImageObserver
 			if (problems.size() == 0)
 			{
 				String okMsg = config.getNoProblemsText();
-				if (okMsg != null)
+				if (okMsg != null && config.getNoProblemsTextPosition() != Position.NONE)
 				{
 					int x = 0;
 					int y = 0;
 					if (config.getShowHeader())
 						y = 1;
 
-					okMsg = coffeeSaint.processStringWithEscapes(okMsg, javNag, rightNow, null);
+					okMsg = coffeeSaint.processStringWithEscapes(okMsg, javNag, rightNow, null, false, true);
 
 					BufferedImage allFineMsg = createRowImage(config.getFontName(), okMsg, "0", config.getBackgroundColor(), rowHeight, null);
 					int width = allFineMsg.getWidth();

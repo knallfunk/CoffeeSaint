@@ -19,6 +19,4 @@
 
 
 ###
-- latency graph: aantal cijfers achter de komma en unit toevoegen
 - path naar logo configureerbaar in webinterface
-- setPutSplitAtOffset in webinterface

@@ -97,6 +97,7 @@ public class Config
 	private String latencyFile;
 	private String logo;
 	private Integer putSplitAtOffset;
+	private String problemStateString;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -195,6 +196,7 @@ public class Config
 		latencyFile = null;
 		logo = null;
 		putSplitAtOffset = null;
+		problemStateString = "Current number of problems: %TOTALISSUES";
 		unlock();
 	}
 
@@ -270,6 +272,9 @@ public class Config
 					lineNr++;
 					if (is == -1)
 						throw new Exception("Error on line " + lineNr + ": malformed line.");
+
+					if (line.length() == 0 || line.substring(0, 1).equals("#"))
+						continue;
 
 					String name = line.substring(0, is).trim();
 					String data = line.substring(is + 1).trim();
@@ -483,6 +488,8 @@ public class Config
 						setPerformanceDataFileName(data);
 					else if (name.equals("no-problems-text"))
 						setNoProblemsText(data);
+					else if (name.equals("state-problems-text"))
+						setStateProblemsText(data);
 					else if (name.equals("no-problems-text-position"))
 						setNoProblemsTextPosition(data);
 					else if (name.equals("web-username"))
@@ -586,6 +593,8 @@ public class Config
 			writeLine(out, "latency-file = " + getLatencyFile());
 		if (getNoProblemsText() != null)
 			writeLine(out, "no-problems-text = " + getNoProblemsText());
+		if (getStateProblemsText() != null)
+			writeLine(out, "state-problems-text = " + getStateProblemsText());
 		writeLine(out, "no-problems-text-position = " + getNoProblemsTextPositionName());
 		String sparkMode = "sparkline-graph-mode = ";
 		if (getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
@@ -2208,6 +2217,8 @@ public class Config
 			newPosition = Position.LOWER_RIGHT;
 		else if (where.equalsIgnoreCase("center"))
 			newPosition = Position.CENTER;
+		else if (where.equalsIgnoreCase("nowhere"))
+			newPosition = Position.NONE;
 		if (newPosition == null)
 			throw new Exception("Position " + where + " is not understood");
 		lock();
@@ -2262,6 +2273,8 @@ public class Config
 			newPosition = Position.LOWER_RIGHT;
 		else if (where.equalsIgnoreCase("center"))
 			newPosition = Position.CENTER;
+		else if (where.equalsIgnoreCase("nowhere"))
+			newPosition = Position.NONE;
 		if (newPosition == null)
 			throw new Exception("Position " + where + " is not understood");
 		lock();
@@ -2397,5 +2410,21 @@ public class Config
 		lock();
 		putSplitAtOffset = newValue;
 		unlock();
+	}
+
+	public void setStateProblemsText(String string)
+	{
+		lock();
+		problemStateString = string;
+		unlock();
+	}
+
+	public String getStateProblemsText()
+	{
+		String copy;
+		lock();
+		copy = problemStateString;
+		unlock();
+		return copy;
 	}
 }
