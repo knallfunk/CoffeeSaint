@@ -1409,6 +1409,8 @@ public class CoffeeSaint
 						config.setAuthentication(false);
 					else if (arg[loop].equals("--logo"))
 						config.setLogo(arg[++loop]);
+					else if (arg[loop].equals("--split-text-put-at-offset"))
+						config.setPutSplitAtOffset(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--sparkline-mode"))
 					{
 						String mode = arg[++loop];

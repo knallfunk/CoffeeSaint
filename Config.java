@@ -96,6 +96,7 @@ public class Config
 	private String webUsername, webPassword;
 	private String latencyFile;
 	private String logo;
+	private Integer putSplitAtOffset;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -193,6 +194,7 @@ public class Config
 		webPassword = null;
 		latencyFile = null;
 		logo = null;
+		putSplitAtOffset = null;
 		unlock();
 	}
 
@@ -379,6 +381,8 @@ public class Config
 						setWebSessionExpire(Integer.valueOf(data));
 					else if (name.equals("listen-port"))
 						setHTTPServerListenPort(Integer.valueOf(data));
+					else if (name.equals("split-text-put-at-offset"))
+						setPutSplitAtOffset(Integer.valueOf(data));
 					else if (name.equals("listen-adapter"))
 						setHTTPServerListenAdapter(data);
 					else if (name.equals("latency-file"))
@@ -573,6 +577,8 @@ public class Config
 		writeLine(out, "scroll-splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
 		writeLine(out, "counter-position = " + getCounterPositionName());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
+		if (getPutSplitAtOffset() != null)
+			writeLine(out, "split-text-put-at-offset = " + getPutSplitAtOffset());
 		if (getLogo() != null)
 			writeLine(out, "logo = " + getLogo());
 		writeLine(out, "web-expire-time = " + getWebSessionExpire());
@@ -2375,5 +2381,21 @@ public class Config
 		copy = logo;
 		unlock();
 		return copy;
+	}
+
+	public Integer getPutSplitAtOffset()
+	{
+		Integer copy;
+		lock();
+		copy = putSplitAtOffset;
+		unlock();
+		return copy;
+	}
+
+	public void setPutSplitAtOffset(Integer newValue)
+	{
+		lock();
+		putSplitAtOffset = newValue;
+		unlock();
 	}
 }

@@ -500,11 +500,15 @@ public class Gui extends JPanel implements ImageObserver
 					}
 					else
 					{
-						String before = output.substring(0, splitIndex) + splitChar;
+						String before = output.substring(0, splitIndex);
 						String after = output.substring(splitIndex + 1);
 
 						int beforeWidth = prepareRow(g, rowColWidth, xStart, before, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
-						prepareRow(g, Math.max(0, rowColWidth - beforeWidth), xStart + beforeWidth, after, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
+
+						int newX = xStart + beforeWidth;
+						if (config.getPutSplitAtOffset() != null)
+							newX = xStart + config.getPutSplitAtOffset();
+						prepareRow(g, Math.max(0, rowColWidth - newX), newX, after, curNRows, currentProblem.getCurrent_state(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit());
 					}
 				}
 				else

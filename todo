@@ -13,8 +13,12 @@
 
 - maxNHostsPerPage configureerbaar
 
-- latency graph: aantal cijfers achter de komma en unit toevoegen
-
 - hosts sorteren, services ook
 
 - web-interface; sync datafiles to disk bij write config? aparte link?
+
+
+###
+- latency graph: aantal cijfers achter de komma en unit toevoegen
+- path naar logo configureerbaar in webinterface
+- setPutSplitAtOffset in webinterface
