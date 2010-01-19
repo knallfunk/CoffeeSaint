@@ -3,3 +3,4 @@
 - login-screen for web-interface
 - latency graph in web-interface
 - can add a logo
+- header can be set to always draw with backgroundcolor (instead of state-color)

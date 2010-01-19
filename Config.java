@@ -98,6 +98,7 @@ public class Config
 	private String logo;
 	private Integer putSplitAtOffset;
 	private String problemStateString;
+	private boolean headerAlwaysBGColor;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -197,6 +198,7 @@ public class Config
 		logo = null;
 		putSplitAtOffset = null;
 		problemStateString = "Current number of problems: %TOTALISSUES";
+		headerAlwaysBGColor = false;
 		unlock();
 	}
 
@@ -398,6 +400,8 @@ public class Config
 						setReduceTextWidth(isTrue);
 					else if (name.equals("also-scheduled-downtime"))
 						setAlsoScheduledDowntime(isTrue);
+					else if (name.equals("header-always-bgcolor"))
+						setHeaderAlwaysBGColor(isTrue);
 					else if (name.equals("show-flapping"))
 						setShowFlapping(isTrue);
 					else if (name.equals("also-soft-state"))
@@ -584,6 +588,7 @@ public class Config
 		writeLine(out, "scroll-splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
 		writeLine(out, "counter-position = " + getCounterPositionName());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
+		writeLine(out, "header-always-bgcolor = " + (getHeaderAlwaysBGColor() ? "true" : "false"));
 		if (getPutSplitAtOffset() != null)
 			writeLine(out, "split-text-put-at-offset = " + getPutSplitAtOffset());
 		if (getLogo() != null)
@@ -669,6 +674,9 @@ public class Config
 
 	public Color selectColor(String name)
 	{
+		if (name.equals("NULL"))
+			return null;
+
 		for(ColorPair currentColor : colorPairs)
 		{
 			if (currentColor.equals(name))
@@ -2426,5 +2434,21 @@ public class Config
 		copy = problemStateString;
 		unlock();
 		return copy;
+	}
+
+	public boolean getHeaderAlwaysBGColor()
+	{
+		boolean copy;
+		lock();
+		copy = headerAlwaysBGColor;
+		unlock();
+		return copy;
+	}
+
+	public void setHeaderAlwaysBGColor(boolean when)
+	{
+		lock();
+		headerAlwaysBGColor = when;
+		unlock();
 	}
 }

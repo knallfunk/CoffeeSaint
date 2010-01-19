@@ -458,9 +458,11 @@ class HTTPServer implements Runnable
 		return "";
 	}
 
-	public void colorSelectorHTML(List<String> reply, String name, String selectedColor)
+	public void colorSelectorHTML(List<String> reply, String name, String selectedColor, boolean allowNone)
 	{
 		reply.add("<SELECT NAME=\"" + name + "\">\n");
+		if (allowNone)
+			reply.add("<OPTION VALUE=\"NULL\">NONE</OPTION>\n");
 		for(ColorPair cp : config.getColors())
 		{
 			String line = "<OPTION VALUE=\"" + cp.getName() + "\"";
@@ -712,39 +714,43 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam</TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Row border color:</TD><TD>\n");
-		colorSelectorHTML(reply, "row-border-color", config.getRowBorderColorName());
+		colorSelectorHTML(reply, "row-border-color", config.getRowBorderColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Graph color:</TD><TD>\n");
-		colorSelectorHTML(reply, "graph-color", config.getGraphColorName());
+		colorSelectorHTML(reply, "graph-color", config.getGraphColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
+		// reply.add("<TR><TD>Header background color:</TD><TD>\n");
+		// colorSelectorHTML(reply, "header-color", config.getHeaderColorName(), true);
+		// reply.add("</TD><TD>Select 'NONE' for state-color(!).</TD></TR>");
 		reply.add("<TR><TD>Text color:</TD><TD>\n");
-		colorSelectorHTML(reply, "textColor", config.getTextColorName());
+		colorSelectorHTML(reply, "textColor", config.getTextColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Warning text color:</TD><TD>\n");
-		colorSelectorHTML(reply, "warningTextColor", config.getWarningTextColorName());
+		colorSelectorHTML(reply, "warningTextColor", config.getWarningTextColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Critical text color:</TD><TD>\n");
-		colorSelectorHTML(reply, "criticalTextColor", config.getCriticalTextColorName());
+		colorSelectorHTML(reply, "criticalTextColor", config.getCriticalTextColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color:</TD><TD>\n");
-		colorSelectorHTML(reply, "backgroundColor", config.getBackgroundColorName());
+		colorSelectorHTML(reply, "backgroundColor", config.getBackgroundColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color OK-status:</TD><TD>\n");
-		colorSelectorHTML(reply, "bgColorOk", config.getBackgroundColorOkStatusName());
+		colorSelectorHTML(reply, "bgColorOk", config.getBackgroundColorOkStatusName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color warning-status:</TD><TD>\n");
-		colorSelectorHTML(reply, "warning-bg-color", config.getWarningBgColorName());
+		colorSelectorHTML(reply, "warning-bg-color", config.getWarningBgColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color critical-status:</TD><TD>\n");
-		colorSelectorHTML(reply, "critical-bg-color", config.getCriticalBgColorName());
+		colorSelectorHTML(reply, "critical-bg-color", config.getCriticalBgColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color unknown-status:</TD><TD>\n");
-		colorSelectorHTML(reply, "unknown-bg-color", config.getNagiosUnknownBgColorName());
+		colorSelectorHTML(reply, "unknown-bg-color", config.getNagiosUnknownBgColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Header always bg color:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"header-always-bgcolor\" VALUE=\"on\" " + isChecked(config.getHeaderAlwaysBGColor()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scroll-if-not-fitting\" VALUE=\"on\" " + isChecked(config.getScrollIfNotFit()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
@@ -921,6 +927,7 @@ class HTTPServer implements Runnable
 		config.setTextColor(getField(socket, requestData, "textColor"));
 		config.setWarningTextColor(getField(socket, requestData, "warningTextColor"));
 		config.setCriticalTextColor(getField(socket, requestData, "criticalTextColor"));
+		// config.setHeaderColorName(getField(socket, requestData, "header-color"));
 
 		config.setBackgroundColor(getField(socket, requestData, "backgroundColor"));
 
@@ -1007,6 +1014,8 @@ class HTTPServer implements Runnable
 		}
 
 		config.setAlwaysNotify(getCheckBox(socket, requestData, "always_notify"));
+
+		config.setHeaderAlwaysBGColor(getCheckBox(socket, requestData, "header-always-bgcolor"));
 
 		config.setAlsoAcknowledged(getCheckBox(socket, requestData, "also_acknowledged"));
 

@@ -1423,6 +1423,8 @@ public class CoffeeSaint
 						config.setNoProblemsTextPosition(arg[++loop]);
 					else if (arg[loop].equals("--no-authentication"))
 						config.setAuthentication(false);
+					else if (arg[loop].equals("--header-always-bgcolor"))
+						config.setHeaderAlwaysBGColor(true);
 					else if (arg[loop].equals("--logo"))
 						config.setLogo(arg[++loop]);
 					else if (arg[loop].equals("--split-text-put-at-offset"))

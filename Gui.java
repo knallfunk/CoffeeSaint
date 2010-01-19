@@ -448,14 +448,17 @@ public class Gui extends JPanel implements ImageObserver
 			if (config.getShowHeader())
 			{
 				String header = coffeeSaint.getScreenHeader(javNag, rightNow, problems.size() > 0);
+				String stateForColor = problems.size() == 0 ? "0" : "255";
+				if (config.getHeaderAlwaysBGColor())
+					stateForColor = "255";
 				if (config.getScrollingHeader())
 				{
 					movingPartsSemaphore.acquireUninterruptibly();
-					currentHeader.setImage(createRowImage(fontName, header, problems.size() == 0 ? "0" : "255", bgColor, rowHeight, null));
+					currentHeader.setImage(createRowImage(fontName, header, stateForColor, bgColor, rowHeight, null));
 					movingPartsSemaphore.release();
 				}
 				else
-					prepareRow(g, windowWidth, 0, header, curNRows, problems.size() == 0 ? "0" : "255", bgColor, 1.0f, null, false);
+					prepareRow(g, windowWidth, 0, header, curNRows, stateForColor, bgColor, 1.0f, null, false);
 				curNRows++;
 			}
 
