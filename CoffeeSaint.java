@@ -17,10 +17,14 @@ import java.awt.geom.Rectangle2D;
 import java.awt.font.FontRenderContext;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.FileNotFoundException;
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.Socket;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,7 +38,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.8-beta002";
+	static String versionNr = "v2.8-beta003";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -1017,6 +1021,85 @@ public class CoffeeSaint
 		}
 	}
 
+	public static void errorExit(String error)
+	{
+		System.err.println(error);
+		System.exit(127);
+	}
+
+	public static String testFile(String filename)
+	{
+		try
+		{
+			FileReader fileHandle = new FileReader(filename); 
+			if (fileHandle == null)
+				return "Opening file returned null";
+		}
+		catch(Exception e)
+		{
+			return "" + e;
+		}
+
+		return null;
+	}
+
+	public static String testUrlString(String urlIn)
+	{
+		try
+		{
+			URL url = new URL(urlIn);
+			if (url == null)
+				return "URL(...) returned null";
+		}
+		catch(MalformedURLException mue)
+		{
+			return "" + mue;
+		}
+
+		return null;
+	}
+
+	public static String testPort(String host, int port)
+	{
+		try
+		{
+			Socket socket = new Socket(host, port);
+			if (socket == null)
+				return "Could not create socket: returned null";
+		}
+		catch(IOException ioe)
+		{
+			return "" + ioe;
+		}
+
+		return null;
+	}
+
+	public static String testUrl(URL url, boolean withAuthentication)
+	{
+		try
+		{
+			HttpURLConnection HTTPConnection = (HttpURLConnection)url.openConnection();
+			if (HTTPConnection == null)
+				return "HttpURLConnection.openConnection() returned null";
+
+			HTTPConnection.connect();
+
+			int responseCode = HTTPConnection.getResponseCode();
+			if (responseCode < 200 || responseCode > 299)
+			{
+				if (!(withAuthentication && responseCode == 401))
+					return "HTTP response code: " + responseCode;
+			}
+		}
+		catch(IOException ioe)
+		{
+			return "" + ioe;
+		}
+
+		return null;
+	}
+
 	public static void daemonLoop(CoffeeSaint coffeeSaint, Config config) throws Exception
 	{
 		for(;;)
@@ -1217,19 +1300,38 @@ public class CoffeeSaint
 						else if (versionStr.equals("3"))
 							nv = NagiosVersion.V3;
 						else
-							throw new Exception("Nagios version '" + versionStr + "' not known");
+							errorExit("Nagios version '" + versionStr + "' not known");
 
-						if (type.equalsIgnoreCase("http"))
-							nds = new NagiosDataSource(new URL(arg[++loop]), nv);
-						else if (type.equalsIgnoreCase("http-auth"))
+						if (type.equalsIgnoreCase("http") || type.equalsIgnoreCase("http-auth"))
 						{
-							URL url = new URL(arg[++loop]);
-							String username = arg[++loop];
-							String password = arg[++loop];
-							nds = new NagiosDataSource(url, username, password, nv);
+							boolean withAuth = type.equalsIgnoreCase("http-auth");
+							String urlStr = arg[++loop];
+							String resultStr = testUrlString(urlStr);
+							if (resultStr != null)
+								errorExit("Cannot parse url " + urlStr + ": " + resultStr);
+							URL url = new URL(urlStr);
+							String resultUrl = testUrl(url, withAuth);
+							if (resultUrl != null)
+								errorExit("Cannot use url " + url + " (" + resultUrl + ")");
+							if (withAuth)
+							{
+								String username = arg[++loop];
+								String password = arg[++loop];
+								nds = new NagiosDataSource(url, username, password, nv);
+							}
+							else
+							{
+								nds = new NagiosDataSource(url, nv);
+							}
 						}
 						else if (type.equalsIgnoreCase("file"))
-							nds = new NagiosDataSource(arg[++loop], nv);
+						{
+							String filename = arg[++loop];
+							String result = testFile(filename);
+							if (result != null)
+								errorExit("Cannot access file " + filename + " (" + result + ")");
+							nds = new NagiosDataSource(filename, nv);
+						}
 						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
 						{
 							String host = arg[++loop];
@@ -1237,16 +1339,18 @@ public class CoffeeSaint
 							try
 							{
 								port = Integer.valueOf(arg[++loop]);
+								String result = testPort(host, port);
+								if (result != null)
+									errorExit("Cannot open socket on " + host + ":" + port + " (" + result + ")");
 								nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
 							}
 							catch(NumberFormatException nfe)
 							{
-								System.err.println("--source: expecting a port-number but got '" + arg[loop] + "'");
-								System.exit(127);
+								errorExit("--source: expecting a port-number but got '" + arg[loop] + "'");
 							}
 						}
 						else
-							throw new Exception("Data source-type '" + type + "' not understood.");
+							errorExit("Data source-type '" + type + "' not understood.");
 
 						config.addNagiosDataSource(nds);
 					}
@@ -1285,7 +1389,7 @@ public class CoffeeSaint
 						else if (mode.equalsIgnoreCase("fullscreen"))
 							config.setFullscreen(FullScreenMode.FULLSCREEN);
 						else
-							throw new Exception("Fullscreen mode " + mode + " not recognized");
+							errorExit("Fullscreen mode " + mode + " not recognized");
 					}
 					else if (arg[loop].equals("--header"))
 						config.setHeader(arg[++loop]);
@@ -1307,7 +1411,13 @@ public class CoffeeSaint
 						config.setRunGui(false);
 					}
 					else if (arg[loop].equals("--config"))
-						config.loadConfig(arg[++loop]);
+					{
+						String filename = arg[++loop];
+						String result = testFile(filename);
+						if (result != null)
+							errorExit("Cannot open configuration file " + filename + " (" + result + ")");
+						config.loadConfig(filename);
+					}
 					else if (arg[loop].equals("--predict"))
 						config.setBrainFileName(arg[++loop]);
 					else if (arg[loop].equals("--performance-data-filename"))
@@ -1330,8 +1440,7 @@ public class CoffeeSaint
 						}
 						catch(NumberFormatException nfe)
 						{
-							System.err.println("--listen-port: expecting a port-number but got '" + arg[loop] + "'");
-							System.exit(127);
+							errorExit("--listen-port: expecting a port-number but got '" + arg[loop] + "'");
 						}
 					}
 					else if (arg[loop].equals("--listen-adapter"))
@@ -1358,7 +1467,26 @@ public class CoffeeSaint
 					else if (arg[loop].equals("--interval"))
 						config.setSleepTime(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--image"))
-						config.addImageUrl(arg[++loop]);
+					{
+						String what = arg[++loop];
+						if (what.length() > 7 && what.substring(0, 7).equalsIgnoreCase("http://"))
+						{
+							String result = testUrlString(what);
+							if (result != null)
+								errorExit("Cannot open image-url " + what + " (" + result + ")");
+							URL url = new URL(what);
+							result = testUrl(url, false);
+							if (result != null)
+								errorExit("Cannot open image-url " + what + " (" + result + ")");
+						}
+						else
+						{
+							String result = testFile(what);
+							if (result != null)
+								errorExit("Cannot open image-file " + what + " (" + result + ")");
+						}
+						config.addImageUrl(what);
+					}
 					else if (arg[loop].equals("--problem-columns"))
 						config.setNProblemCols(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--cam-rows"))
@@ -1442,7 +1570,26 @@ public class CoffeeSaint
 					else if (arg[loop].equals("--color-bg-to-state"))
 						config.setSetBgColorToState(true);
 					else if (arg[loop].equals("--logo"))
-						config.setLogo(arg[++loop]);
+					{
+						String what = arg[++loop];
+						if (what.length() > 7 && what.substring(0, 7).equalsIgnoreCase("http://"))
+						{
+							String result = testUrlString(what);
+							if (result != null)
+								errorExit("Cannot open logo-image url " + what + " (" + result + ")");
+							URL url = new URL(what);
+							result = testUrl(url, false);
+							if (result != null)
+								errorExit("Cannot open image-url " + what + " (" + result + ")");
+						}
+						else
+						{
+							String result = testFile(what);
+							if (result != null)
+								errorExit("Cannot open logo-image file " + what + " (" + result + ")");
+						}
+						config.setLogo(what);
+					}
 					else if (arg[loop].equals("--logo-position"))
 						config.setLogoPosition(arg[++loop]);
 					else if (arg[loop].equals("--split-text-put-at-offset"))
@@ -1467,20 +1614,17 @@ public class CoffeeSaint
 					}
 					else
 					{
-						System.err.println("Parameter " + arg[loop] + " not understood.");
 						showHelp();
-						System.exit(127);
+						errorExit("Parameter " + arg[loop] + " not understood.");
 					}
 				}
 				catch(ArrayIndexOutOfBoundsException aioobe)
 				{
-					System.err.println(currentSwitch + ": expects more parameters than currently given");
-					System.exit(127);
+					errorExit(currentSwitch + ": expects more parameters than currently given");
 				}
 				catch(NumberFormatException nfeGlobal)
 				{
-					System.err.println(currentSwitch + ": one of the parameters given should've been a number");
-					System.exit(127);
+					errorExit(currentSwitch + ": one of the parameters given should've been a number");
 				}
 			}
 

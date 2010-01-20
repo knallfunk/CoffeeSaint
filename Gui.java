@@ -735,7 +735,11 @@ public class Gui extends JPanel implements ImageObserver
 
 		if (config.getLogo() != null)
 		{
-			logo = Toolkit.getDefaultToolkit().createImage(config.getLogo());
+			String loadImage = config.getLogo();
+			if (loadImage.length() >= 8 && (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://")))
+				logo = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
+			else
+				logo = Toolkit.getDefaultToolkit().createImage(loadImage);
                         new ImageIcon(logo); //loads the image
                         Toolkit.getDefaultToolkit().sync();
 		}

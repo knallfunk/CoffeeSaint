@@ -18,7 +18,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
-import java.net.Socket;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -889,44 +888,6 @@ class HTTPServer implements Runnable
 		return URLDecoder.decode(fieldData, defaultCharset);
 	}
 
-	public String testPort(String host, int port)
-	{
-		try
-		{
-			Socket socket = new Socket(host, port);
-			if (socket == null)
-				return "Could not create socket: returned null";
-
-			return null;
-		}
-		catch(IOException ioe)
-		{
-			return "" + ioe;
-		}
-	}
-
-	public String testUrl(URL url)
-	{
-		try
-		{
-			HttpURLConnection HTTPConnection = (HttpURLConnection)url.openConnection();
-			if (HTTPConnection == null)
-				return "HttpURLConnection.openConnection() returned null";
-
-			HTTPConnection.connect();
-
-			int responseCode = HTTPConnection.getResponseCode();
-			if (responseCode < 200 || responseCode > 299)
-				return "HTTP response code: " + responseCode;
-
-			return null;
-		}
-		catch(IOException ioe)
-		{
-			return "" + ioe;
-		}
-	}
-
 	public void sendReply_cgibin_configdo_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -1285,7 +1246,7 @@ class HTTPServer implements Runnable
 						server_add_parameters = server_add_parameters.substring(0, space);
 					}
 
-					String result = testPort(server_add_parameters, port);
+					String result = CoffeeSaint.testPort(server_add_parameters, port);
 					if (result != null)
 						reply.add("Error: address " + server_add_parameters + ":" + port + " has an issue (" + result + "). Nagios server was <I>not</I> added.<BR>\n");
 					else
@@ -1298,12 +1259,13 @@ class HTTPServer implements Runnable
 						URL url = new URL(URLDecoder.decode(server_add_parameters, "US-ASCII"));
 						String username = getFieldDecoded(socket, requestData, "nagios-http-username");
 						String password = getFieldDecoded(socket, requestData, "nagios-http-password");
-						if (username != null && password != null && username.equals("") == false && password.equals("") == false)
+						boolean withAuth = username != null && password != null && username.equals("") == false && password.equals("") == false;
+						if (withAuth)
 							config.addNagiosDataSource(new NagiosDataSource(url, username, password, nv));
 						else
 							config.addNagiosDataSource(new NagiosDataSource(url, nv));
 
-						String result = testUrl(url);
+						String result = CoffeeSaint.testUrl(url, withAuth);
 						if (result != null)
 							reply.add("Warning: URL " + server_add_parameters + " seems to be unreachable! (" + result + ")<BR>\n");
 					}
