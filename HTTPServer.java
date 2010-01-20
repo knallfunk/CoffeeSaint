@@ -746,6 +746,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Background color unknown-status:</TD><TD>\n");
 		colorSelectorHTML(reply, "unknown-bg-color", config.getNagiosUnknownBgColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Let bg color depend on state:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"color-bg-to-state\" VALUE=\"on\" " + isChecked(config.getSetBgColorToState()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
@@ -935,6 +936,7 @@ class HTTPServer implements Runnable
 		config.setWarningBgColor(getField(socket, requestData, "warning-bg-color"));
 		config.setCriticalBgColor(getField(socket, requestData, "critical-bg-color"));
 		config.setNagiosUnknownBgColor(getField(socket, requestData, "unknown-bg-color"));
+		config.setSetBgColorToState(getCheckBox(socket, requestData, "color-bg-to-state"));
 
 		String sleepTime = getField(socket, requestData, "sleepTime");
 		if (sleepTime != null && sleepTime.equals("") == false)

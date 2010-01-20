@@ -1132,7 +1132,8 @@ public class CoffeeSaint
 		System.out.println("--scroll-splitter x        When scrolling problems, on what character to split. Left from the split-character no scrolling takes place, right from that character the text is scrolled.");
 		System.out.println("--anti-alias  Anti-alias graphics");
 		System.out.println("--verbose     Show what it is doing");
-		System.out.println("--warning-bg-color x Background color for warnings (yellow)");
+		System.out.println("--color-bg-to-state   Background color depends on state:");
+		System.out.println("--warning-bg-color x  Background color for warnings (yellow)");
 		System.out.println("--critical-bg-color x Background color for criticals (red)");
 		System.out.println("--nagios-unknown-bg-color x Background color for unknonws (magenta)");
 		System.out.println("--hosts-filter-exclude x Comma-seperated list of hosts not to display");
@@ -1425,6 +1426,8 @@ public class CoffeeSaint
 						config.setAuthentication(false);
 					else if (arg[loop].equals("--header-always-bgcolor"))
 						config.setHeaderAlwaysBGColor(true);
+					else if (arg[loop].equals("--color-bg-to-state"))
+						config.setSetBgColorToState(true);
 					else if (arg[loop].equals("--logo"))
 						config.setLogo(arg[++loop]);
 					else if (arg[loop].equals("--split-text-put-at-offset"))

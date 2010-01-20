@@ -39,12 +39,20 @@ public class Gui extends JPanel implements ImageObserver
 		String add = ", img: " + img + ", flags: " + flags + ", x/y: " + x + "," + y + ", width: " + width + ", height: " + height;
 		if ((flags & ABORT) != 0)
 			CoffeeSaint.log.add("Image aborted" + add);
-		else if ((flags & ERROR) != 0)
-			CoffeeSaint.log.add("Image error" + add);
-		else if ((flags & ALLBITS) != 0)
+		if ((flags & ALLBITS) != 0)
 			CoffeeSaint.log.add("Image complete" + add);
-		else
-			CoffeeSaint.log.add("Image ???" + add);
+		if ((flags & ERROR) != 0)
+			CoffeeSaint.log.add("Image error" + add);
+		if ((flags & FRAMEBITS) != 0)
+			CoffeeSaint.log.add("Image framebits " + add);
+		if ((flags & HEIGHT) != 0)
+			CoffeeSaint.log.add("Image framebits " + add);
+		if ((flags & PROPERTIES) != 0)
+			CoffeeSaint.log.add("Image framebits " + add);
+		if ((flags & SOMEBITS) != 0)
+			CoffeeSaint.log.add("Image framebits " + add);
+		if ((flags & WIDTH) != 0)
+			CoffeeSaint.log.add("Image framebits " + add);
 
 		// If status is not COMPLETE then we need more updates.
 		return (flags & (ALLBITS|ABORT)) == 0;
@@ -433,8 +441,23 @@ public class Gui extends JPanel implements ImageObserver
 
 			Calendar rightNow = Calendar.getInstance();
 
-			if (problems.size() == 0)
+			if (problems.size() == 0 && config.getBrainFileName() != null)
 				bgColor = coffeeSaint.predictWithColor(rightNow);
+			else if (config.getSetBgColorToState())
+			{
+				int state = -1;
+				for(Problem currentProblem : problems)
+					state = Math.max(state, Integer.valueOf(currentProblem.getCurrent_state()));
+
+				if (state == 0)
+					bgColor = config.getBackgroundColorOkStatus();
+				else if (state == 1)
+					bgColor = config.getWarningBgColor();
+				else if (state == 2)
+					bgColor = config.getCriticalBgColor();
+				else
+					bgColor = config.getNagiosUnknownBgColor();
+			}
 
 			/* clear frame */
 			g.setColor(bgColor);

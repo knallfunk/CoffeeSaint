@@ -41,6 +41,7 @@ public class Config
 	private String textColorName, warningTextColorName, criticalTextColorName;
 	private Color warningBgColor, criticalBgColor, nagiosUnknownBgColor;
 	private String warningBgColorName, criticalBgColorName, nagiosUnknownBgColorName;
+	private boolean bgColorToState;
 	private String bgColorOkStatusName;
 	private Color bgColorOkStatus;
 	private String problemSound = null;
@@ -199,6 +200,7 @@ public class Config
 		putSplitAtOffset = null;
 		problemStateString = "Current number of problems: %TOTALISSUES";
 		headerAlwaysBGColor = false;
+		bgColorToState = false;
 		unlock();
 	}
 
@@ -319,7 +321,7 @@ public class Config
 					}
 					else if (name.equals("predict"))
 						setBrainFileName(data);
-					else if (name.equals("scroll-splitter"))
+					else if (name.equals("scroll-splitter") || name.equals("splitter"))
 					{
 						if (data.equalsIgnoreCase("none") || data.length() < 1)
 							setLineScrollSplitter(null);
@@ -382,6 +384,8 @@ public class Config
 						setRowBorderColor(data);
 					else if (name.equals("sound"))
 						setProblemSound(data);
+					else if (name.equals("color-bg-to-state"))
+						setSetBgColorToState(isTrue);
 					else if (name.equals("problem-columns"))
 						setNProblemCols(Integer.valueOf(data));
 					else if (name.equals("web-expire-time"))
@@ -585,7 +589,7 @@ public class Config
 		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
 		writeLine(out, "services-filter-include = " + getServicesFilterIncludeList());
 		writeLine(out, "scroll-if-not-fitting = " + (getScrollIfNotFit() ? "true" : "false"));
-		writeLine(out, "scroll-splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
+		writeLine(out, "splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
 		writeLine(out, "counter-position = " + getCounterPositionName());
 		writeLine(out, "sparkline-width = " + getSparkLineWidth());
 		writeLine(out, "header-always-bgcolor = " + (getHeaderAlwaysBGColor() ? "true" : "false"));
@@ -663,6 +667,7 @@ public class Config
 		writeLine(out, "critical-bg-color = " + getCriticalBgColorName());
 		writeLine(out, "nagios-unknown-bg-color = " + getNagiosUnknownBgColorName());
 		writeLine(out, "disable-http-compression = " + (!getAllowHTTPCompression() ? "true" : "false"));
+		writeLine(out, "color-bg-to-state = " + (getSetBgColorToState() ? "true" : "false"));
 
 		out.close();
 	}
@@ -2449,6 +2454,22 @@ public class Config
 	{
 		lock();
 		headerAlwaysBGColor = when;
+		unlock();
+	}
+
+	public boolean getSetBgColorToState()
+	{
+		boolean copy;
+		lock();
+		copy = bgColorToState;
+		unlock();
+		return copy;
+	}
+
+	public void setSetBgColorToState(boolean state)
+	{
+		lock();
+		bgColorToState = state;
 		unlock();
 	}
 }
