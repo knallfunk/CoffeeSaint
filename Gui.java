@@ -445,7 +445,7 @@ public class Gui extends JPanel implements ImageObserver
 				bgColor = coffeeSaint.predictWithColor(rightNow);
 			else if (config.getSetBgColorToState())
 			{
-				int state = -1;
+				int state = 0;
 				for(Problem currentProblem : problems)
 					state = Math.max(state, Integer.valueOf(currentProblem.getCurrent_state()));
 
