@@ -1,5 +1,5 @@
 /* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
-public enum Position { UPPER_LEFT , UPPER_RIGHT, LOWER_LEFT, LOWER_RIGHT, CENTER, NONE;
+public enum Position { UPPER_LEFT , UPPER_RIGHT, LOWER_LEFT, LOWER_RIGHT, CENTER, NONE, LEFT, RIGHT;
 	public String toString()
 	{
 		switch(this)
@@ -16,6 +16,10 @@ public enum Position { UPPER_LEFT , UPPER_RIGHT, LOWER_LEFT, LOWER_RIGHT, CENTER
 				return "center";
 			case NONE:
 				return "nowhere";
+			case LEFT:
+				return "left";
+			case RIGHT:
+				return "right";
 		}
 
 		return null;

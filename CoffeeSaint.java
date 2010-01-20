@@ -914,7 +914,7 @@ public class CoffeeSaint
 
 	public void dumpPredictorBrainToFile() throws Exception
 	{
-		if (predictor != null)
+		if (predictor != null && config.getBrainFileName() != null)
 		{
 			log.add("Dumping brain to " + config.getBrainFileName());
 
@@ -1147,6 +1147,8 @@ public class CoffeeSaint
 		System.out.println("--no-authentication Disable authentication in the web-interface.");
 		System.out.println("--web-username      Username to use for web-interface authentication. You need to set the password as well!");
 		System.out.println("--web-password      Username to use for web-interface authentication. You need to set the username as well!");
+		System.out.println("--logo x            Image to put in the header-row.");
+		System.out.println("--logo-position x   Where to put the logo in the header-row. Can be \"left\" or \"right\".");
 		System.out.println("");
 		System.out.print("Known colors:");
 		config.listColors();
@@ -1430,6 +1432,8 @@ public class CoffeeSaint
 						config.setSetBgColorToState(true);
 					else if (arg[loop].equals("--logo"))
 						config.setLogo(arg[++loop]);
+					else if (arg[loop].equals("--logo-position"))
+						config.setLogoPosition(arg[++loop]);
 					else if (arg[loop].equals("--split-text-put-at-offset"))
 						config.setPutSplitAtOffset(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--sparkline-mode"))

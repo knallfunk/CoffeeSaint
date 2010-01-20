@@ -100,6 +100,8 @@ public class Config
 	private Integer putSplitAtOffset;
 	private String problemStateString;
 	private boolean headerAlwaysBGColor;
+	private Position logoPosition;
+	private int upperRowBorderHeight;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -197,10 +199,12 @@ public class Config
 		webPassword = null;
 		latencyFile = null;
 		logo = null;
+		logoPosition = Position.RIGHT;
 		putSplitAtOffset = null;
 		problemStateString = "Current number of problems: %TOTALISSUES";
 		headerAlwaysBGColor = false;
 		bgColorToState = false;
+		upperRowBorderHeight = 1;
 		unlock();
 	}
 
@@ -330,6 +334,8 @@ public class Config
 					}
 					else if (name.equals("counter-position"))
 						setCounterPosition(data);
+					else if (name.equals("logo-position"))
+						setLogoPosition(data);
 					else if (name.equals("exec"))
 						setExec(data);
 					else if (name.equals("fullscreen"))
@@ -392,6 +398,8 @@ public class Config
 						setWebSessionExpire(Integer.valueOf(data));
 					else if (name.equals("listen-port"))
 						setHTTPServerListenPort(Integer.valueOf(data));
+					else if (name.equals("upper-row-border-height"))
+						setUpperRowBorderHeight(Integer.valueOf(data));
 					else if (name.equals("split-text-put-at-offset"))
 						setPutSplitAtOffset(Integer.valueOf(data));
 					else if (name.equals("listen-adapter"))
@@ -572,6 +580,7 @@ public class Config
 		writeLine(out, "max-quality-graphics = " + (getMaxQualityGraphics() ? "true" : "false"));
 		writeLine(out, "row-border = " + (getRowBorder() ? "true" : "false"));
 		writeLine(out, "row-border-color = " + getRowBorderColorName());
+		writeLine(out, "upper-row-border-height = " + getUpperRowBorderHeight());
 		writeLine(out, "graph-color = " + getGraphColorName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
 		writeLine(out, "fullscreen = " + getFullscreenName());
@@ -597,6 +606,8 @@ public class Config
 			writeLine(out, "split-text-put-at-offset = " + getPutSplitAtOffset());
 		if (getLogo() != null)
 			writeLine(out, "logo = " + getLogo());
+		if (getLogoPosition() != null)
+			writeLine(out, "logo-position = " + getLogoPositionName());
 		writeLine(out, "web-expire-time = " + getWebSessionExpire());
 		if (getLatencyFile() != null)
 			writeLine(out, "latency-file = " + getLatencyFile());
@@ -2470,6 +2481,63 @@ public class Config
 	{
 		lock();
 		bgColorToState = state;
+		unlock();
+	}
+
+	public Position getLogoPosition()
+	{
+		Position copy;
+		lock();
+		copy = logoPosition;
+		unlock();
+		return copy;
+	}
+
+	public String getLogoPositionName()
+	{
+		Position copy;
+		lock();
+		copy = logoPosition;
+		unlock();
+		return copy.toString();
+	}
+
+	public void setLogoPosition(Position newPosition) throws Exception
+	{
+		if (newPosition != Position.LEFT && newPosition != Position.RIGHT)
+			throw new Exception("Logo position can only be left or right.");
+		lock();
+		logoPosition = newPosition;
+		unlock();
+	}
+
+	public void setLogoPosition(String newPosition) throws Exception
+	{
+		Position value = null;
+		if (newPosition.equalsIgnoreCase("left"))
+			value = Position.LEFT;
+		else if (newPosition.equalsIgnoreCase("right"))
+			value = Position.RIGHT;
+		else
+			throw new Exception("Logo position can only be left or right.");
+		lock();
+		logoPosition = value;
+		unlock();
+	}
+
+	public int getUpperRowBorderHeight()
+	{
+		int copy;
+		lock();
+		copy = upperRowBorderHeight;
+		unlock();
+		return copy;
+	}
+
+	public void setUpperRowBorderHeight(int height)
+	{
+		lock();
+		upperRowBorderHeight = height;
 		unlock();
 	}
 }

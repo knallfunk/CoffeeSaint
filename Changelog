@@ -5,3 +5,4 @@
 - can add a logo
 - header can be set to always draw with backgroundcolor (instead of state-color)
 - can now let the background color depend on the state
+- configurable bar height between header and problem-list

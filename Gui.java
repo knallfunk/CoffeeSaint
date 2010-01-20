@@ -84,7 +84,7 @@ public class Gui extends JPanel implements ImageObserver
 
 	int prepareRow(Graphics gTo, int windowWidth, int xStart, String msg, int row, String state, Color bgColor, float seeThrough, BufferedImage sparkLine, boolean addToScrollersIfNotFit)
 	{
-		final int rowHeight = getHeight() / config.getNRows();
+		final int rowHeight = (getHeight() - (config.getShowHeader() ? config.getUpperRowBorderHeight() : 0))/ config.getNRows();
 
 		String font = config.getFontName();
 		if (state.equals("1"))
@@ -99,7 +99,10 @@ public class Gui extends JPanel implements ImageObserver
 
 		if (config.getReduceTextWidth() == false && rowParameters.getTextWidth() > windowWidth && addToScrollersIfNotFit == true)
 		{
-			windowMovingParts.add(new ScrollableContent(createRowImage(font, msg, state, bgColor, rowHeight, null), xStart, rowHeight * row, windowWidth));
+			int yPos = 0;
+			if (row > 0)
+				yPos = rowHeight * row + (config.getShowHeader() ? config.getUpperRowBorderHeight() : 0);
+			windowMovingParts.add(new ScrollableContent(createRowImage(font, msg, state, bgColor, rowHeight, null), xStart, yPos, windowWidth));
 		}
 		else
 		{
@@ -168,7 +171,9 @@ public class Gui extends JPanel implements ImageObserver
 		Graphics2D gTo2D = (Graphics2D)gTo;
 
 		int x = xStart;
-		int y = rowHeight * row;
+		int y = 0;
+		if (row > 0)
+			y = rowHeight * row + (config.getShowHeader() ? config.getUpperRowBorderHeight() : 0);
 		if (seeThrough != 1.0)
 		{
 			float [] scales  = { 1f, 1f, 1f, seeThrough };
@@ -347,7 +352,7 @@ public class Gui extends JPanel implements ImageObserver
 					}
 					else
 					{
-						g.drawString("n/a", plotX, plotY);
+						// g.drawString("n/a", plotX, plotY);
 					}
 
 					nr++;
@@ -379,7 +384,7 @@ public class Gui extends JPanel implements ImageObserver
 			for(int rowColumns=0; rowColumns < bordersParameters.getNColumns(); rowColumns++)
 			{
 				int x = (bordersParameters.getWindowWidth() * rowColumns) / bordersParameters.getNColumns();
-				int y =  config.getShowHeader() ? bordersParameters.getRowHeight() : 0;
+				int y =  config.getShowHeader() ? (bordersParameters.getRowHeight() + config.getUpperRowBorderHeight()): 0;
 				g.drawLine(x, y, x, bordersParameters.getRowHeight() * verticalNRows);
 			}
 		}
@@ -389,9 +394,17 @@ public class Gui extends JPanel implements ImageObserver
 			for(int rowsRow=0; rowsRow < verticalNRows; rowsRow++)
 			{
 				int drawY = bordersParameters.getRowHeight() + rowsRow * bordersParameters.getRowHeight();
+				if (rowsRow > 0 && config.getShowHeader() == true)
+					drawY += config.getUpperRowBorderHeight();
 				g.drawLine(0, drawY, bordersParameters.getWindowWidth(), drawY);
 			}
 
+		}
+
+		if (config.getShowHeader())
+		{
+			int drawY = bordersParameters.getRowHeight();
+			g.fillRect(0, drawY, bordersParameters.getWindowWidth(), config.getUpperRowBorderHeight());
 		}
 
 		configureRendered((Graphics2D)g, true);
@@ -406,6 +419,16 @@ public class Gui extends JPanel implements ImageObserver
 			long startLoadTs, endLoadTs;
 			double took;
 			Color bgColor = config.getBackgroundColor();
+			int newLogoHeight = -1, newLogoWidth = -1;
+
+			if (logo != null)
+			{
+				int imgLogoWidth  = logo.getWidth(null);
+				int imgLogoHeight = logo.getHeight(null);
+
+				newLogoHeight = rowHeight;
+				newLogoWidth  = (int)(((double)newLogoHeight / (double)imgLogoHeight) * imgLogoWidth);
+			}
 
 			/* block in upper right to inform about load */
 			g.setColor(Color.BLUE);
@@ -481,7 +504,12 @@ public class Gui extends JPanel implements ImageObserver
 					movingPartsSemaphore.release();
 				}
 				else
-					prepareRow(g, windowWidth, 0, header, curNRows, stateForColor, bgColor, 1.0f, null, false);
+				{
+					int xStart = 0;
+					if (logo != null && config.getLogoPosition() == Position.LEFT)
+						xStart = newLogoWidth;
+					prepareRow(g, windowWidth, xStart, header, curNRows, stateForColor, bgColor, 1.0f, null, false);
+				}
 				curNRows++;
 			}
 
@@ -601,16 +629,17 @@ public class Gui extends JPanel implements ImageObserver
 
 			if (logo != null)
 			{
-				int imgWidth  = logo.getWidth(null);
-				int imgHeight = logo.getHeight(null);
+				int plotX = -1, plotY = 0;
+				Position logoPosition = config.getLogoPosition();
 
-				int newHeight = rowHeight;
-				int newWidth  = (int)(((double)newHeight / (double)imgHeight) * imgWidth);
+				if (logoPosition == Position.LEFT)
+					plotX = 0;
+				else if (logoPosition == Position.RIGHT)
+					plotX = Math.max(0, windowWidth - newLogoWidth);
+				else
+					throw new Exception("Unknown logo position: " + logoPosition);
 
-				int plotX = Math.max(0, windowWidth - newWidth);
-				int plotY = 0;
-
-				g.drawImage(logo, plotX, plotY, newWidth, newHeight, this);
+				g.drawImage(logo, plotX, plotY, newLogoWidth, newLogoHeight, this);
 			}
 
 			if (config.getRowBorder())
@@ -665,7 +694,7 @@ public class Gui extends JPanel implements ImageObserver
 		System.out.println("+++ PAINT START +++ " + getWidth() + "x" + getHeight());
 		// super.paintComponent(g); not needed, doing everything myself
 		final Graphics2D g2d = (Graphics2D)g;
-		final int rowHeight = getHeight() / config.getNRows();
+		final int rowHeight = (getHeight() - (config.getShowHeader() ? config.getUpperRowBorderHeight() : 0)) / config.getNRows();
 
 		configureRendered(g2d, true);
 

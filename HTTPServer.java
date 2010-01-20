@@ -713,6 +713,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Max. quality graphics:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"max-quality-graphics\" VALUE=\"on\" " + isChecked(config.getMaxQualityGraphics()) + "></TD><TD>Slows down and difference is small</TD></TR>\n");
 		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam</TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Row border height:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"upper-row-border-height\" VALUE=\"" + config.getUpperRowBorderHeight() + "\"></TD><TD>In case you want a thicker bar between the header and the problem list./TD></TR>\n");
 		reply.add("<TR><TD>Row border color:</TD><TD>\n");
 		colorSelectorHTML(reply, "row-border-color", config.getRowBorderColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
@@ -776,6 +777,10 @@ class HTTPServer implements Runnable
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "center"));
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "nowhere"));
 		reply.add("<TR><TD>Problem message:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"state-problems-text\" VALUE=\"" + (config.getStateProblemsText() != null ? config.getStateProblemsText() : "") + "\"></TD><TD>Used in the %STATE escape string.</TD></TR>\n");
+		reply.add("</SELECT></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Logo position:</TD><TD><SELECT NAME=\"logo-position\">\n");
+		reply.add(selectField(config.getLogoPositionName(), "left"));
+		reply.add(selectField(config.getLogoPositionName(), "right"));
 		reply.add("</SELECT></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
@@ -1053,6 +1058,10 @@ class HTTPServer implements Runnable
 		if (counterPosition != null)
 			config.setCounterPosition(counterPosition);
 
+		String logoPosition = getField(socket, requestData, "logo-position");
+		if (logoPosition != null)
+			config.setLogoPosition(logoPosition);
+
 		if (config.getDisableHTTPFileselect() == false)
 		{
 			String brainFile = getField(socket, requestData, "brain-file").trim();
@@ -1153,6 +1162,17 @@ class HTTPServer implements Runnable
 		config.setVerbose(getCheckBox(socket, requestData, "verbose"));
 
 		config.setRowBorder(getCheckBox(socket, requestData, "row-border"));
+
+		String rowBorderHeight = getField(socket, requestData, "upper-row-border-height");
+		if (rowBorderHeight != null && rowBorderHeight.trim().equals("") == false)
+		{
+			int newRowBorderHeight = Integer.valueOf(rowBorderHeight);
+			if (newRowBorderHeight < 1 || newRowBorderHeight > 400)
+				reply.add("Invalid upper row border height. Must be &gt;= 1.<BR>\n");
+			else
+				config.setUpperRowBorderHeight(newRowBorderHeight);
+		}
+
 		config.setRowBorderColor(getField(socket, requestData, "row-border-color"));
 		config.setGraphColor(getField(socket, requestData, "graph-color"));
 
