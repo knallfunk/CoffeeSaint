@@ -102,6 +102,8 @@ public class Config
 	private boolean headerAlwaysBGColor;
 	private Position logoPosition;
 	private int upperRowBorderHeight;
+	private Color bgColorFadeTo;
+	private String bgColorFadeToName;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -205,6 +207,8 @@ public class Config
 		headerAlwaysBGColor = false;
 		bgColorToState = false;
 		upperRowBorderHeight = 1;
+		bgColorFadeTo = null;
+		bgColorFadeToName = null;
 		unlock();
 	}
 
@@ -310,6 +314,8 @@ public class Config
 
 						if (type.equalsIgnoreCase("http"))
 							nds = new NagiosDataSource(new URL(parameters[2]), nv);
+						else if (type.equalsIgnoreCase("http-auth"))
+							nds = new NagiosDataSource(new URL(parameters[2]), parameters[3], parameters[4], nv);
 						else if (type.equalsIgnoreCase("file"))
 							nds = new NagiosDataSource(parameters[2], nv);
 						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
@@ -408,6 +414,8 @@ public class Config
 						setLatencyFile(data);
 					else if (name.equals("bgcolor"))
 						setBackgroundColor(data);
+					else if (name.equals("bgcolor-fade-to"))
+						setBackgroundColorFadeTo(data);
 					else if (name.equals("reduce-textwidth"))
 						setReduceTextWidth(isTrue);
 					else if (name.equals("also-scheduled-downtime"))
@@ -558,6 +566,8 @@ public class Config
 		writeLine(out, "listen-port = " + getHTTPServerListenPort());
 		writeLine(out, "listen-adapter = " + getHTTPServerListenAdapter());
 		writeLine(out, "bgcolor = " + getBackgroundColorName());
+		if (getBackgroundColorFadeTo() != null)
+			writeLine(out, "bgcolor-fade-to = " + getBackgroundColorFadeToName());
 		if (getPerformanceDataFileName() != null)
 			writeLine(out, "performance-data-filename = " + getPerformanceDataFileName());
 		writeLine(out, "textcolor = " + getTextColorName());
@@ -664,7 +674,14 @@ public class Config
 			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP)
 				parameters = dataSource.getHost() + " " + dataSource.getPort();
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+			{
 				parameters = dataSource.getURL().toString();
+				if (dataSource.getUsername() != null && dataSource.getPassword() != null)
+				{
+					parameters += " " + dataSource.getUsername() + " " + dataSource.getPassword();
+					type = "http-auth";
+				}
+			}
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 				parameters = dataSource.getFile();
 
@@ -2539,5 +2556,44 @@ public class Config
 		lock();
 		upperRowBorderHeight = height;
 		unlock();
+	}
+
+	public Color getBackgroundColorFadeTo()
+	{
+		Color copy;
+		lock();
+		copy = bgColorFadeTo;
+		unlock();
+		return copy;
+	}
+
+	public void setBackgroundColorFadeTo(String colorName) throws Exception
+	{
+		if (colorName == null)
+		{
+			lock();
+			bgColorFadeTo = null;
+			bgColorFadeToName = null;
+			unlock();
+		}
+		else
+		{
+			Color color = selectColor(colorName);
+			if (color == null)
+				throw new Exception("Color " + colorName + " is not known.");
+			lock();
+			bgColorFadeTo = color;
+			bgColorFadeToName = colorName;
+			unlock();
+		}
+	}
+
+	public String getBackgroundColorFadeToName()
+	{
+		String copy;
+		lock();
+		copy = bgColorFadeToName;
+		unlock();
+		return copy;
 	}
 }

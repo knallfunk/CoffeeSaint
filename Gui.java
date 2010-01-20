@@ -123,7 +123,7 @@ public class Gui extends JPanel implements ImageObserver
 		configureRendered(g, true);
 
 		Color stateColor = coffeeSaint.stateToColor(state);
-		// Color fadeToColor = bgColor; // from config FIXME
+		//Color fadeToColor = bgColor; // from config FIXME
 		Color fadeToColor = null; // from config FIXME
 		if (fadeToColor != null)
 		{
@@ -136,7 +136,8 @@ public class Gui extends JPanel implements ImageObserver
 			double piStep = Math.PI / (double)rowHeight;
 			for(int rowY = 0; rowY<rowHeight; rowY++)
 			{
-				double pos = rowY * (1.0 - Math.sin(piStep * (double)rowY));
+				//double pos = rowY * (1.0 - Math.sin(piStep * (double)rowY));
+				double pos = rowY;
 				int curR = Math.min(Math.max(0, scR + (int)((double)pos * stepR)), 255);
 				int curG = Math.min(Math.max(0, scG + (int)((double)pos * stepG)), 255);
 				int curB = Math.min(Math.max(0, scB + (int)((double)pos * stepB)), 255);
@@ -485,6 +486,26 @@ public class Gui extends JPanel implements ImageObserver
 			/* clear frame */
 			g.setColor(bgColor);
 			g.fillRect(0, 0, windowWidth, windowHeight);
+			Color fadeToBgColor = config.getBackgroundColorFadeTo();
+			if (fadeToBgColor != null)
+			{
+				int scR = bgColor.getRed(), scG = bgColor.getGreen(), scB = bgColor.getBlue();
+				int ftcR = fadeToBgColor.getRed(), ftcG = fadeToBgColor.getGreen(), ftcB = fadeToBgColor.getBlue();
+				double stepR = (double)(ftcR - scR) / (double)windowHeight;
+				double stepG = (double)(ftcG - scG) / (double)windowHeight;
+				double stepB = (double)(ftcB - scB) / (double)windowHeight;
+
+				for(int y = 0; y<windowHeight; y++)
+				{
+					double pos = y;
+					int curR = Math.min(Math.max(0, scR + (int)((double)pos * stepR)), 255);
+					int curG = Math.min(Math.max(0, scG + (int)((double)pos * stepG)), 255);
+					int curB = Math.min(Math.max(0, scB + (int)((double)pos * stepB)), 255);
+
+					g.setColor(new Color(curR, curG, curB));
+					g.drawLine(0, y, windowWidth - 1, y);
+				}
+			}
 
 			if (imageParameters != null)
 				displayImage(imageParameters, problems.size(), g, rowHeight, config.getAdaptImageSize(), windowWidth, windowHeight);

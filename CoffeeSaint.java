@@ -961,7 +961,7 @@ public class CoffeeSaint
 			{
 				logStr += dataSource.getURL();
 				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getURL());
-				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion(), config.getAllowHTTPCompression());
+				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion(), dataSource.getUsername(), dataSource.getPassword(), config.getAllowHTTPCompression());
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 			{
@@ -1070,6 +1070,7 @@ public class CoffeeSaint
 		System.out.println("--source type version x  Source to retrieve from");
 		System.out.println("              Type can be: http, tcp, file");
 		System.out.println("              http expects an url like http://keetweej.vanheusden.com/status.dat");
+		System.out.println("              http-auth expects an url like http://keetweej.vanheusden.com/status.dat and a username and a password");
 		System.out.println("              tcp expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
 		System.out.println("              ztcp also expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
 		System.out.println("              file expects a file-name, e.g. /var/cache/nagios3/status.dat");
@@ -1100,6 +1101,7 @@ public class CoffeeSaint
 		System.out.println("--suppress-flapping Do not show hosts that are flapping");
 		System.out.println("--show-services-for-host-with-problems");
 		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray");
+		System.out.println("--bgcolor-fade-to x If set, don't draw a solid color but fade the --bgcolor color to this one.");
 		System.out.println("--list-bgcolors     Show a list of available colors");
 		System.out.println("--textcolor   Text color (header and such)");
 		System.out.println("--warning-textcolor Text color of warning-problems");
@@ -1219,6 +1221,13 @@ public class CoffeeSaint
 
 						if (type.equalsIgnoreCase("http"))
 							nds = new NagiosDataSource(new URL(arg[++loop]), nv);
+						else if (type.equalsIgnoreCase("http-auth"))
+						{
+							URL url = new URL(arg[++loop]);
+							String username = arg[++loop];
+							String password = arg[++loop];
+							nds = new NagiosDataSource(url, username, password, nv);
+						}
 						else if (type.equalsIgnoreCase("file"))
 							nds = new NagiosDataSource(arg[++loop], nv);
 						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
@@ -1340,6 +1349,8 @@ public class CoffeeSaint
 						config.setNagiosUnknownBgColor(arg[++loop]);
 					else if (arg[loop].equals("--bgcolor"))
 						config.setBackgroundColor(arg[++loop]);
+					else if (arg[loop].equals("--bgcolor-fade-to"))
+						config.setBackgroundColorFadeTo(arg[++loop]);
 					else if (arg[loop].equals("--textcolor"))
 						config.setTextColor(arg[++loop]);
 					else if (arg[loop].equals("--nrows"))

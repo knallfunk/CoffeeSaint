@@ -56,6 +56,8 @@ public class JavNag
 	{
 		for(String currentLine : fileDump)
 		{
+			if (currentLine.length() == 0)
+				continue;
 			if (currentLine.substring(0, 1).equals("#")) // only the first line should have this comment
 				continue;
 
@@ -64,7 +66,7 @@ public class JavNag
 				continue;
 			int space = elements[0].indexOf(" ");
 			if (space == -1)
-				throw new Exception("Invalid line: first field should contain space");
+				throw new Exception("Invalid line: first field should contain space (" + currentLine + ")");
 			String type = elements[0].substring(space + 1);
 			String timeStamp = elements[0].substring(0, space);
 			String hostName = elements[1];
@@ -498,7 +500,48 @@ public class JavNag
 		}
 	}
 
-	public void loadNagiosData(URL url, NagiosVersion nagiosVersion, boolean allowCompression) throws Exception
+	String encode3Chars(String in)
+	{
+		String result = new String();
+		String encodingChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+		int tripple;
+		tripple = in.charAt(0);
+		tripple <<= 8;
+		if (in.length() >= 2)
+			tripple += in.charAt(1);
+		tripple <<= 8;
+		if (in.length() >= 3)
+			tripple += in.charAt(2);
+
+		for (int outputIndex=0; outputIndex<4; outputIndex++)
+		{   
+			int ecIndex = tripple % 64;
+			result = encodingChars.substring(ecIndex, ecIndex + 1) + result;
+			tripple /= 64;
+		}
+
+		return result;
+	}
+
+
+	public String encodeBase64(String input)
+	{
+		String output = new String();
+		int inputLength = input.length(), index = 0;
+
+                while(inputLength > 0)
+		{
+			output += encode3Chars(input.substring(index, index + Math.min(3, inputLength)));
+
+			index += 3;
+			inputLength -= 3;
+                }
+
+		return output;
+        }
+
+	public void loadNagiosData(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();
 
@@ -506,6 +549,8 @@ public class JavNag
 		HTTPConnection.setFollowRedirects(true);
 		if (allowCompression)
 			HTTPConnection.setRequestProperty("Accept-Encoding", "gzip, deflate");
+		if (username != null)
+			HTTPConnection.setRequestProperty("Authorization", "Basic " + encodeBase64(username + ":" + password));
 		//establish connection, get response headers
 		HTTPConnection.connect();
 		//obtain the encoding returned by the server
@@ -582,8 +627,8 @@ public class JavNag
 	 * @param nagiosVersion	Nagios-version this file is from.
 	 * @see NagiosVersion
 	 */
-	public JavNag(URL url, NagiosVersion nagiosVersion, boolean allowCompression) throws Exception
+	public JavNag(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression) throws Exception
 	{
-		loadNagiosData(url, nagiosVersion, allowCompression);
+		loadNagiosData(url, nagiosVersion, username, password, allowCompression);
 	}
 }

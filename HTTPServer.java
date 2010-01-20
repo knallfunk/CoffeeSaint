@@ -12,9 +12,13 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.InputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -466,7 +470,7 @@ class HTTPServer implements Runnable
 		for(ColorPair cp : config.getColors())
 		{
 			String line = "<OPTION VALUE=\"" + cp.getName() + "\"";
-			if (selectedColor.equalsIgnoreCase(cp.getName()))
+			if (selectedColor != null && selectedColor.equalsIgnoreCase(cp.getName()))
 				line += " SELECTED";
 			line += ">" + cp.getName() + "</OPTION>\n";
 			reply.add(line);
@@ -628,17 +632,28 @@ class HTTPServer implements Runnable
 		reply.add("<BR>\n");
 
 		reply.add("<H1>Nagios server(s)</H1>\n");
+		reply.add("See the <A HREF=\"http://vanheusden.com/java/CoffeeSaint/#howto\">CoffeeSaint website</A> to see what you can enter here.<BR>\n");
+		reply.add("Please note that 'username' and 'password' are only for 'http-auth'.<BR>\n");
 		reply.add("<TABLE>\n");
-		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD></TR>\n");
+		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD><TD><B>username</B></TD><TD><B>password</B></TD></TR>\n");
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
 		{
-			String type = "?";
+			String type = "?", username = "", password = "";
 			if (dataSource.getType() == NagiosDataSourceType.TCP)
 				type = "tcp";
 			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
 				type = "compressed tcp";
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
-				type = "http";
+			{
+				if (dataSource.getUsername() != null)
+				{
+					type = "http-auth";
+					username = dataSource.getUsername();
+					password = dataSource.getPassword();
+				}
+				else
+					type = "http";
+			}
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 				type = "file";
 
@@ -659,12 +674,15 @@ class HTTPServer implements Runnable
 				parameters = dataSource.getFile();
 
 			String serverString = parameters;
-			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD></TR>\n");
+			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD><TD>" + username + "</TD><TD>" + password +"</TD></TR>\n");
 		}
 		reply.add("<TR>\n");
 		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"ztcp\">compressed tcp</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
-		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\">3</OPTION></SELECT></TD>\n");
+		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\" SELECTED>3</OPTION></SELECT></TD>\n");
 		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"server-add-parameters\"></TD>\n");
+		reply.add("<TD></TD>\n");
+		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"nagios-http-username\"></TD>\n");
+		reply.add("<TD><INPUT TYPE=\"PASSWORD\" NAME=\"nagios-http-password\"></TD>\n");
 		reply.add("</TR>\n");
 		reply.add("<TR><TD>Use HTTP compression:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"disable-http-compression\" VALUE=\"on\" " + isChecked(config.getAllowHTTPCompression()) + "></TD></TR>\n");
 		reply.add("</TABLE>\n");
@@ -711,7 +729,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Reduce text width to fit to screen:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"reduce-textwidth\" VALUE=\"on\" " + isChecked(config.getReduceTextWidth()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Anti-alias:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"anti-alias\" VALUE=\"on\" " + isChecked(config.getAntiAlias()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Max. quality graphics:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"max-quality-graphics\" VALUE=\"on\" " + isChecked(config.getMaxQualityGraphics()) + "></TD><TD>Slows down and difference is small</TD></TR>\n");
-		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam</TD></TR>\n");
+		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam, 1.0 = not transparent</TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Row border height:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"upper-row-border-height\" VALUE=\"" + config.getUpperRowBorderHeight() + "\"></TD><TD>In case you want a thicker bar between the header and the problem list./TD></TR>\n");
 		reply.add("<TR><TD>Row border color:</TD><TD>\n");
@@ -734,6 +752,9 @@ class HTTPServer implements Runnable
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color:</TD><TD>\n");
 		colorSelectorHTML(reply, "backgroundColor", config.getBackgroundColorName(), false);
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Background fade-to color:</TD><TD>\n");
+		colorSelectorHTML(reply, "bgcolor-fade-to", config.getBackgroundColorFadeToName(), true);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color OK-status:</TD><TD>\n");
 		colorSelectorHTML(reply, "bgColorOk", config.getBackgroundColorOkStatusName(), false);
@@ -861,7 +882,49 @@ class HTTPServer implements Runnable
 
 	public String getFieldDecoded(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName) throws Exception
 	{
-		return URLDecoder.decode(getField(socket, requestData, fieldName), defaultCharset);
+		String fieldData = getField(socket, requestData, fieldName);
+		if (fieldData == null)
+			return null;
+
+		return URLDecoder.decode(fieldData, defaultCharset);
+	}
+
+	public String testPort(String host, int port)
+	{
+		try
+		{
+			Socket socket = new Socket(host, port);
+			if (socket == null)
+				return "Could not create socket: returned null";
+
+			return null;
+		}
+		catch(IOException ioe)
+		{
+			return "" + ioe;
+		}
+	}
+
+	public String testUrl(URL url)
+	{
+		try
+		{
+			HttpURLConnection HTTPConnection = (HttpURLConnection)url.openConnection();
+			if (HTTPConnection == null)
+				return "HttpURLConnection.openConnection() returned null";
+
+			HTTPConnection.connect();
+
+			int responseCode = HTTPConnection.getResponseCode();
+			if (responseCode < 200 || responseCode > 299)
+				return "HTTP response code: " + responseCode;
+
+			return null;
+		}
+		catch(IOException ioe)
+		{
+			return "" + ioe;
+		}
 	}
 
 	public void sendReply_cgibin_configdo_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData, String cookie) throws Exception
@@ -936,6 +999,11 @@ class HTTPServer implements Runnable
 		// config.setHeaderColorName(getField(socket, requestData, "header-color"));
 
 		config.setBackgroundColor(getField(socket, requestData, "backgroundColor"));
+		String fadeTo = getField(socket, requestData, "bgcolor-fade-to");
+		if (fadeTo == null || fadeTo.equals("NULL") == true)
+			config.setBackgroundColorFadeTo(null);
+		else
+			config.setBackgroundColorFadeTo(fadeTo);
 
 		config.setBackgroundColorOkStatus(getField(socket, requestData, "bgColorOk"));
 		config.setWarningBgColor(getField(socket, requestData, "warning-bg-color"));
@@ -1217,10 +1285,33 @@ class HTTPServer implements Runnable
 						server_add_parameters = server_add_parameters.substring(0, space);
 					}
 
-					config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, nv, ndst == NagiosDataSourceType.ZTCP));
+					String result = testPort(server_add_parameters, port);
+					if (result != null)
+						reply.add("Error: address " + server_add_parameters + ":" + port + " has an issue (" + result + "). Nagios server was <I>not</I> added.<BR>\n");
+					else
+						config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, nv, ndst == NagiosDataSourceType.ZTCP));
 				}
 				else if (ndst == NagiosDataSourceType.HTTP)
-					config.addNagiosDataSource(new NagiosDataSource(new URL(URLDecoder.decode(server_add_parameters, "US-ASCII")), nv));
+				{
+					try
+					{
+						URL url = new URL(URLDecoder.decode(server_add_parameters, "US-ASCII"));
+						String username = getFieldDecoded(socket, requestData, "nagios-http-username");
+						String password = getFieldDecoded(socket, requestData, "nagios-http-password");
+						if (username != null && password != null && username.equals("") == false && password.equals("") == false)
+							config.addNagiosDataSource(new NagiosDataSource(url, username, password, nv));
+						else
+							config.addNagiosDataSource(new NagiosDataSource(url, nv));
+
+						String result = testUrl(url);
+						if (result != null)
+							reply.add("Warning: URL " + server_add_parameters + " seems to be unreachable! (" + result + ")<BR>\n");
+					}
+					catch(MalformedURLException mue)
+					{
+						reply.add("Error: URL " + server_add_parameters + " is not valid. Nagios-server was <I>not</> added.<BR>\n");
+					}
+				}
 				else if (ndst == NagiosDataSourceType.FILE)
 					config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, nv));
 			}

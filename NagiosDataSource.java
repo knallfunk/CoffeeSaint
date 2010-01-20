@@ -11,6 +11,7 @@ public class NagiosDataSource
 	private NagiosVersion version = NagiosVersion.V1;
 	private URL url = null;
 	private String file = null;
+	private String username = null, password = null;
 
 	public NagiosDataSource(String host, int port, NagiosVersion version, boolean compressed)
 	{
@@ -27,11 +28,30 @@ public class NagiosDataSource
 		this.version = version;
 	}
 
+	public NagiosDataSource(URL url, String username, String password, NagiosVersion version)
+	{
+		this.type = NagiosDataSourceType.HTTP;
+		this.url = url;
+		this.version = version;
+		this.username = username;
+		this.password = password;
+	}
+
 	public NagiosDataSource(String file, NagiosVersion version)
 	{
 		this.type = NagiosDataSourceType.FILE;
 		this.file = file;
 		this.version = version;
+	}
+
+	public String getUsername()
+	{
+		return username;
+	}
+
+	public String getPassword()
+	{
+		return password;
 	}
 
 	public NagiosDataSourceType getType()
