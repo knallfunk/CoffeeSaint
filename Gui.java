@@ -123,12 +123,11 @@ public class Gui extends JPanel implements ImageObserver
 		configureRendered(g, true);
 
 		Color stateColor = coffeeSaint.stateToColor(state);
-		//Color fadeToColor = bgColor; // from config FIXME
-		Color fadeToColor = null; // from config FIXME
-		if (fadeToColor != null)
+		Color gradientColor = config.getProblemRowGradient();
+		if (gradientColor != null)
 		{
 			int scR = stateColor.getRed(), scG = stateColor.getGreen(), scB = stateColor.getBlue();
-			int ftcR = fadeToColor.getRed(), ftcG = fadeToColor.getGreen(), ftcB = fadeToColor.getBlue();
+			int ftcR = gradientColor.getRed(), ftcG = gradientColor.getGreen(), ftcB = gradientColor.getBlue();
 			double stepR = (double)(ftcR - scR) / (double)rowHeight;
 			double stepG = (double)(ftcG - scG) / (double)rowHeight;
 			double stepB = (double)(ftcB - scB) / (double)rowHeight;
@@ -411,6 +410,24 @@ public class Gui extends JPanel implements ImageObserver
 		configureRendered((Graphics2D)g, true);
 	}
 
+	public void drawProblemServiceSplitLine(Graphics g, int rowHeight, int windowHeight, int nProblems)
+	{
+		if (config.getPutSplitAtOffset() != null)
+		{
+			int x = config.getPutSplitAtOffset();
+			int maxY = nProblems * bordersParameters.getRowHeight(), minY = 0;
+			if (config.getShowHeader() == true)
+			{
+				minY = config.getUpperRowBorderHeight() + rowHeight;
+				maxY += minY;
+			}
+			maxY = Math.min(maxY, windowHeight);
+
+			g.setColor(config.getRowBorderColor());
+			g.drawLine(x, minY, x, maxY);
+		}
+	}
+
 	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
 	{
 		System.out.println(">>> DRAW PROBLEMS START <<<");
@@ -672,6 +689,9 @@ public class Gui extends JPanel implements ImageObserver
 				movingPartsSemaphore.release();
 			}
 
+			if (config.getDrawProblemServiceSplitLine())
+				drawProblemServiceSplitLine(g, rowHeight, windowHeight, problems.size());
+
 			if (problems.size() > 0)
 			{
 				if (lastState == false)
@@ -740,8 +760,8 @@ public class Gui extends JPanel implements ImageObserver
 				logo = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
 			else
 				logo = Toolkit.getDefaultToolkit().createImage(loadImage);
-                        new ImageIcon(logo); //loads the image
-                        Toolkit.getDefaultToolkit().sync();
+			new ImageIcon(logo); //loads the image
+			Toolkit.getDefaultToolkit().sync();
 		}
 
 		for(;;)
@@ -770,7 +790,11 @@ public class Gui extends JPanel implements ImageObserver
 				currentMovingPart.scrollView(g2d, config.getScrollingPixelsPerSecond());
 			}
 			if (bordersParameters != null && windowMovingParts.size() > 0)
+			{
 				drawBorders((Graphics2D)g, bordersParameters);
+				if (config.getDrawProblemServiceSplitLine())
+					drawProblemServiceSplitLine(g, rowHeight, getHeight(), bordersParameters.getNProblems());
+			}
 			movingPartsSemaphore.release();
 
 			Position counterPosition = config.getCounterPosition();

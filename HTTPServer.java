@@ -727,7 +727,7 @@ class HTTPServer implements Runnable
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Reduce text width to fit to screen:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"reduce-textwidth\" VALUE=\"on\" " + isChecked(config.getReduceTextWidth()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Anti-alias:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"anti-alias\" VALUE=\"on\" " + isChecked(config.getAntiAlias()) + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Max. quality graphics:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"max-quality-graphics\" VALUE=\"on\" " + isChecked(config.getMaxQualityGraphics()) + "></TD><TD>Slows down and difference is small</TD></TR>\n");
+		reply.add("<TR><TD>Max. quality graphics:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"max-quality-graphics\" VALUE=\"on\" " + isChecked(config.getMaxQualityGraphics()) + "></TD><TD>Slows down considerably in some situations</TD></TR>\n");
 		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam, 1.0 = not transparent</TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Row border height:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"upper-row-border-height\" VALUE=\"" + config.getUpperRowBorderHeight() + "\"></TD><TD>In case you want a thicker bar between the header and the problem list./TD></TR>\n");
@@ -754,7 +754,10 @@ class HTTPServer implements Runnable
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background fade-to color:</TD><TD>\n");
 		colorSelectorHTML(reply, "bgcolor-fade-to", config.getBackgroundColorFadeToName(), true);
-		reply.add("</TD><TD></TD></TR>");
+		reply.add("</TD><TD>(color gradient)</TD></TR>");
+		reply.add("<TR><TD>Problem bar fade-to-color:</TD><TD>\n");
+		colorSelectorHTML(reply, "problem-row-gradient", config.getProblemRowGradientName(), true);
+		reply.add("</TD><TD>(color gradient)</TD></TR>");
 		reply.add("<TR><TD>Background color OK-status:</TD><TD>\n");
 		colorSelectorHTML(reply, "bgColorOk", config.getBackgroundColorOkStatusName(), false);
 		reply.add("</TD><TD></TD></TR>");
@@ -778,6 +781,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Text splitter:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-splitter\" VALUE=\"" + (config.getLineScrollSplitter() == null ? "" : "" + config.getLineScrollSplitter()) + "\"></TD><TD>This is used for both scrolling-splitted-text<BR>and the 'draw at offset' functionality.</TD></TR>\n");
 		reply.add("<TR><TD>Draw at what offset splitted part:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"split-text-put-at-offset\" VALUE=\"" + (config.getPutSplitAtOffset() != null ? config.getPutSplitAtOffset() : 0) + "\"></TD><TD>0 = disabled</TD></TR>\n");
+		reply.add("<TR><TD>Draw split-line:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"draw-problems-service-split-line\" VALUE=\"on\" " + isChecked(config.getDrawProblemServiceSplitLine()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD>\n");
 		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder(), false);
 		reply.add("</TD><TD></TD></TR>");
@@ -965,6 +969,12 @@ class HTTPServer implements Runnable
 			config.setBackgroundColorFadeTo(null);
 		else
 			config.setBackgroundColorFadeTo(fadeTo);
+
+		String problemBarFadeTo = getField(socket, requestData, "problem-row-gradient");
+		if (problemBarFadeTo == null || problemBarFadeTo.equals("NULL") == true)
+			config.setProblemRowGradient(null);
+		else
+			config.setProblemRowGradient(problemBarFadeTo);
 
 		config.setBackgroundColorOkStatus(getField(socket, requestData, "bgColorOk"));
 		config.setWarningBgColor(getField(socket, requestData, "warning-bg-color"));
@@ -1155,6 +1165,8 @@ class HTTPServer implements Runnable
 			else
 				config.setLineScrollSplitter(splitter.charAt(0));
 		}
+
+		config.setDrawProblemServiceSplitLine(getCheckBox(socket, requestData, "draw-problems-service-split-line"));
 
 		String drawSplitAtOffset = getField(socket, requestData, "split-text-put-at-offset");
 		if (drawSplitAtOffset != null && drawSplitAtOffset.trim().equals("") == false)

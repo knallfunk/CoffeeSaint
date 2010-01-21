@@ -104,6 +104,9 @@ public class Config
 	private int upperRowBorderHeight;
 	private Color bgColorFadeTo;
 	private String bgColorFadeToName;
+	private Color problemRowGradient;
+	private String problemRowGradientName;
+	private boolean drawProblemServiceSplitLine;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -209,6 +212,7 @@ public class Config
 		upperRowBorderHeight = 1;
 		bgColorFadeTo = null;
 		bgColorFadeToName = null;
+		drawProblemServiceSplitLine = false;
 		unlock();
 	}
 
@@ -390,6 +394,8 @@ public class Config
 						setRowBorder(isTrue);
 					else if (name.equals("anti-alias"))
 						setAntiAlias(isTrue);
+					else if (name.equals("draw-problems-service-split-line"))
+						setDrawProblemServiceSplitLine(isTrue);
 					else if (name.equals("max-quality-graphics"))
 						setMaxQualityGraphics(isTrue);
 					else if (name.equals("row-border-color"))
@@ -416,6 +422,8 @@ public class Config
 						setBackgroundColor(data);
 					else if (name.equals("bgcolor-fade-to"))
 						setBackgroundColorFadeTo(data);
+					else if (name.equals("problem-row-gradient"))
+						setProblemRowGradient(data);
 					else if (name.equals("reduce-textwidth"))
 						setReduceTextWidth(isTrue);
 					else if (name.equals("also-scheduled-downtime"))
@@ -568,6 +576,8 @@ public class Config
 		writeLine(out, "bgcolor = " + getBackgroundColorName());
 		if (getBackgroundColorFadeTo() != null)
 			writeLine(out, "bgcolor-fade-to = " + getBackgroundColorFadeToName());
+		if (getProblemRowGradient() != null)
+			writeLine(out, "problem-row-gradient = " + getProblemRowGradientName());
 		if (getPerformanceDataFileName() != null)
 			writeLine(out, "performance-data-filename = " + getPerformanceDataFileName());
 		writeLine(out, "textcolor = " + getTextColorName());
@@ -589,6 +599,7 @@ public class Config
 		writeLine(out, "anti-alias = " + (getAntiAlias() ? "true" : "false"));
 		writeLine(out, "max-quality-graphics = " + (getMaxQualityGraphics() ? "true" : "false"));
 		writeLine(out, "row-border = " + (getRowBorder() ? "true" : "false"));
+		writeLine(out, "draw-problems-service-split-line = " + (getDrawProblemServiceSplitLine() ? "true" : "false"));
 		writeLine(out, "row-border-color = " + getRowBorderColorName());
 		writeLine(out, "upper-row-border-height = " + getUpperRowBorderHeight());
 		writeLine(out, "graph-color = " + getGraphColorName());
@@ -2449,7 +2460,10 @@ public class Config
 	public void setPutSplitAtOffset(Integer newValue)
 	{
 		lock();
-		putSplitAtOffset = newValue;
+		if (newValue == 0)
+			putSplitAtOffset = null;
+		else
+			putSplitAtOffset = newValue;
 		unlock();
 	}
 
@@ -2595,5 +2609,60 @@ public class Config
 		copy = bgColorFadeToName;
 		unlock();
 		return copy;
+	}
+
+	public Color getProblemRowGradient()
+	{
+		Color copy;
+		lock();
+		copy = problemRowGradient;
+		unlock();
+		return copy;
+	}
+
+	public void setProblemRowGradient(String colorName) throws Exception
+	{
+		if (colorName == null)
+		{
+			lock();
+			problemRowGradient = null;
+			problemRowGradientName = null;
+			unlock();
+		}
+		else
+		{
+			Color color = selectColor(colorName);
+			if (color == null)
+				throw new Exception("Color " + colorName + " is not known.");
+			lock();
+			problemRowGradient = color;
+			problemRowGradientName = colorName;
+			unlock();
+		}
+	}
+
+	public String getProblemRowGradientName()
+	{
+		String copy;
+		lock();
+		copy = problemRowGradientName;
+		unlock();
+		return copy;
+	}
+
+	public boolean getDrawProblemServiceSplitLine()
+	{
+		boolean copy;
+		lock();
+		copy = drawProblemServiceSplitLine;
+		unlock();
+		return copy;
+	}
+
+	public void setDrawProblemServiceSplitLine(boolean on)
+	{
+		lock();
+		drawProblemServiceSplitLine = on;
+		unlock();
 	}
 }

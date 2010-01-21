@@ -1184,7 +1184,8 @@ public class CoffeeSaint
 		System.out.println("--suppress-flapping Do not show hosts that are flapping");
 		System.out.println("--show-services-for-host-with-problems");
 		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray");
-		System.out.println("--bgcolor-fade-to x If set, don't draw a solid color but fade the --bgcolor color to this one.");
+		System.out.println("--bgcolor-fade-to x If set, don't draw a solid color but fade (gradient) the --bgcolor color to this one.");
+		System.out.println("--problem-row-gradient If set, don't draw a solid color bar but fade (gradient) the problem-status-color to this one.");
 		System.out.println("--list-bgcolors     Show a list of available colors");
 		System.out.println("--textcolor   Text color (header and such)");
 		System.out.println("--warning-textcolor Text color of warning-problems");
@@ -1214,7 +1215,8 @@ public class CoffeeSaint
 		System.out.println("--scrolling-header  In case there's more information to put into it than what fits on the screen");
 		System.out.println("--scroll-pixels-per-sec x  Number of pixels to scroll per second (default: 100)");
 		System.out.println("--scroll-if-not-fitting    If problems do not fit, scroll them");
-		System.out.println("--scroll-splitter x        When scrolling problems, on what character to split. Left from the split-character no scrolling takes place, right from that character the text is scrolled.");
+		System.out.println("--splitter x        On what character to split a line. When scrolling is enabled: left from the split-character no scrolling takes place, right from that character the text is scrolled.");
+		System.out.println("--draw-problems-service-split-line Draw a line at the split position.");
 		System.out.println("--anti-alias  Anti-alias graphics");
 		System.out.println("--verbose     Show what it is doing");
 		System.out.println("--color-bg-to-state   Background color depends on state:");
@@ -1460,6 +1462,8 @@ public class CoffeeSaint
 						config.setBackgroundColor(arg[++loop]);
 					else if (arg[loop].equals("--bgcolor-fade-to"))
 						config.setBackgroundColorFadeTo(arg[++loop]);
+					else if (arg[loop].equals("--problem-row-gradient"))
+						config.setProblemRowGradient(arg[++loop]);
 					else if (arg[loop].equals("--textcolor"))
 						config.setTextColor(arg[++loop]);
 					else if (arg[loop].equals("--nrows"))
@@ -1549,8 +1553,10 @@ public class CoffeeSaint
 						config.setServicesFilterExclude(arg[++loop]);
 					else if (arg[loop].equals("--services-filter-include"))
 						config.setServicesFilterInclude(arg[++loop]);
-					else if (arg[loop].equals("--scroll-splitter"))
+					else if (arg[loop].equals("--scroll-splitter") || arg[loop].equals("--splitter"))
 						config.setLineScrollSplitter(arg[++loop].trim().charAt(0));
+					else if (arg[loop].equals("--draw-problems-service-split-line"))
+						config.setDrawProblemServiceSplitLine(true);
 					else if (arg[loop].equals("--sparkline-width"))
 						config.setSparkLineWidth(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--scroll-if-not-fitting"))
