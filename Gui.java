@@ -58,11 +58,22 @@ public class Gui extends JPanel implements ImageObserver
 		return (flags & (ALLBITS|ABORT)) == 0;
 	}
 
-	public Gui(Config config, CoffeeSaint coffeeSaint, Statistics statistics)
+	public Gui(Config config, CoffeeSaint coffeeSaint, Statistics statistics) throws Exception
 	{
 		this.config = config;
 		this.coffeeSaint = coffeeSaint;
 		this.statistics = statistics;
+
+		if (config.getLogo() != null)
+		{
+			String loadImage = config.getLogo();
+			if (loadImage.length() >= 8 && (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://")))
+				logo = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
+			else
+				logo = Toolkit.getDefaultToolkit().createImage(loadImage);
+			new ImageIcon(logo); //loads the image
+			Toolkit.getDefaultToolkit().sync();
+		}
 	}
 
 	public void configureRendered(Graphics2D g, boolean enable)
@@ -677,6 +688,7 @@ public class Gui extends JPanel implements ImageObserver
 				else
 					throw new Exception("Unknown logo position: " + logoPosition);
 
+System.out.println("LOGO " + plotX + "," + plotY + " | " + newLogoWidth + "x" + newLogoHeight);
 				g.drawImage(logo, plotX, plotY, newLogoWidth, newLogoHeight, this);
 			}
 
@@ -752,17 +764,6 @@ public class Gui extends JPanel implements ImageObserver
 		double scrollTs = (double)System.currentTimeMillis() / 1000.0;
 
 		currentHeader = new ScrollableContent(0, 0, getWidth());
-
-		if (config.getLogo() != null)
-		{
-			String loadImage = config.getLogo();
-			if (loadImage.length() >= 8 && (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://")))
-				logo = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
-			else
-				logo = Toolkit.getDefaultToolkit().createImage(loadImage);
-			new ImageIcon(logo); //loads the image
-			Toolkit.getDefaultToolkit().sync();
-		}
 
 		for(;;)
 		{
