@@ -726,7 +726,7 @@ class HTTPServer implements Runnable
 		stringSelectorHTML(reply, "critical-font", fontNames, config.getCriticalFontName(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Reduce text width to fit to screen:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"reduce-textwidth\" VALUE=\"on\" " + isChecked(config.getReduceTextWidth()) + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Anti-alias:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"anti-alias\" VALUE=\"on\" " + isChecked(config.getAntiAlias()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Anti-alias:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"anti-alias\" VALUE=\"on\" " + isChecked(config.getAntiAlias()) + "></TD><TD>Slows down considerably in some situations but improves how fonts are shown</TD></TR>\n");
 		reply.add("<TR><TD>Max. quality graphics:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"max-quality-graphics\" VALUE=\"on\" " + isChecked(config.getMaxQualityGraphics()) + "></TD><TD>Slows down considerably in some situations</TD></TR>\n");
 		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam, 1.0 = not transparent</TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
@@ -800,8 +800,9 @@ class HTTPServer implements Runnable
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "lower-right"));
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "center"));
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "nowhere"));
-		reply.add("<TR><TD>Problem message:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"state-problems-text\" VALUE=\"" + (config.getStateProblemsText() != null ? config.getStateProblemsText() : "") + "\"></TD><TD>Used in the %STATE escape string.</TD></TR>\n");
 		reply.add("</SELECT></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Problem message:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"state-problems-text\" VALUE=\"" + (config.getStateProblemsText() != null ? config.getStateProblemsText() : "") + "\"></TD><TD>Used in the %STATE escape string.</TD></TR>\n");
+		reply.add("<TR><TD>Logo:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"logo-url\" VALUE=\"" + (config.getLogo() != null ? config.getLogo() : "") + "\"></TD><TD>Either a pathname or an URL.</TD></TR>\n");
 		reply.add("<TR><TD>Logo position:</TD><TD><SELECT NAME=\"logo-position\">\n");
 		reply.add(selectField(config.getLogoPositionName(), "left"));
 		reply.add(selectField(config.getLogoPositionName(), "right"));
@@ -1023,7 +1024,7 @@ class HTTPServer implements Runnable
 				config.setNoProblemsText(noProblemsText);
 		}
 		String noProblemsTextPosition = getField(socket, requestData, "no-problems-text-position");
-		if (noProblemsTextPosition != null)
+		if (noProblemsTextPosition != null && noProblemsTextPosition.equals("") == false)
 			config.setNoProblemsTextPosition(noProblemsTextPosition);
 
 		String stateProblemsText = getFieldDecoded(socket, requestData, "state-problems-text");
@@ -1097,6 +1098,14 @@ class HTTPServer implements Runnable
 		if (counterPosition != null)
 			config.setCounterPosition(counterPosition);
 
+		String newLogo = getFieldDecoded(socket, requestData, "logo-url");
+		if (newLogo != null)
+		{
+			if (newLogo.trim().equals(""))
+				config.setLogo(null);
+			else
+				config.setLogo(newLogo);
+		}
 		String logoPosition = getField(socket, requestData, "logo-position");
 		if (logoPosition != null)
 			config.setLogoPosition(logoPosition);
@@ -1114,7 +1123,7 @@ class HTTPServer implements Runnable
 		}
 
 		String newWebcam = getFieldDecoded(socket, requestData, "newWebcam");
-		if (newWebcam.equals("") == false)
+		if (newWebcam != null && newWebcam.equals("") == false)
 			config.addImageUrl(newWebcam);
 
 		for(HTTPRequestData webcam : requestData)
@@ -1516,10 +1525,10 @@ class HTTPServer implements Runnable
 			reply.add("<IMG SRC=\"/cgi-bin/latency-graph.cgi\" BORDER=\"1\"><BR>\n");
 			reply.add("<BR>\n");
 			reply.add("<TABLE>\n");
-			reply.add("<TR><TD>Minimum:</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "ms</TD></TR>\n");
-			reply.add("<TR><TD>Maximum:</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "ms</TD></TR>\n");
-			reply.add("<TR><TD>Average:</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "ms</TD></TR>\n");
-			reply.add("<TR><TD>Standard deviation:</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "ms</TD></TR>\n");
+			reply.add("<TR><TD>Minimum:</TD><TD>" + String.format("%.4f", dataInfo.getMin()) + "s</TD></TR>\n");
+			reply.add("<TR><TD>Maximum:</TD><TD>" + String.format("%.4f", dataInfo.getMax()) + "s</TD></TR>\n");
+			reply.add("<TR><TD>Average:</TD><TD>" + String.format("%.4f", dataInfo.getAvg()) + "s</TD></TR>\n");
+			reply.add("<TR><TD>Standard deviation:</TD><TD>" + String.format("%.4f", dataInfo.getSd()) + "s</TD></TR>\n");
 			reply.add("</TABLE>\n");
 		}
 		else

@@ -450,6 +450,7 @@ public class Gui extends JPanel implements ImageObserver
 			Color bgColor = config.getBackgroundColor();
 			int newLogoHeight = -1, newLogoWidth = -1;
 
+			/* determine new size of logo; keep correct aspect ratio */
 			if (logo != null)
 			{
 				int imgLogoWidth  = logo.getWidth(null);
@@ -463,6 +464,12 @@ public class Gui extends JPanel implements ImageObserver
 			g.setColor(Color.BLUE);
 			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 
+			/* font for all texts */
+			String fontName = config.getFontName();
+			final Font f = new Font(fontName, Font.PLAIN, rowHeight);
+			g.setFont(f);
+
+			/* get webcam images */
 			if (config.getVerbose())
 				prepareRow(g, windowWidth, 0, "Loading image(s)", 0, "0", bgColor, 1.0f, null, false);
 			startLoadTs = System.currentTimeMillis();
@@ -473,11 +480,7 @@ public class Gui extends JPanel implements ImageObserver
 
 			statistics.addToTotalImageLoadTime(took);
 
-			String fontName = config.getFontName();
-			final Font f = new Font(fontName, Font.PLAIN, rowHeight);
-			g.setFont(f);
-
-			/* find the problems in the nagios data */
+			/* load & process nagios data */
 			if (config.getVerbose())
 				prepareRow(g, windowWidth, 0, "Loading Nagios data", 0, "0", bgColor, 1.0f, null, false);
 			JavNag javNag = CoffeeSaint.loadNagiosData(this, windowWidth, g);
@@ -493,6 +496,7 @@ public class Gui extends JPanel implements ImageObserver
 
 			Calendar rightNow = Calendar.getInstance();
 
+			/* determine background color */
 			if (problems.size() == 0 && config.getBrainFileName() != null)
 				bgColor = coffeeSaint.predictWithColor(rightNow);
 			else if (config.getSetBgColorToState())
@@ -511,7 +515,7 @@ public class Gui extends JPanel implements ImageObserver
 					bgColor = config.getNagiosUnknownBgColor();
 			}
 
-			/* clear frame */
+			/* clear frame & draw background gradient, if selected */
 			g.setColor(bgColor);
 			g.fillRect(0, 0, windowWidth, windowHeight);
 			Color fadeToBgColor = config.getBackgroundColorFadeTo();
@@ -526,20 +530,22 @@ public class Gui extends JPanel implements ImageObserver
 				for(int y = 0; y<windowHeight; y++)
 				{
 					double pos = y;
-					int curR = Math.min(Math.max(0, scR + (int)((double)pos * stepR)), 255);
-					int curG = Math.min(Math.max(0, scG + (int)((double)pos * stepG)), 255);
-					int curB = Math.min(Math.max(0, scB + (int)((double)pos * stepB)), 255);
+					int curR = Math.min(Math.max(0, scR + (int)(pos * stepR)), 255);
+					int curG = Math.min(Math.max(0, scG + (int)(pos * stepG)), 255);
+					int curB = Math.min(Math.max(0, scB + (int)(pos * stepB)), 255);
 
 					g.setColor(new Color(curR, curG, curB));
 					g.drawLine(0, y, windowWidth - 1, y);
 				}
 			}
 
+			/* webcam */
 			if (imageParameters != null)
 				displayImage(imageParameters, problems.size(), g, rowHeight, config.getAdaptImageSize(), windowWidth, windowHeight);
 
 			int curNRows = 0;
 
+			/* header */
 			if (config.getShowHeader())
 			{
 				String header = coffeeSaint.getScreenHeader(javNag, rightNow, problems.size() > 0);
@@ -562,6 +568,7 @@ public class Gui extends JPanel implements ImageObserver
 				curNRows++;
 			}
 
+			/* problems */
 			int colNr = 0;
 			int dummyNRows = config.getNRows() - (config.getShowHeader() ? 1 : 0);
 			int curNColumns;
@@ -631,6 +638,7 @@ public class Gui extends JPanel implements ImageObserver
 				}
 			}
 
+			/* no problems message */
 			if (problems.size() == 0)
 			{
 				String okMsg = config.getNoProblemsText();
@@ -676,6 +684,7 @@ public class Gui extends JPanel implements ImageObserver
 				}
 			}
 
+			/* draw logo */
 			if (logo != null)
 			{
 				int plotX = -1, plotY = 0;
@@ -688,10 +697,10 @@ public class Gui extends JPanel implements ImageObserver
 				else
 					throw new Exception("Unknown logo position: " + logoPosition);
 
-System.out.println("LOGO " + plotX + "," + plotY + " | " + newLogoWidth + "x" + newLogoHeight);
 				g.drawImage(logo, plotX, plotY, newLogoWidth, newLogoHeight, this);
 			}
 
+			/* draw borders */
 			if (config.getRowBorder())
 			{
 				bordersParameters = new BordersParameters(problems.size(), curNColumns, windowWidth, rowHeight);
@@ -704,6 +713,7 @@ System.out.println("LOGO " + plotX + "," + plotY + " | " + newLogoWidth + "x" + 
 			if (config.getDrawProblemServiceSplitLine())
 				drawProblemServiceSplitLine(g, rowHeight, windowHeight, problems.size());
 
+			/* play sound */
 			if (problems.size() > 0)
 			{
 				if (lastState == false)

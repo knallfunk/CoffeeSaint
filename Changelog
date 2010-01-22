@@ -8,3 +8,4 @@
 - configurable bar height between header and problem-list
 - can now retrieve the nagios status via https and/or authetication as well
 - better handling of bugs in commandline parameters
+- now allows you to maximize the window

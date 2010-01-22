@@ -1,6 +1,12 @@
 /* Released under GPL2, (C) 2009-2010 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
 
+import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.HostnameVerifier;
+import java.security.SecureRandom;
+import javax.net.ssl.SSLSession;
+
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -38,7 +44,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.8-beta003";
+	static String versionNr = "v2.8-beta006";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -64,6 +70,8 @@ public class CoffeeSaint
 	static Semaphore statisticsSemaphore = new Semaphore(1);
 	//
 	static Random random = new Random(System.currentTimeMillis());
+	//
+	private static TrustManager[] trustManagers;
 
 	public CoffeeSaint() throws Exception
 	{
@@ -1148,6 +1156,34 @@ public class CoffeeSaint
 		f.setIconImage(img);
 	}
 
+	public static void allowAllSSL()
+	{
+		javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier(){
+				public boolean verify ( String hostname, SSLSession session) {
+					return true;
+				}
+				});
+
+		javax.net.ssl.SSLContext context=null;
+
+		if(trustManagers == null)
+		{
+			trustManagers = new javax.net.ssl.TrustManager[]{new _FakeX509TrustManager()};
+		}
+
+		try
+		{
+			context = javax.net.ssl.SSLContext.getInstance("TLS");
+			context.init(null, trustManagers, new SecureRandom());
+		}
+		catch (Exception e)
+		{
+			errorExit("Setting relaxed SSL settings failed: " + e);
+		}
+
+		javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
+	}
+
 	public static void showHelp()
 	{
 		System.out.println("--source type version x  Source to retrieve from");
@@ -1161,10 +1197,11 @@ public class CoffeeSaint
 		System.out.println("              You can add as many Nagios servers as you like");
 		System.out.println("              Example: --source file 3 /var/cache/nagios3/status.dat");
 		System.out.println("");
+		System.out.println("--allow-all-ssl  For https: do not check if the certificate is valid. You can use this with hosts that have a self-signed certificate. Please note that this needs to be the first commandline switch!");
 		System.out.println("--disable-http-compression Don't use gzip/deflate compression in HTTP connection - usefull for fast links as the server has less load then");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
-		System.out.println("--fullscreen  Run in fullscreen mode, e.g. without any borders");
+		System.out.println("--fullscreen x Run in a fullscreen mode, e.g. without any borders (undecorated) or spread out over all monitors (fullscreen)");
 		System.out.println("--problem-columns x  Split the screen in x columns so that it can display x * nrows");
 		System.out.println("--flexible-n-columns Dynamically adjust number of columns (up to the maximum set with --problem-columns)");
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin");
@@ -1288,6 +1325,8 @@ public class CoffeeSaint
 						config.writeConfig(arg[++loop]);
 						config.setConfigFilename(arg[loop]);
 					}
+					else if (arg[loop].equals("--allow-all-ssl"))
+						allowAllSSL();
 					else if (arg[loop].equals("--source"))
 					{
 						NagiosDataSource nds = null;
@@ -1419,6 +1458,8 @@ public class CoffeeSaint
 						if (result != null)
 							errorExit("Cannot open configuration file " + filename + " (" + result + ")");
 						config.loadConfig(filename);
+						if (config.getAllowAllSSL())
+							allowAllSSL();
 					}
 					else if (arg[loop].equals("--predict"))
 						config.setBrainFileName(arg[++loop]);
@@ -1662,7 +1703,7 @@ public class CoffeeSaint
 				{
 					/* create frame to draw in */
 					Rectangle useable = ge.getMaximumWindowBounds();
-					f.setMaximizedBounds(useable);
+					//f.setMaximizedBounds(useable);
 					f.setSize(useable.width, useable.height);
 					f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
 

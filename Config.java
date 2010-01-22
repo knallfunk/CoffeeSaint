@@ -107,6 +107,7 @@ public class Config
 	private Color problemRowGradient;
 	private String problemRowGradientName;
 	private boolean drawProblemServiceSplitLine;
+	private boolean allowAllSSL;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -213,6 +214,7 @@ public class Config
 		bgColorFadeTo = null;
 		bgColorFadeToName = null;
 		drawProblemServiceSplitLine = false;
+		allowAllSSL = false;
 		unlock();
 	}
 
@@ -299,6 +301,8 @@ public class Config
 
 					if (name.equals("config"))
 						loadConfig(data);
+					else if (name.equals("allow-all-ssl"))
+						setAllowAllSSL(isTrue);
 					else if (name.equals("source"))
 					{
 						String [] parameters = data.split(" ");
@@ -562,6 +566,7 @@ public class Config
 	{
 		BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
 
+		writeLine(out, "allow-all-ssl = " + (getAllowAllSSL() ? "true" : "false"));
 		if (getBrainFileName() != null)
 			writeLine(out, "predict = " + getBrainFileName());
 		if (getExec() != null)
@@ -2460,7 +2465,7 @@ public class Config
 	public void setPutSplitAtOffset(Integer newValue)
 	{
 		lock();
-		if (newValue == 0)
+		if (newValue == null || newValue == 0)
 			putSplitAtOffset = null;
 		else
 			putSplitAtOffset = newValue;
@@ -2663,6 +2668,22 @@ public class Config
 	{
 		lock();
 		drawProblemServiceSplitLine = on;
+		unlock();
+	}
+
+	public boolean getAllowAllSSL()
+	{
+		boolean copy;
+		lock();
+		copy = allowAllSSL;
+		unlock();
+		return copy;
+	}
+
+	public void setAllowAllSSL(boolean newSetting)
+	{
+		lock();
+		allowAllSSL = newSetting;
 		unlock();
 	}
 }
