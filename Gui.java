@@ -137,6 +137,7 @@ public class Gui extends JPanel implements ImageObserver
 		Color gradientColor = config.getProblemRowGradient();
 		if (gradientColor != null)
 		{
+			configureRendered((Graphics2D)gTo, false);
 			int scR = stateColor.getRed(), scG = stateColor.getGreen(), scB = stateColor.getBlue();
 			int ftcR = gradientColor.getRed(), ftcG = gradientColor.getGreen(), ftcB = gradientColor.getBlue();
 			double stepR = (double)(ftcR - scR) / (double)rowHeight;
@@ -155,6 +156,7 @@ public class Gui extends JPanel implements ImageObserver
 				g.setColor(new Color(curR, curG, curB));
 				g.drawLine(0, rowY, windowWidth - 1, rowY);
 			}
+			configureRendered((Graphics2D)gTo, true);
 		}
 		else
 		{
@@ -521,6 +523,7 @@ public class Gui extends JPanel implements ImageObserver
 			Color fadeToBgColor = config.getBackgroundColorFadeTo();
 			if (fadeToBgColor != null)
 			{
+				configureRendered((Graphics2D)g, false);
 				int scR = bgColor.getRed(), scG = bgColor.getGreen(), scB = bgColor.getBlue();
 				int ftcR = fadeToBgColor.getRed(), ftcG = fadeToBgColor.getGreen(), ftcB = fadeToBgColor.getBlue();
 				double stepR = (double)(ftcR - scR) / (double)windowHeight;
@@ -537,6 +540,7 @@ public class Gui extends JPanel implements ImageObserver
 					g.setColor(new Color(curR, curG, curB));
 					g.drawLine(0, y, windowWidth - 1, y);
 				}
+				configureRendered((Graphics2D)g, true);
 			}
 
 			/* webcam */
