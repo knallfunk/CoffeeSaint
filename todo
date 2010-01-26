@@ -18,3 +18,5 @@
 - web-interface; sync datafiles to disk bij write config? aparte link?
 
 - resize gaat mis
+
+ - iets met de execution time: check_execution_time

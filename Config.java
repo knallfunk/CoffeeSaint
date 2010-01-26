@@ -79,7 +79,7 @@ public class Config
 	private boolean flexibleNColumns;
 	private boolean maxQualityGraphics;
 	private boolean allowCompression;
-	private float transparency;
+	private float transparency, headerTransparency;
 	private boolean disableHTTPFileselect = false;
 	private boolean showFlapping;
 	private int sparkLineWidth;
@@ -189,6 +189,7 @@ public class Config
 		nagiosUnknownBgColorName = "magenta";
 		allowCompression = true;
 		transparency = 1.0f;
+		headerTransparency = 1.0f;
 		showFlapping = true;
 		sparkLineWidth = 0;
 		sparklineGraphMode = SparklineGraphMode.AVG_SD;
@@ -472,6 +473,8 @@ public class Config
 						setScrollingPixelsPerSecond(Integer.valueOf(data));
 					else if (name.equals("transparency"))
 						setTransparency(Float.valueOf(data));
+					else if (name.equals("header-transparency"))
+						setHeaderTransparency(Float.valueOf(data));
 					else if (name.equals("image"))
 						addImageUrl(data);
 					else if (name.equals("cam-rows"))
@@ -619,6 +622,7 @@ public class Config
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
 		writeLine(out, "transparency = " + getTransparency());
+		writeLine(out, "header-transparency = " + getHeaderTransparency());
 		writeLine(out, "hosts-filter-exclude = " + getHostsFilterExcludeList());
 		writeLine(out, "hosts-filter-include = " + getHostsFilterIncludeList());
 		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
@@ -2136,6 +2140,18 @@ public class Config
 		unlock();
 	}
 
+	public float getHeaderTransparency()
+	{
+		return headerTransparency;
+	}
+
+	public void setHeaderTransparency(float t)
+	{
+		lock();
+		headerTransparency = t;
+		unlock();
+	}
+
 	public void setDisableHTTPFileselect()
 	{
 		lock();
@@ -2685,5 +2701,7 @@ public class Config
 		lock();
 		allowAllSSL = newSetting;
 		unlock();
+
+		CoffeeSaint.allowAllSSL();
 	}
 }

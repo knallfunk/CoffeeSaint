@@ -729,8 +729,9 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Anti-alias:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"anti-alias\" VALUE=\"on\" " + isChecked(config.getAntiAlias()) + "></TD><TD>Slows down considerably in some situations but improves how fonts are shown</TD></TR>\n");
 		reply.add("<TR><TD>Max. quality graphics:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"max-quality-graphics\" VALUE=\"on\" " + isChecked(config.getMaxQualityGraphics()) + "></TD><TD>Slows down considerably in some situations</TD></TR>\n");
 		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam, 1.0 = not transparent</TD></TR>\n");
+		reply.add("<TR><TD>Header transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header-transparency\" VALUE=\"" + config.getHeaderTransparency() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Row border height:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"upper-row-border-height\" VALUE=\"" + config.getUpperRowBorderHeight() + "\"></TD><TD>In case you want a thicker bar between the header and the problem list./TD></TR>\n");
+		reply.add("<TR><TD>Row border height:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"upper-row-border-height\" VALUE=\"" + config.getUpperRowBorderHeight() + "\"></TD><TD>In case you want a thicker bar between the header and the problem list.</TD></TR>\n");
 		reply.add("<TR><TD>Row border color:</TD><TD>\n");
 		colorSelectorHTML(reply, "row-border-color", config.getRowBorderColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
@@ -930,6 +931,16 @@ class HTTPServer implements Runnable
 				reply.add("Transparency must be between 0.0 and 1.0 (both inclusive)");
 			else
 				config.setTransparency(newTransparency);
+		}
+
+		HTTPRequestData headerTransparency = MyHTTPServer.findRecord(requestData, "header-transparency");
+		if (headerTransparency != null && headerTransparency.getData() != null)
+		{
+			float newTransparency = Float.valueOf(headerTransparency.getData());
+			if (newTransparency < 0.0 || newTransparency > 1.0)
+				reply.add("Transparency (for header) must be between 0.0 and 1.0 (both inclusive)");
+			else
+				config.setHeaderTransparency(newTransparency);
 		}
 
 		HTTPRequestData sparkline_size = MyHTTPServer.findRecord(requestData, "sparkline-size");

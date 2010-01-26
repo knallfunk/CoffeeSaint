@@ -44,7 +44,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v2.9";
+	static String versionNr = "v3.0-beta001";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -799,7 +799,9 @@ public class CoffeeSaint
 			return config.getCriticalBgColor();
 		else if (state.equals("3") == true) // UNKNOWN STATE
 			return config.getNagiosUnknownBgColor();
-		else if (state.equals("255") == true)
+		else if (state.equals("254") == true) // no color at all
+			return null;
+		else if (state.equals("255") == true) // background color
 			return config.getBackgroundColor();
 
 		log.add("Unknown state: " + state);
@@ -1208,6 +1210,7 @@ public class CoffeeSaint
 		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems");
 		System.out.println("--random-img  Randomize order of images shown");
 		System.out.println("--transparency x Transparency for drawing (0.0...1.0) - only usefull with background image/webcam");
+		System.out.println("--header-transparency x  Like '--transparency' but for the header.");
 		System.out.println("--font x      Font to use. Default is 'Arial'");
 		System.out.println("--critical-font x  Font to use for critical problems");
 		System.out.println("--warning-font x   Font to use for warning problems");
@@ -1586,6 +1589,8 @@ public class CoffeeSaint
 						config.setAllowHTTPCompression(false);
 					else if (arg[loop].equals("--transparency"))
 						config.setTransparency(Float.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--header-transparency"))
+						config.setHeaderTransparency(Float.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--hosts-filter-exclude"))
 						config.setHostsFilterExclude(arg[++loop]);
 					else if (arg[loop].equals("--hosts-filter-include"))

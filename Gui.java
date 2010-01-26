@@ -135,7 +135,7 @@ public class Gui extends JPanel implements ImageObserver
 
 		Color stateColor = coffeeSaint.stateToColor(state);
 		Color gradientColor = config.getProblemRowGradient();
-		if (gradientColor != null)
+		if (gradientColor != null && stateColor != null)
 		{
 			configureRendered((Graphics2D)gTo, false);
 			int scR = stateColor.getRed(), scG = stateColor.getGreen(), scB = stateColor.getBlue();
@@ -158,7 +158,7 @@ public class Gui extends JPanel implements ImageObserver
 			}
 			configureRendered((Graphics2D)gTo, true);
 		}
-		else
+		else if (stateColor != null)
 		{
 			g.setColor(stateColor);
 			g.fillRect(0, 0, windowWidth, rowHeight);
@@ -318,6 +318,11 @@ public class Gui extends JPanel implements ImageObserver
 		{
 			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + nProblems));
 			offsetY = (headerOffset + nProblems) * rowHeight;
+		}
+		else if (config.getHeaderTransparency() != 1.0f)
+		{
+			curWindowHeight = rowHeight * config.getNRows();
+			offsetY = 0;
 		}
 		else
 		{
@@ -556,6 +561,8 @@ public class Gui extends JPanel implements ImageObserver
 				String stateForColor = problems.size() == 0 ? "0" : "255";
 				if (config.getHeaderAlwaysBGColor())
 					stateForColor = "255";
+// if (config.getHeaderTransparency() != 1.0f)
+//	stateForColor = "254";
 				if (config.getScrollingHeader())
 				{
 					movingPartsSemaphore.acquireUninterruptibly();
@@ -567,7 +574,7 @@ public class Gui extends JPanel implements ImageObserver
 					int xStart = 0;
 					if (logo != null && config.getLogoPosition() == Position.LEFT)
 						xStart = newLogoWidth;
-					prepareRow(g, windowWidth, xStart, header, curNRows, stateForColor, bgColor, 1.0f, null, false);
+					prepareRow(g, windowWidth, xStart, header, curNRows, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
 				}
 				curNRows++;
 			}
