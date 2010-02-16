@@ -443,7 +443,7 @@ public class Config
 						setAlsoDisabledActiveChecks(isTrue);
 					else if (name.equals("show-services-for-host-with-problems"))
 						setShowServicesForHostWithProblems(isTrue);
-					else if (name.equals("textcolor"))
+					else if (name.equals("textcolor") || name.equals("text-color"))
 						setTextColor(data);
 					else if (name.equals("warning-textcolor"))
 						setWarningTextColor(data);
@@ -891,6 +891,28 @@ public class Config
 	public List<ColorPair> getColors()
 	{
 		return colorPairs;
+	}
+
+	public void listFonts()
+	{
+		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		List<String> fontNames = Europe.convertStringArrayToList(lge.getAvailableFontFamilyNames());
+
+		System.out.println("Known fonts: ");
+		int nr = 0;
+		for(String fontName : fontNames);
+		{
+			if (++nr == 4)
+			{
+				System.out.println("\t" + fontName);
+				nr = 0;
+			}
+			else
+				System.out.print("\t" + fontName);
+		}
+
+		if (nr > 0)
+			System.out.println("");
 	}
 
 	public void listColors()
@@ -2100,7 +2122,7 @@ public class Config
 	{
 		boolean copy;
 		lock();
-		copy = alsoDisabledActiveChecks;
+		copy = maxQualityGraphics;
 		unlock();
 		return copy;
 	}

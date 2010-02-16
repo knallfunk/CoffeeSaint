@@ -44,7 +44,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.0-beta001";
+	static String versionNr = "v3.0";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -1212,6 +1212,7 @@ public class CoffeeSaint
 		System.out.println("--transparency x Transparency for drawing (0.0...1.0) - only usefull with background image/webcam");
 		System.out.println("--header-transparency x  Like '--transparency' but for the header.");
 		System.out.println("--font x      Font to use. Default is 'Arial'");
+		System.out.println("--list-fonts  List known fonts");
 		System.out.println("--critical-font x  Font to use for critical problems");
 		System.out.println("--warning-font x   Font to use for warning problems");
 		System.out.println("--reduce-textwidth Try to fit text to the window width");
@@ -1258,6 +1259,7 @@ public class CoffeeSaint
 		System.out.println("--splitter x        On what character to split a line. When scrolling is enabled: left from the split-character no scrolling takes place, right from that character the text is scrolled.");
 		System.out.println("--draw-problems-service-split-line Draw a line at the split position.");
 		System.out.println("--anti-alias  Anti-alias graphics");
+		System.out.println("--max-quality-graphics Draw graphics with maximum quality.");
 		System.out.println("--verbose     Show what it is doing");
 		System.out.println("--color-bg-to-state   Background color depends on state:");
 		System.out.println("--warning-bg-color x  Background color for warnings (yellow)");
@@ -1559,6 +1561,11 @@ public class CoffeeSaint
 						config.setAlsoAcknowledged(true);
 					else if (arg[loop].equals("--font"))
 						config.setFontName(arg[++loop]);
+					else if (arg[loop].equals("--list-fonts"))
+					{
+						config.listFonts();
+						System.exit(0);
+					}
 					else if (arg[loop].equals("--no-network-change"))
 						config.setNoNetworkChange(true);
 					else if (arg[loop].equals("--critical-font"))
