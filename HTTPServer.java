@@ -623,6 +623,7 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Nagios server(s)</H1>\n");
 		reply.add("See the <A HREF=\"http://vanheusden.com/java/CoffeeSaint/#howto\">CoffeeSaint website</A> to see what you can enter here.<BR>\n");
 		reply.add("Please note that 'username' and 'password' are only for 'http-auth'.<BR>\n");
+		reply.add("Also please note that http/https are NOT the urls of the Nagios web-interface but URLs of the status.dat-file. See <A HREF=\"http://vanheusden.com/java/CoffeeSaint/#url\">this page</A> for more info.<BR>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD><TD><B>username</B></TD><TD><B>password</B></TD></TR>\n");
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
