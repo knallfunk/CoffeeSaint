@@ -2,6 +2,7 @@
 import com.vanheusden.nagios.*;
 
 import java.awt.Color;
+import java.awt.GraphicsEnvironment;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
@@ -896,7 +897,7 @@ public class Config
 	public void listFonts()
 	{
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		List<String> fontNames = Europe.convertStringArrayToList(lge.getAvailableFontFamilyNames());
+		List<String> fontNames = CoffeeSaint.convertStringArrayToList(lge.getAvailableFontFamilyNames());
 
 		System.out.println("Known fonts: ");
 		int nr = 0;

@@ -496,16 +496,6 @@ class HTTPServer implements Runnable
 		reply.add("</SELECT>\n");
 	}
 
-	public List<String> convertStringArrayToList(String [] array)
-	{
-		List<String> list = new ArrayList<String>();
-
-		for(int index=0; index<array.length; index++)
-			list.add(array[index]);
-
-		return list;
-	}
-
 	public void sendReply_cgibin_select_configfile_cgi(MyHTTPServer socket, String cookie) throws Exception
 	{
 		File dir = new File(".");
@@ -535,7 +525,7 @@ class HTTPServer implements Runnable
 				};
 			String [] files = dir.list(fileFilter);
 			Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
-			stringSelectorHTML(reply, "config-file-list", convertStringArrayToList(files), currentFile != null ? currentFile : "---NONE---", true);
+			stringSelectorHTML(reply, "config-file-list", CoffeeSaint.convertStringArrayToList(files), currentFile != null ? currentFile : "---NONE---", true);
 			reply.add("</TD></TR>\n");
 			reply.add("<TR><TD></TD><TD><INPUT TYPE=\"SUBMIT\" VALUE=\"Submit changes!\"></TD></TR>\n");
 			reply.add("</TABLE>\n");
@@ -715,7 +705,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD>&gt;= 1</TD></TR>\n");
 		reply.add("<TR><TD>Flexible number of columns:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"flexible-n-columns\" VALUE=\"on\" " + isChecked(config.getFlexibleNColumns()) + "></TD><TD>Use in combination with number of columns</TD></TR>\n");
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		List<String> fontNames = convertStringArrayToList(lge.getAvailableFontFamilyNames());
+		List<String> fontNames = CoffeeSaint.convertStringArrayToList(lge.getAvailableFontFamilyNames());
 		reply.add("<TR><TD>Font:</TD><TD>");
 		stringSelectorHTML(reply, "font", fontNames, config.getFontName(), false);
 		reply.add("</TD><TD></TD></TR>");

@@ -35,6 +35,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.Random;
 import java.util.regex.Pattern;
@@ -44,7 +45,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.0";
+	static String versionNr = "v3.0-beta001";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -122,6 +123,16 @@ public class CoffeeSaint
 				System.err.println("File " + config.getLatencyFile() + " not found, continuing(!) anyway");
 			}
 		}
+	}
+
+	public static List<String> convertStringArrayToList(String [] array)
+	{
+		List<String> list = new ArrayList<String>();
+
+		for(int index=0; index<array.length; index++)
+			list.add(array[index]);
+
+		return list;
 	}
 
 	protected java.util.List<DataSource> getPerformanceData(String host, String service)
