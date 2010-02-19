@@ -46,7 +46,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.1";
+	static String versionNr = "v3.2-beta001";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -1146,34 +1146,13 @@ public class CoffeeSaint
 		}
 	}
 
-	public Rectangle getAllScreensSizes()
+	public static List<Monitor> getMonitors()
 	{
-		Rectangle vBounds = new Rectangle();
+		List<Monitor> monitors = new ArrayList<Monitor>();
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice[] gdArray = ge.getScreenDevices();
-
-		for (int i = 0; i < gdArray.length; i++)
-		{
-			GraphicsDevice gd = gdArray[i];
-			GraphicsConfiguration[] gcArray = gd.getConfigurations();
-			for (int j = 0; j < gcArray.length; j++)
-			{
-				// System.out.println("" + gcArray[j].getBounds() + " " + gcArray[j].getColorModel() + " " + gcArray[j].getBufferCapabilities());
-				System.out.println("" + gcArray[j]);
-				vBounds = vBounds.union(gcArray[j].getBounds());
-			}
-		}
-
-		return vBounds;
-	}
-
-	public static void showAvailableScreens()
-	{
 		String previous = "";
-		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		GraphicsDevice[] gdArray = ge.getScreenDevices();
 
-		System.out.println("Available screens (for --use-screen):");
 		for (int i = 0; i < gdArray.length; i++)
 		{
 			GraphicsDevice gd = gdArray[i];
@@ -1184,33 +1163,56 @@ public class CoffeeSaint
 				String current = gcArray[j].getDevice().getIDstring();
 				if (current.equals(previous) == false)
 				{
+					monitors.add(new Monitor(gdArray[i], gcArray[j], current, bounds));
 					previous = current;
-					System.out.println("" + current + " => " + bounds.width + "x" + bounds.height);
 				}
 			}
+		}
+
+		if (monitors.size() == 0)
+			return null;
+
+		return monitors;
+	}
+
+	public Rectangle getAllScreensSizes()
+	{
+		Rectangle vBounds = new Rectangle();
+		List<Monitor> monitors = getMonitors();
+		for(Monitor monitor : monitors)
+		{
+			Rectangle currentBounds = monitor.getBounds();
+			vBounds = vBounds.union(currentBounds);
+		}
+
+		return vBounds;
+	}
+
+	public static void showAvailableScreens()
+	{
+		System.out.println("Available screens (for --use-screen):");
+
+		List<Monitor> monitors = getMonitors();
+		for(Monitor monitor : monitors)
+		{
+			Rectangle bounds = monitor.getBounds();
+			System.out.println(monitor.getDeviceName() + " => " + bounds.width + "x" + bounds.height);
 		}
 	}
 
 	public JFrame selectScreen(String device)
 	{
-		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		GraphicsDevice[] gdArray = ge.getScreenDevices();
-
-		for (int i = 0; i < gdArray.length; i++)
+		List<Monitor> monitors = getMonitors();
+		for(Monitor monitor : monitors)
 		{
-			GraphicsDevice gd = gdArray[i];
-			GraphicsConfiguration[] gcArray = gd.getConfigurations();
-			for (int j = 0; j < gcArray.length; j++)
+			if (monitor.getDeviceName().equals(device))
 			{
-				if (gcArray[j].getDevice().getIDstring().equals(device))
-				{
-					JFrame f = new JFrame(gdArray[i].getDefaultConfiguration());
-					f.getContentPane().add(new Canvas(gcArray[j]));
-                                        Rectangle useable = gcArray[j].getBounds();
-					f.setLocation(useable.x, useable.y);
-                                        f.setSize(useable.width, useable.height);
-					return f;
-				}
+				JFrame f = new JFrame(monitor.getGraphicsDevice().getDefaultConfiguration());
+				f.getContentPane().add(new Canvas(monitor.getGraphicsConfiguration()));
+				Rectangle useable = monitor.getBounds();
+				f.setLocation(useable.x, useable.y);
+				f.setSize(useable.width, useable.height);
+				return f;
 			}
 		}
 
@@ -1381,8 +1383,6 @@ public class CoffeeSaint
 	{
 		try
 		{
-			String useScreen = null;
-
 			statistics.setRunningSince(System.currentTimeMillis());
 
 			System.out.println(version);
@@ -1404,7 +1404,9 @@ public class CoffeeSaint
 					else if (arg[loop].equals("--allow-all-ssl"))
 						allowAllSSL();
 					else if (arg[loop].equals("--use-screen"))
-						useScreen = arg[++loop];
+						config.setUseScreen(arg[++loop]);
+					else if (arg[loop].equals("--footer"))
+						config.setFooter(arg[++loop]);
 					else if (arg[loop].equals("--list-screens"))
 					{
 						showAvailableScreens();
@@ -1779,12 +1781,12 @@ public class CoffeeSaint
 
 				gui = new Gui(config, coffeeSaint, statistics);
 
-				if (useScreen != null)
+				if (config.getUseScreen() != null)
 				{
-					f = coffeeSaint.selectScreen(useScreen);
+					f = coffeeSaint.selectScreen(config.getUseScreen());
 					if (f == null)
 					{
-						System.err.println("Screen '" + useScreen + "' is not known.");
+						System.err.println("Screen '" + config.getUseScreen() + "' is not known.");
 						System.err.println("Please use '--list-screens' to see a list of known displays.");
 					}
 				}

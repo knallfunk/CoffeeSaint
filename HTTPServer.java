@@ -570,7 +570,7 @@ class HTTPServer implements Runnable
 	public String selectField(String current, String newValue)
 	{
 		String out = "<OPTION VALUE=\"" + newValue + "\"";
-		if (newValue.equals(current))
+		if (current != null && newValue.equals(current))
 			out += " SELECTED";
 		out += ">" + newValue + "</OPTION>\n";
 		return out;
@@ -691,7 +691,12 @@ class HTTPServer implements Runnable
 		reply.add(selectField(config.getFullscreenName(), "none"));
 		reply.add(selectField(config.getFullscreenName(), "undecorated"));
 		reply.add(selectField(config.getFullscreenName(), "fullscreen"));
-//		reply.add("</SELECT></TD><TD>" + fsMode + "</TD></TR>\n");
+		reply.add("</SELECT></TD><TD>Requires restart of CoffeeSaint.</TD></TR>\n");
+		reply.add("<TR><TD>Select monitor:</TD><TD><SELECT NAME=\"use-screen\">\n");
+		reply.add(selectField(config.getUseScreen(), "ALL"));
+		List<Monitor> monitors = CoffeeSaint.getMonitors();
+		for(Monitor monitor : monitors)
+			reply.add(selectField(config.getUseScreen(), monitor.getDeviceName()));
 		reply.add("</SELECT></TD><TD>Requires restart of CoffeeSaint.</TD></TR>\n");
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Counter position:</TD><TD><SELECT NAME=\"counter-position\">\n");
@@ -766,9 +771,11 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Host issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"host-issue\" VALUE=\"" + config.getHostIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Service issues:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"service-issue\" VALUE=\"" + config.getServiceIssue() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
+		reply.add("<TR><TD>Footer:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"footer\" VALUE=\"" + (config.getFooter() != null ? config.getFooter() : "") + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Header always bg color:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"header-always-bgcolor\" VALUE=\"on\" " + isChecked(config.getHeaderAlwaysBGColor()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Scroll footer:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-footer\" VALUE=\"on\" " + isChecked(config.getScrollingFooter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scroll-if-not-fitting\" VALUE=\"on\" " + isChecked(config.getScrollIfNotFit()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Text splitter:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-splitter\" VALUE=\"" + (config.getLineScrollSplitter() == null ? "" : "" + config.getLineScrollSplitter()) + "\"></TD><TD>This is used for both scrolling-splitted-text<BR>and the 'draw at offset' functionality.</TD></TR>\n");
@@ -1096,6 +1103,12 @@ class HTTPServer implements Runnable
 				config.setFullscreen(FullScreenMode.FULLSCREEN);
 		}
 
+		String useScreen = getFieldDecoded(socket, requestData, "use-screen");
+		if (useScreen == null || useScreen.equals("ALL"))
+			config.setUseScreen(null);
+		else
+			config.setUseScreen(useScreen);
+
 		String counterPosition = getField(socket, requestData, "counter-position");
 		if (counterPosition != null)
 			config.setCounterPosition(counterPosition);
@@ -1156,6 +1169,7 @@ class HTTPServer implements Runnable
 		config.setReduceTextWidth(getCheckBox(socket, requestData, "reduce-textwidth"));
 
 		config.setHeader(getFieldDecoded(socket, requestData, "header"));
+		config.setFooter(getFieldDecoded(socket, requestData, "footer"));
 
 		config.setPrefers(getFieldDecoded(socket, requestData, "prefer"));
 		config.setHostsFilterExclude(getFieldDecoded(socket, requestData, "hosts-filter-exclude-list"));
@@ -1164,6 +1178,7 @@ class HTTPServer implements Runnable
 		config.setServicesFilterInclude(getFieldDecoded(socket, requestData, "services-filter-include-list"));
 
 		config.setScrollingHeader(getCheckBox(socket, requestData, "scrolling-header"));
+		config.setScrollingFooter(getCheckBox(socket, requestData, "scrolling-footer"));
 		config.setScrollIfNotFit(getCheckBox(socket, requestData, "scroll-if-not-fitting"));
 
 		String splitter = getFieldDecoded(socket, requestData, "scroll-splitter");

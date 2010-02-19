@@ -22,7 +22,6 @@ public class Gui extends JPanel implements ImageObserver
 	final Statistics statistics;
 	//
 	Semaphore movingPartsSemaphore = new Semaphore(1);
-	ScrollableContent currentHeader = new ScrollableContent(0, 0, 0);
 	BordersParameters bordersParameters = null;
 	java.util.List<ScrollableContent> windowMovingParts = new ArrayList<ScrollableContent>();
 	//
@@ -299,6 +298,7 @@ public class Gui extends JPanel implements ImageObserver
 	public void displayImage(ImageParameters [] imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
 	{
 		int headerOffset = config.getShowHeader() ? 1 : 0;
+		int footerOffset = config.getFooter() != null ? 1 : 0;
 		int curWindowHeight, offsetY;
 		int maxW = -1, maxH = -1, nr;
 
@@ -316,8 +316,8 @@ public class Gui extends JPanel implements ImageObserver
 
 		if (adaptImgSize)
 		{
-			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + nProblems));
-			offsetY = (headerOffset + nProblems) * rowHeight;
+			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset + nProblems));
+			offsetY = (headerOffset + footerOffset + nProblems) * rowHeight;
 		}
 		else if (config.getHeaderTransparency() != 1.0f)
 		{
@@ -326,7 +326,7 @@ public class Gui extends JPanel implements ImageObserver
 		}
 		else
 		{
-			curWindowHeight = rowHeight * (config.getNRows() - headerOffset);
+			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset));
 			offsetY = rowHeight * headerOffset;
 		}
 
@@ -419,6 +419,13 @@ public class Gui extends JPanel implements ImageObserver
 
 		}
 
+		if (config.getFooter() != null)
+		{
+			int y =  config.getShowHeader() ? config.getUpperRowBorderHeight(): 0;
+			y += (config.getNRows() - 1) * bordersParameters.getRowHeight();
+			g.drawLine(0, y, bordersParameters.getWindowWidth(), y);
+		}
+
 		if (config.getShowHeader())
 		{
 			int drawY = bordersParameters.getRowHeight();
@@ -439,7 +446,7 @@ public class Gui extends JPanel implements ImageObserver
 				minY = config.getUpperRowBorderHeight() + rowHeight;
 				maxY += minY;
 			}
-			maxY = Math.min(maxY, windowHeight);
+			maxY = Math.min(maxY, windowHeight - (config.getFooter() != null ? rowHeight : 0));
 
 			g.setColor(config.getRowBorderColor());
 			g.drawLine(x, minY, x, maxY);
@@ -563,25 +570,39 @@ public class Gui extends JPanel implements ImageObserver
 					stateForColor = "255";
 // if (config.getHeaderTransparency() != 1.0f)
 //	stateForColor = "254";
-				if (config.getScrollingHeader())
+				int xStart = 0, ww = windowWidth;;
+				if (logo != null)
 				{
-					movingPartsSemaphore.acquireUninterruptibly();
-					currentHeader.setImage(createRowImage(fontName, header, stateForColor, bgColor, rowHeight, null));
-					movingPartsSemaphore.release();
-				}
-				else
-				{
-					int xStart = 0;
-					if (logo != null && config.getLogoPosition() == Position.LEFT)
+					if (config.getLogoPosition() == Position.LEFT)
 						xStart = newLogoWidth;
-					prepareRow(g, windowWidth, xStart, header, curNRows, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
+
+					ww -= newLogoWidth;
 				}
+
+				if (config.getScrollingHeader())
+					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, header, stateForColor, bgColor, rowHeight, null), xStart, 0, ww));
+				else
+					prepareRow(g, windowWidth, xStart, header, curNRows, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
+
 				curNRows++;
+			}
+
+			/* footer */
+			if (config.getFooter() != null)
+			{
+				String footer = coffeeSaint.processStringWithEscapes(config.getFooter(), javNag, rightNow, null, problems.size() > 0, true);
+				String stateForColor = problems.size() == 0 ? "0" : "255";
+				int row = config.getNRows() - 1;
+
+				if (config.getScrollingFooter())
+					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer, stateForColor, bgColor, rowHeight, null), 0, row * rowHeight, windowWidth));
+				else
+					prepareRow(g, windowWidth, 0, footer, row, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
 			}
 
 			/* problems */
 			int colNr = 0;
-			int dummyNRows = config.getNRows() - (config.getShowHeader() ? 1 : 0);
+			int dummyNRows = config.getNRows() - ((config.getShowHeader() ? 1 : 0) + (config.getFooter() != null ? 1 : 0));
 			int curNColumns;
 			if (config.getFlexibleNColumns())
 				curNColumns = Math.min(config.getNProblemCols(), (problems.size() + dummyNRows - 1) / dummyNRows);
@@ -640,7 +661,7 @@ public class Gui extends JPanel implements ImageObserver
 
 				curNRows++;
 
-				if (curNRows == config.getNRows())
+				if (curNRows == (config.getNRows() - (config.getFooter() != null ? 1 : 0)))
 				{
 					curNRows = config.getShowHeader() ? 1 : 0;
 					colNr++;
@@ -784,8 +805,6 @@ public class Gui extends JPanel implements ImageObserver
 		int headerScrollerX = 0;
 		double scrollTs = (double)System.currentTimeMillis() / 1000.0;
 
-		currentHeader = new ScrollableContent(0, 0, getWidth());
-
 		for(;;)
 		{
 			long now = System.currentTimeMillis();
@@ -805,8 +824,6 @@ public class Gui extends JPanel implements ImageObserver
 			}
 
 			movingPartsSemaphore.acquireUninterruptibly();
-			if (currentHeader.hasImage() && config.getScrollingHeader() && config.getShowHeader())
-				currentHeader.scrollView(g2d, config.getScrollingPixelsPerSecond());
 			for(ScrollableContent currentMovingPart : windowMovingParts)
 			{
 				currentMovingPart.scrollView(g2d, config.getScrollingPixelsPerSecond());
@@ -817,6 +834,7 @@ public class Gui extends JPanel implements ImageObserver
 				if (config.getDrawProblemServiceSplitLine())
 					drawProblemServiceSplitLine(g, rowHeight, getHeight(), bordersParameters.getNProblems());
 			}
+			// FIXME bottomLine
 			movingPartsSemaphore.release();
 
 			Position counterPosition = config.getCounterPosition();
@@ -826,7 +844,7 @@ public class Gui extends JPanel implements ImageObserver
 				lastLeft = left;
 			}
 
-			if ((currentHeader.hasImage() && config.getScrollingHeader()) || windowMovingParts.size() != 0)
+			if (windowMovingParts.size() > 0)
 				Thread.sleep(5);
 			else
 				Thread.sleep(1000);

@@ -66,6 +66,7 @@ public class Config
 	private FullScreenMode fullscreen;
 	private boolean keepAspectRatio;
 	private boolean scrollingHeader;
+	private boolean scrollingFooter;
 	private int scrollingPixelsPerSecond;
 	private boolean reduceTextWidth;
 	private boolean rowBorder;
@@ -109,6 +110,8 @@ public class Config
 	private String problemRowGradientName;
 	private boolean drawProblemServiceSplitLine;
 	private boolean allowAllSSL;
+	private String useScreen;
+	private String footer;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -217,6 +220,8 @@ public class Config
 		bgColorFadeToName = null;
 		drawProblemServiceSplitLine = false;
 		allowAllSSL = false;
+		useScreen = null;
+		footer = null;
 		unlock();
 	}
 
@@ -365,6 +370,10 @@ public class Config
 						else
 							throw new Exception("Fullscreen mode " + data + " not recognized");
 					}
+					else if (name.equals("use-screen"))
+						setUseScreen(data);
+					else if (name.equals("footer"))
+						setFooter(data);
 					else if (name.equals("adapt-img"))
 						setAdaptImageSize(isTrue);
 					else if (name.equals("random-img"))
@@ -470,6 +479,8 @@ public class Config
 						setSleepTime(Integer.valueOf(data));
 					else if (name.equals("scrolling-header"))
 						setScrollingHeader(isTrue);
+					else if (name.equals("scrolling-footer"))
+						setScrollingFooter(isTrue);
 					else if (name.equals("scroll-pixels-per-sec"))
 						setScrollingPixelsPerSecond(Integer.valueOf(data));
 					else if (name.equals("transparency"))
@@ -614,11 +625,16 @@ public class Config
 		writeLine(out, "graph-color = " + getGraphColorName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
 		writeLine(out, "fullscreen = " + getFullscreenName());
+		if (getUseScreen() != null)
+			writeLine(out, "use-screen = " + getUseScreen());
 		writeLine(out, "reduce-textwidth = " + (getReduceTextWidth() ? "true" : "false"));
 		if (getHeaderSet() == true)
 			writeLine(out, "header = " + getHeader());
+		if (getFooter() != null)
+			writeLine(out, "footer = " + getFooter());
 		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
 		writeLine(out, "scrolling-header = " + (getScrollingHeader() ? "true" : "false"));
+		writeLine(out, "scrolling-footer = " + (getScrollingFooter() ? "true" : "false"));
 		writeLine(out, "scroll-pixels-per-sec = " + getScrollingPixelsPerSecond());
 		writeLine(out, "host-issue = " + getHostIssue());
 		writeLine(out, "service-issue = " + getServiceIssue());
@@ -2726,5 +2742,53 @@ public class Config
 		unlock();
 
 		CoffeeSaint.allowAllSSL();
+	}
+
+	public String getUseScreen()
+	{
+		String copy;
+		lock();
+		copy = useScreen;
+		unlock();
+		return copy;
+	}
+
+	public void setUseScreen(String screen)
+	{
+		lock();
+		useScreen = screen;
+		unlock();
+	}
+
+	public String getFooter()
+	{
+		String copy;
+		lock();
+		copy = footer;
+		unlock();
+		return copy;
+	}
+
+	public void setFooter(String line)
+	{
+		lock();
+		footer = line;
+		unlock();
+	}
+
+	public void setScrollingFooter(boolean sh)
+	{
+		lock();
+		this.scrollingFooter = sh;
+		unlock();
+	}
+
+	public boolean getScrollingFooter()
+	{
+		boolean copy;
+		lock();
+		copy = scrollingFooter;
+		unlock();
+		return copy;
 	}
 }
