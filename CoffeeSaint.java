@@ -7,6 +7,7 @@ import javax.net.ssl.HostnameVerifier;
 import java.security.SecureRandom;
 import javax.net.ssl.SSLSession;
 
+import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -45,7 +46,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.0-beta001";
+	static String versionNr = "v3.1";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -1156,11 +1157,66 @@ public class CoffeeSaint
 			GraphicsDevice gd = gdArray[i];
 			GraphicsConfiguration[] gcArray = gd.getConfigurations();
 			for (int j = 0; j < gcArray.length; j++)
+			{
+				// System.out.println("" + gcArray[j].getBounds() + " " + gcArray[j].getColorModel() + " " + gcArray[j].getBufferCapabilities());
+				System.out.println("" + gcArray[j]);
 				vBounds = vBounds.union(gcArray[j].getBounds());
+			}
 		}
 
 		return vBounds;
 	}
+
+	public static void showAvailableScreens()
+	{
+		String previous = "";
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice[] gdArray = ge.getScreenDevices();
+
+		System.out.println("Available screens (for --use-screen):");
+		for (int i = 0; i < gdArray.length; i++)
+		{
+			GraphicsDevice gd = gdArray[i];
+			GraphicsConfiguration[] gcArray = gd.getConfigurations();
+			for (int j = 0; j < gcArray.length; j++)
+			{
+				Rectangle bounds = gcArray[j].getBounds();
+				String current = gcArray[j].getDevice().getIDstring();
+				if (current.equals(previous) == false)
+				{
+					previous = current;
+					System.out.println("" + current + " => " + bounds.width + "x" + bounds.height);
+				}
+			}
+		}
+	}
+
+	public JFrame selectScreen(String device)
+	{
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice[] gdArray = ge.getScreenDevices();
+
+		for (int i = 0; i < gdArray.length; i++)
+		{
+			GraphicsDevice gd = gdArray[i];
+			GraphicsConfiguration[] gcArray = gd.getConfigurations();
+			for (int j = 0; j < gcArray.length; j++)
+			{
+				if (gcArray[j].getDevice().getIDstring().equals(device))
+				{
+					JFrame f = new JFrame(gdArray[i].getDefaultConfiguration());
+					f.getContentPane().add(new Canvas(gcArray[j]));
+                                        Rectangle useable = gcArray[j].getBounds();
+					f.setLocation(useable.x, useable.y);
+                                        f.setSize(useable.width, useable.height);
+					return f;
+				}
+			}
+		}
+
+		return null;
+	}
+
 	public static void setIcon(CoffeeSaint coffeeSaint, JFrame f)
 	{
 		ClassLoader loader = coffeeSaint.getClass().getClassLoader();
@@ -1214,7 +1270,9 @@ public class CoffeeSaint
 		System.out.println("--disable-http-compression Don't use gzip/deflate compression in HTTP connection - usefull for fast links as the server has less load then");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
-		System.out.println("--fullscreen x Run in a fullscreen mode, e.g. without any borders (undecorated) or spread out over all monitors (fullscreen)");
+		System.out.println("--fullscreen x Run in a fullscreen mode, e.g. without any borders (undecorated) or spread out over all monitors (fullscreen) or none (none)");
+		System.out.println("--list-screens  To see a list of screens connected to the system on which CoffeeSaint is running");
+		System.out.println("--use-screen x  Select screen 'x' to display the output on. This is usefull if you have multiple monitors connected to the system.");
 		System.out.println("--problem-columns x  Split the screen in x columns so that it can display x * nrows");
 		System.out.println("--flexible-n-columns Dynamically adjust number of columns (up to the maximum set with --problem-columns)");
 		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin");
@@ -1323,6 +1381,8 @@ public class CoffeeSaint
 	{
 		try
 		{
+			String useScreen = null;
+
 			statistics.setRunningSince(System.currentTimeMillis());
 
 			System.out.println(version);
@@ -1343,6 +1403,13 @@ public class CoffeeSaint
 					}
 					else if (arg[loop].equals("--allow-all-ssl"))
 						allowAllSSL();
+					else if (arg[loop].equals("--use-screen"))
+						useScreen = arg[++loop];
+					else if (arg[loop].equals("--list-screens"))
+					{
+						showAvailableScreens();
+						System.exit(0);
+					}
 					else if (arg[loop].equals("--source"))
 					{
 						NagiosDataSource nds = null;
@@ -1699,9 +1766,12 @@ public class CoffeeSaint
 			}
 
 			CoffeeSaint coffeeSaint = new CoffeeSaint();
+			// coffeeSaint.getAllScreensSizes();
 			Gui gui = null;
 			GraphicsEnvironment ge = null;
 			GraphicsDevice gd = null;
+			ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+			gd = ge.getDefaultScreenDevice();
 			JFrame f = null;
 			if (config.getRunGui())
 			{
@@ -1709,9 +1779,24 @@ public class CoffeeSaint
 
 				gui = new Gui(config, coffeeSaint, statistics);
 
-				ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-				gd = ge.getDefaultScreenDevice();
-				f = new JFrame();
+				if (useScreen != null)
+				{
+					f = coffeeSaint.selectScreen(useScreen);
+					if (f == null)
+					{
+						System.err.println("Screen '" + useScreen + "' is not known.");
+						System.err.println("Please use '--list-screens' to see a list of known displays.");
+					}
+				}
+				else
+				{
+					f = new JFrame();
+					/* create frame to draw in */
+					Rectangle useable = ge.getMaximumWindowBounds();
+					//f.setMaximizedBounds(useable);
+					f.setSize(useable.width, useable.height);
+				}
+
 				if (config.getFullscreen() == FullScreenMode.FULLSCREEN && gd.isFullScreenSupported())
 				{
 					System.out.println("FULLSCREEN");
@@ -1724,10 +1809,6 @@ public class CoffeeSaint
 				}
 				else
 				{
-					/* create frame to draw in */
-					Rectangle useable = ge.getMaximumWindowBounds();
-					//f.setMaximizedBounds(useable);
-					f.setSize(useable.width, useable.height);
 					f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
 
 					if (config.getFullscreen() == FullScreenMode.UNDECORATED)
