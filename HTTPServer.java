@@ -1169,7 +1169,12 @@ class HTTPServer implements Runnable
 		config.setReduceTextWidth(getCheckBox(socket, requestData, "reduce-textwidth"));
 
 		config.setHeader(getFieldDecoded(socket, requestData, "header"));
-		config.setFooter(getFieldDecoded(socket, requestData, "footer"));
+
+		String newFooter = getFieldDecoded(socket, requestData, "footer");
+		if (newFooter.trim().equals(""))
+			config.setFooter(null);
+		else
+			config.setFooter(newFooter);
 
 		config.setPrefers(getFieldDecoded(socket, requestData, "prefer"));
 		config.setHostsFilterExclude(getFieldDecoded(socket, requestData, "hosts-filter-exclude-list"));

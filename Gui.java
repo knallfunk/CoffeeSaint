@@ -571,9 +571,9 @@ public class Gui extends JPanel implements ImageObserver
 // if (config.getHeaderTransparency() != 1.0f)
 //	stateForColor = "254";
 				int xStart = 0, ww = windowWidth;;
-				if (logo != null)
+				if (logo != null && config.getLogoPosition() == Position.UPPER_LEFT || config.getLogoPosition() == Position.UPPER_RIGHT)
 				{
-					if (config.getLogoPosition() == Position.LEFT)
+					if (config.getLogoPosition() == Position.UPPER_LEFT)
 						xStart = newLogoWidth;
 
 					ww -= newLogoWidth;
@@ -582,7 +582,7 @@ public class Gui extends JPanel implements ImageObserver
 				if (config.getScrollingHeader())
 					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, header, stateForColor, bgColor, rowHeight, null), xStart, 0, ww));
 				else
-					prepareRow(g, windowWidth, xStart, header, curNRows, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
+					prepareRow(g, ww, xStart, header, curNRows, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
 
 				curNRows++;
 			}
@@ -594,10 +594,19 @@ public class Gui extends JPanel implements ImageObserver
 				String stateForColor = problems.size() == 0 ? "0" : "255";
 				int row = config.getNRows() - 1;
 
+				int xStart = 0, ww = windowWidth;;
+				if (logo != null && config.getLogoPosition() == Position.LOWER_LEFT || config.getLogoPosition() == Position.LOWER_RIGHT)
+				{
+					if (config.getLogoPosition() == Position.LOWER_LEFT)
+						xStart = newLogoWidth;
+
+					ww -= newLogoWidth;
+				}
+
 				if (config.getScrollingFooter())
-					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer, stateForColor, bgColor, rowHeight, null), 0, row * rowHeight, windowWidth));
+					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer, stateForColor, bgColor, rowHeight, null), xStart, row * rowHeight, ww));
 				else
-					prepareRow(g, windowWidth, 0, footer, row, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
+					prepareRow(g, ww, xStart, footer, row, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
 			}
 
 			/* problems */
@@ -722,10 +731,20 @@ public class Gui extends JPanel implements ImageObserver
 				int plotX = -1, plotY = 0;
 				Position logoPosition = config.getLogoPosition();
 
-				if (logoPosition == Position.LEFT)
+				if (logoPosition == Position.UPPER_LEFT)
 					plotX = 0;
-				else if (logoPosition == Position.RIGHT)
+				else if (logoPosition == Position.UPPER_RIGHT)
 					plotX = Math.max(0, windowWidth - newLogoWidth);
+				else if (logoPosition == Position.LOWER_LEFT)
+				{
+					plotX = 0;
+					plotY = (config.getNRows() - 1) * rowHeight;
+				}
+				else if (logoPosition == Position.LOWER_RIGHT)
+				{
+					plotX = Math.max(0, windowWidth - newLogoWidth);
+					plotY = (config.getNRows() - 1) * rowHeight;
+				}
 				else
 					throw new Exception("Unknown logo position: " + logoPosition);
 

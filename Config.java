@@ -2595,8 +2595,8 @@ public class Config
 
 	public void setLogoPosition(Position newPosition) throws Exception
 	{
-		if (newPosition != Position.LEFT && newPosition != Position.RIGHT)
-			throw new Exception("Logo position can only be left or right.");
+		if (newPosition == Position.CENTER)
+			throw new Exception("Logo position cannot be center");
 		lock();
 		logoPosition = newPosition;
 		unlock();
@@ -2605,12 +2605,16 @@ public class Config
 	public void setLogoPosition(String newPosition) throws Exception
 	{
 		Position value = null;
-		if (newPosition.equalsIgnoreCase("left"))
-			value = Position.LEFT;
-		else if (newPosition.equalsIgnoreCase("right"))
-			value = Position.RIGHT;
+		if (newPosition.equalsIgnoreCase("left") || newPosition.equalsIgnoreCase("upper-left"))
+			value = Position.UPPER_LEFT;
+		else if (newPosition.equalsIgnoreCase("right") || newPosition.equalsIgnoreCase("upper-right"))
+			value = Position.UPPER_RIGHT;
+		else if (newPosition.equalsIgnoreCase("lower-left"))
+			value = Position.LOWER_LEFT;
+		else if (newPosition.equalsIgnoreCase("lower-right"))
+			value = Position.LOWER_RIGHT;
 		else
-			throw new Exception("Logo position can only be left or right.");
+			throw new Exception("Logo position cannot be " + newPosition);
 		lock();
 		logoPosition = value;
 		unlock();
