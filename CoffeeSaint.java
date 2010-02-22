@@ -46,7 +46,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.2-beta002";
+	static String versionNr = "v3.2-beta003";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -1175,19 +1175,6 @@ public class CoffeeSaint
 		return monitors;
 	}
 
-	public Rectangle getAllScreensSizes()
-	{
-		Rectangle vBounds = new Rectangle();
-		List<Monitor> monitors = getMonitors();
-		for(Monitor monitor : monitors)
-		{
-			Rectangle currentBounds = monitor.getBounds();
-			vBounds = vBounds.union(currentBounds);
-		}
-
-		return vBounds;
-	}
-
 	public static void showAvailableScreens()
 	{
 		System.out.println("Available screens (for --use-screen):");
@@ -1200,7 +1187,7 @@ public class CoffeeSaint
 		}
 	}
 
-	public JFrame selectScreen(String device)
+	public Monitor selectScreen(String device)
 	{
 		List<Monitor> monitors = getMonitors();
 		for(Monitor monitor : monitors)
@@ -1212,7 +1199,8 @@ public class CoffeeSaint
 				Rectangle useable = monitor.getBounds();
 				f.setLocation(useable.x, useable.y);
 				f.setSize(useable.width, useable.height);
-				return f;
+				monitor.setJFrame(f);
+				return monitor;
 			}
 		}
 
@@ -1768,23 +1756,18 @@ public class CoffeeSaint
 			}
 
 			CoffeeSaint coffeeSaint = new CoffeeSaint();
-			// coffeeSaint.getAllScreensSizes();
 			Gui gui = null;
-			GraphicsEnvironment ge = null;
-			GraphicsDevice gd = null;
-			ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-			gd = ge.getDefaultScreenDevice();
-			JFrame f = null;
 			if (config.getRunGui())
 			{
 				System.out.println("Start gui");
 
+				Monitor monitor = null;
 				gui = new Gui(config, coffeeSaint, statistics);
 
 				if (config.getUseScreen() != null)
 				{
-					f = coffeeSaint.selectScreen(config.getUseScreen());
-					if (f == null)
+					monitor = coffeeSaint.selectScreen(config.getUseScreen());
+					if (monitor == null)
 					{
 						System.err.println("Screen '" + config.getUseScreen() + "' is not known.");
 						System.err.println("Please use '--list-screens' to see a list of known displays.");
@@ -1792,33 +1775,44 @@ public class CoffeeSaint
 				}
 				else
 				{
-					f = new JFrame();
+					GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+					GraphicsDevice gd = ge.getDefaultScreenDevice();
+					JFrame f = new JFrame();
 					/* create frame to draw in */
 					Rectangle useable = ge.getMaximumWindowBounds();
 					//f.setMaximizedBounds(useable);
+					f.setLocation(useable.x, useable.y);
 					f.setSize(useable.width, useable.height);
+					GraphicsConfiguration gc = gd.getDefaultConfiguration();
+					monitor = new Monitor(gd, gc, gc.getDevice().getIDstring(), useable);
+					monitor.setJFrame(f);
 				}
 
-				if (config.getFullscreen() == FullScreenMode.FULLSCREEN && gd.isFullScreenSupported())
+				JFrame f = monitor.getJFrame();
+
+				if (config.getFullscreen() == FullScreenMode.FULLSCREEN)
 				{
 					System.out.println("FULLSCREEN");
 					f.setUndecorated(true);
 					f.setResizable(false);
-					//gd.setFullScreenWindow(f);
-					Rectangle virtualScreenRectangle = coffeeSaint.getAllScreensSizes();
-					f.setMaximizedBounds(virtualScreenRectangle);
-					f.setSize(virtualScreenRectangle.width, virtualScreenRectangle.height);
+					monitor.getGraphicsDevice().setFullScreenWindow(f);
 				}
 				else
 				{
-					f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+//					f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
 
 					if (config.getFullscreen() == FullScreenMode.UNDECORATED)
 					{
+						System.out.println("UNDECORATED");
 						f.setUndecorated(true);
 						f.setResizable(false);
 					}
+					else
+					{
+						System.out.println("WINDOWED");
+					}
 				}
+
 				f.setContentPane(gui);
 
 				RepaintManager.currentManager(gui).setDoubleBufferingEnabled(false);
@@ -1836,7 +1830,7 @@ public class CoffeeSaint
 			if (config.getHTTPServerListenPort() != -1)
 			{
 				System.out.println("Start HTTP server");
-				Thread httpServer = new Thread(new HTTPServer(config, coffeeSaint, statistics, gui, gd, f));
+				Thread httpServer = new Thread(new HTTPServer(config, coffeeSaint, statistics, gui));
 				httpServer.setPriority(Thread.MAX_PRIORITY);
 				httpServer.start();
 			}

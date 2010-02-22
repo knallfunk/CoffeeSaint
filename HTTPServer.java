@@ -41,8 +41,6 @@ class HTTPServer implements Runnable
 	final Statistics statistics;
 	final Gui gui;
 	final List<HTTPLogEntry> hosts = new ArrayList<HTTPLogEntry>();
-	final GraphicsDevice gd;
-	final JFrame frame;
 	//
 	int webServerHits, webServer404;
 	boolean configNotWrittenToDisk = false;
@@ -77,14 +75,12 @@ class HTTPServer implements Runnable
 		return false;
 	}
 
-	public HTTPServer(Config config, CoffeeSaint coffeeSaint, Statistics statistics, Gui gui, GraphicsDevice gd, JFrame frame)
+	public HTTPServer(Config config, CoffeeSaint coffeeSaint, Statistics statistics, Gui gui)
 	{
 		this.config = config;
 		this.coffeeSaint = coffeeSaint;
 		this.statistics = statistics;
 		this.gui = gui;
-		this.gd = gd;
-		this.frame = frame;
 	}
 
 	public void addHTTP200(List<String> whereTo, String cookie)
@@ -682,11 +678,6 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Look and feel parameters</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
-//		String fsMode = "";
-//		if (gd == null)
-//			fsMode = "Running headless";
-//		else if (gd.isFullScreenSupported() == false)
-//			fsMode = "Not supported";
 		reply.add("<TR><TD>Fullscreen mode:</TD><TD><SELECT NAME=\"fullscreen\">\n");
 		reply.add(selectField(config.getFullscreenName(), "none"));
 		reply.add(selectField(config.getFullscreenName(), "undecorated"));
@@ -1090,11 +1081,6 @@ class HTTPServer implements Runnable
 		String newFSMode = getField(socket, requestData, "fullscreen");
 		if (newFSMode != null)
 		{
-//			if (newFSMode.equalsIgnoreCase("fullscreen"))
-//				gd.setFullScreenWindow(frame);
-//			else
-//				gd.setFullScreenWindow(null);
-
 			if (newFSMode.equalsIgnoreCase("none"))
 				config.setFullscreen(FullScreenMode.NONE);
 			else if (newFSMode.equalsIgnoreCase("undecorated"))

@@ -2,6 +2,7 @@
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.Rectangle;
+import javax.swing.JFrame;
 
 public class Monitor
 {
@@ -9,6 +10,7 @@ public class Monitor
 	GraphicsConfiguration configuration;
 	String deviceName;
 	Rectangle bounds;
+	JFrame f;
 
 	public Monitor(final GraphicsDevice device, final GraphicsConfiguration configuration, final String deviceName, final Rectangle bounds)
 	{
@@ -36,5 +38,15 @@ public class Monitor
 	public GraphicsConfiguration getGraphicsConfiguration()
 	{
 		return configuration;
+	}
+
+	public void setJFrame(final JFrame frame)
+	{
+		f = frame;
+	}
+
+	public JFrame getJFrame()
+	{
+		return f;
 	}
 }
