@@ -1207,6 +1207,19 @@ public class CoffeeSaint
 		return null;
 	}
 
+        public Rectangle getDimensionsOverAllMonitors()
+        {
+                Rectangle vBounds = new Rectangle();
+                List<Monitor> monitors = getMonitors();
+                for(Monitor monitor : monitors)
+                {
+                        Rectangle currentBounds = monitor.getBounds();
+                        vBounds = vBounds.union(currentBounds);
+                }
+
+                return vBounds;
+        }
+
 	public static void setIcon(CoffeeSaint coffeeSaint, JFrame f)
 	{
 		ClassLoader loader = coffeeSaint.getClass().getClassLoader();
@@ -1260,7 +1273,7 @@ public class CoffeeSaint
 		System.out.println("--disable-http-compression Don't use gzip/deflate compression in HTTP connection - usefull for fast links as the server has less load then");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
-		System.out.println("--fullscreen x Run in a fullscreen mode, e.g. without any borders (undecorated) or spread out over all monitors (fullscreen) or none (none)");
+		System.out.println("--fullscreen x Run in a fullscreen mode, e.g. without any borders (undecorated), no menu bars (fullscreen), spread over all monitors (allmonitors) or none (none)");
 		System.out.println("--list-screens  To see a list of screens connected to the system on which CoffeeSaint is running");
 		System.out.println("--use-screen x  Select screen 'x' to display the output on. This is usefull if you have multiple monitors connected to the system.");
 		System.out.println("--problem-columns x  Split the screen in x columns so that it can display x * nrows");
@@ -1502,6 +1515,8 @@ public class CoffeeSaint
 							config.setFullscreen(FullScreenMode.UNDECORATED);
 						else if (mode.equalsIgnoreCase("fullscreen"))
 							config.setFullscreen(FullScreenMode.FULLSCREEN);
+						else if (mode.equalsIgnoreCase("allmonitors"))
+							config.setFullscreen(FullScreenMode.ALLMONITORS);
 						else
 							errorExit("Fullscreen mode " + mode + " not recognized");
 					}
@@ -1796,6 +1811,15 @@ public class CoffeeSaint
 					f.setUndecorated(true);
 					f.setResizable(false);
 					monitor.getGraphicsDevice().setFullScreenWindow(f);
+				}
+				else if (config.getFullscreen() == FullScreenMode.ALLMONITORS)
+				{
+					System.out.println("ALLMONITORS");
+					f.setUndecorated(true);
+					f.setResizable(false);
+					Rectangle allMonitors = coffeeSaint.getDimensionsOverAllMonitors();
+					f.setLocation(allMonitors.x, allMonitors.y);
+					f.setSize(allMonitors.width, allMonitors.height);
 				}
 				else
 				{

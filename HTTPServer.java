@@ -682,6 +682,7 @@ class HTTPServer implements Runnable
 		reply.add(selectField(config.getFullscreenName(), "none"));
 		reply.add(selectField(config.getFullscreenName(), "undecorated"));
 		reply.add(selectField(config.getFullscreenName(), "fullscreen"));
+		reply.add(selectField(config.getFullscreenName(), "allmonitors"));
 		reply.add("</SELECT></TD><TD>Requires restart of CoffeeSaint.</TD></TR>\n");
 		reply.add("<TR><TD>Select monitor:</TD><TD><SELECT NAME=\"use-screen\">\n");
 		reply.add(selectField(config.getUseScreen(), "ALL"));
@@ -1087,6 +1088,8 @@ class HTTPServer implements Runnable
 				config.setFullscreen(FullScreenMode.UNDECORATED);
 			else if (newFSMode.equalsIgnoreCase("fullscreen"))
 				config.setFullscreen(FullScreenMode.FULLSCREEN);
+			else if (newFSMode.equalsIgnoreCase("allmonitors"))
+				config.setFullscreen(FullScreenMode.ALLMONITORS);
 		}
 
 		String useScreen = getFieldDecoded(socket, requestData, "use-screen");

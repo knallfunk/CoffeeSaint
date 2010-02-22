@@ -367,6 +367,8 @@ public class Config
 							setFullscreen(FullScreenMode.UNDECORATED);
 						else if (data.equalsIgnoreCase("fullscreen"))
 							setFullscreen(FullScreenMode.FULLSCREEN);
+						else if (data.equalsIgnoreCase("allmonitors"))
+							setFullscreen(FullScreenMode.ALLMONITORS);
 						else
 							throw new Exception("Fullscreen mode " + data + " not recognized");
 					}
