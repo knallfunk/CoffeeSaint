@@ -112,6 +112,7 @@ public class Config
 	private boolean allowAllSSL;
 	private String useScreen;
 	private String footer;
+	private boolean noProbTextBg;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -222,6 +223,7 @@ public class Config
 		allowAllSSL = false;
 		useScreen = null;
 		footer = null;
+		noProbTextBg = true;
 		unlock();
 	}
 
@@ -413,6 +415,8 @@ public class Config
 						setAntiAlias(isTrue);
 					else if (name.equals("draw-problems-service-split-line"))
 						setDrawProblemServiceSplitLine(isTrue);
+					else if (name.equals("no-problems-text-with-bg-color"))
+						setNoProblemsTextBg(isTrue);
 					else if (name.equals("max-quality-graphics"))
 						setMaxQualityGraphics(isTrue);
 					else if (name.equals("row-border-color"))
@@ -465,13 +469,25 @@ public class Config
 						setGraphColor(data);
 
 					else if (name.equals("hosts-filter-exclude"))
-						setHostsFilterExclude(data);
+					{
+						if (data.trim().equals("") == false)
+							setHostsFilterExclude(data);
+					}
 					else if (name.equals("hosts-filter-include"))
-						setHostsFilterInclude(data);
+					{
+						if (data.trim().equals("") == false)
+							setHostsFilterInclude(data);
+					}
 					else if (name.equals("services-filter-exclude"))
-						setServicesFilterExclude(data);
+					{
+						if (data.trim().equals("") == false)
+							setServicesFilterExclude(data);
+					}
 					else if (name.equals("services-filter-include"))
-						setServicesFilterInclude(data);
+					{
+						if (data.trim().equals("") == false)
+							setServicesFilterInclude(data);
+					}
 
 					else if (name.equals("bgcolorok"))
 						setBackgroundColorOkStatus(data);
@@ -608,6 +624,7 @@ public class Config
 		writeLine(out, "bgcolorok = " + getBackgroundColorOkStatusName());
 		writeLine(out, "nrows = " + getNRows());
 		writeLine(out, "flexible-n-columns = " + (getFlexibleNColumns() ? "true" : "false"));
+		writeLine(out, "no-problems-text-with-bg-color" + (getNoProblemsTextBg() ? "true" : "false"));
 		writeLine(out, "interval = " + getSleepTime());
 		for(String imgUrl : getImageUrls())
 			writeLine(out, "image = " + imgUrl);
@@ -1473,7 +1490,10 @@ public class Config
 		String [] elementsArray = input.split(",");
 
 		for(String element : elementsArray)
+		{
+			System.out.println("setFilter: " + element);
 			output.add(Pattern.compile(element));
+		}
 
 		return output;
 	}
@@ -2796,5 +2816,21 @@ public class Config
 		copy = scrollingFooter;
 		unlock();
 		return copy;
+	}
+
+	public boolean getNoProblemsTextBg()
+	{
+		boolean copy;
+		lock();
+		copy = noProbTextBg;
+		unlock();
+		return copy;
+	}
+
+	public void setNoProblemsTextBg(boolean bg)
+	{
+		lock();
+		noProbTextBg = bg;
+		unlock();
 	}
 }

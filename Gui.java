@@ -14,6 +14,7 @@ import java.awt.geom.Rectangle2D;
 import java.awt.font.FontRenderContext;
 import java.io.FileNotFoundException;
 import java.util.concurrent.Semaphore;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class Gui extends JPanel implements ImageObserver
 {
@@ -386,7 +387,6 @@ public class Gui extends JPanel implements ImageObserver
 		/* block in upper right to inform about error */
 		g.setColor(Color.RED);
 		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
-
 		prepareRow(g, windowWidth, 0, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1.0f, null, false);
 	}
 
@@ -604,7 +604,11 @@ public class Gui extends JPanel implements ImageObserver
 				}
 
 				if (config.getScrollingFooter())
-					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer, stateForColor, bgColor, rowHeight, null), xStart, row * rowHeight, ww));
+				{
+					int y = config.getShowHeader() ? config.getUpperRowBorderHeight(): 0;
+					y += row * rowHeight;
+					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer, stateForColor, bgColor, rowHeight, null), xStart, y, ww));
+				}
 				else
 					prepareRow(g, ww, xStart, footer, row, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
 			}
@@ -721,7 +725,10 @@ public class Gui extends JPanel implements ImageObserver
 							break;
 					}
 
-					prepareRow(g, width, x, okMsg, y, "0", bgColor, 1.0f, null, false);
+					if (config.getNoProblemsTextBg())
+						prepareRow(g, width, x, okMsg, y, "0", bgColor, 1.0f, null, false);
+					else
+						prepareRow(g, width, x, okMsg, y, "254", bgColor, 1.0f, null, false);
 				}
 			}
 
@@ -790,6 +797,12 @@ public class Gui extends JPanel implements ImageObserver
 			}
 
 			CoffeeSaint.log.add("Memory usage: " + ((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024)) + "MB");
+		}
+		catch(UnsupportedAudioFileException uafe)
+		{
+			g.setColor(Color.RED);
+			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
+			prepareRow(g, windowWidth, 0, "Audio sample unsupported format (" + uafe + ")", config.getNRows() - 1, "2", Color.GRAY, 1.0f, null, false);
 		}
 		catch(Exception e)
 		{

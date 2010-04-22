@@ -92,23 +92,29 @@ public class Problems implements Comparator<Problem>
 	{
 		boolean add = true;
 
+System.out.println("---");
 		if (filterExclude != null)
 		{
+System.out.println("filterExclude");
 			for(Pattern currentPattern : filterExclude)
 			{
+System.out.println(" pattern: " + currentPattern.pattern() + ": " + currentPattern.matcher(pattern).find());
 				if (currentPattern.matcher(pattern).find())
 					add = false;
 			}
 		}
 		if (filterInclude != null && add == false)
 		{
+System.out.println("filterInclude");
 			for(Pattern currentPattern : filterInclude)
 			{
+System.out.println(" pattern: " + currentPattern.pattern() + ": " + currentPattern.matcher(pattern).find());
 				if (currentPattern.matcher(pattern).find())
 					add = true;
 			}
 		}
 
+System.out.println(" ADD: " + add + ": " + pattern);
 		return add;
 	}
 

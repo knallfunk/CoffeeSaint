@@ -793,6 +793,7 @@ class HTTPServer implements Runnable
 		reply.add(selectField(config.getNoProblemsTextPositionName(), "nowhere"));
 		reply.add("</SELECT></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Problem message:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"state-problems-text\" VALUE=\"" + (config.getStateProblemsText() != null ? config.getStateProblemsText() : "") + "\"></TD><TD>Used in the %STATE escape string.</TD></TR>\n");
+		reply.add("<TR><TD>Problem message bg color:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"no-problems-text-with-bg-color\" VALUE=\"on\" " + isChecked(config.getNoProblemsTextBg()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Logo:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"logo-url\" VALUE=\"" + (config.getLogo() != null ? config.getLogo() : "") + "\"></TD><TD>Either a pathname or an URL.</TD></TR>\n");
 		reply.add("<TR><TD>Logo position:</TD><TD><SELECT NAME=\"logo-position\">\n");
 		reply.add(selectField(config.getLogoPositionName(), "left"));
@@ -1187,6 +1188,8 @@ class HTTPServer implements Runnable
 		}
 
 		config.setDrawProblemServiceSplitLine(getCheckBox(socket, requestData, "draw-problems-service-split-line"));
+
+		config.setNoProblemsTextBg(getCheckBox(socket, requestData, "no-problems-text-with-bg-color"));
 
 		String drawSplitAtOffset = getField(socket, requestData, "split-text-put-at-offset");
 		if (drawSplitAtOffset != null && drawSplitAtOffset.trim().equals("") == false)
