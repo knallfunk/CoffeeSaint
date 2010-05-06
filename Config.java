@@ -624,7 +624,7 @@ public class Config
 		writeLine(out, "bgcolorok = " + getBackgroundColorOkStatusName());
 		writeLine(out, "nrows = " + getNRows());
 		writeLine(out, "flexible-n-columns = " + (getFlexibleNColumns() ? "true" : "false"));
-		writeLine(out, "no-problems-text-with-bg-color" + (getNoProblemsTextBg() ? "true" : "false"));
+		writeLine(out, "no-problems-text-with-bg-color = " + (getNoProblemsTextBg() ? "true" : "false"));
 		writeLine(out, "interval = " + getSleepTime());
 		for(String imgUrl : getImageUrls())
 			writeLine(out, "image = " + imgUrl);
