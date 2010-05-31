@@ -113,6 +113,7 @@ public class Config
 	private String useScreen;
 	private String footer;
 	private boolean noProbTextBg;
+	private boolean host_scheduled_downtime_show_services, host_acknowledged_show_services;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -224,6 +225,8 @@ public class Config
 		useScreen = null;
 		footer = null;
 		noProbTextBg = true;
+		host_scheduled_downtime_show_services = true;
+		host_acknowledged_show_services = true;
 		unlock();
 	}
 
@@ -459,6 +462,10 @@ public class Config
 						setAlsoDisabledActiveChecks(isTrue);
 					else if (name.equals("show-services-for-host-with-problems"))
 						setShowServicesForHostWithProblems(isTrue);
+					else if (name.equals("host-scheduled-downtime-show-services"))
+						setHostScheduledDowntimeShowServices(isTrue);
+					else if (name.equals("host-acknowledged-show-services"))
+						setHostAcknowledgedShowServices(isTrue);
 					else if (name.equals("textcolor") || name.equals("text-color"))
 						setTextColor(data);
 					else if (name.equals("warning-textcolor"))
@@ -625,6 +632,8 @@ public class Config
 		writeLine(out, "nrows = " + getNRows());
 		writeLine(out, "flexible-n-columns = " + (getFlexibleNColumns() ? "true" : "false"));
 		writeLine(out, "no-problems-text-with-bg-color = " + (getNoProblemsTextBg() ? "true" : "false"));
+		writeLine(out, "host-scheduled-downtime-show-services = " + (getHostScheduledDowntimeShowServices() ? "true" : "false"));
+		writeLine(out, "host-acknowledged-show-services = " + (getHostAcknowledgedShowServices() ? "true" : "false"));
 		writeLine(out, "interval = " + getSleepTime());
 		for(String imgUrl : getImageUrls())
 			writeLine(out, "image = " + imgUrl);
@@ -2831,6 +2840,34 @@ public class Config
 	{
 		lock();
 		noProbTextBg = bg;
+		unlock();
+	}
+
+	public boolean getHostScheduledDowntimeShowServices() {
+		boolean copy;
+		lock();
+		copy = host_scheduled_downtime_show_services;
+		unlock();
+		return copy;
+	}
+
+	public void setHostScheduledDowntimeShowServices(boolean setting) {
+		lock();
+		host_scheduled_downtime_show_services = setting;
+		unlock();
+	}
+
+	public boolean getHostAcknowledgedShowServices() {
+		boolean copy;
+		lock();
+		copy = host_acknowledged_show_services;
+		unlock();
+		return copy;
+	}
+
+	public void setHostAcknowledgedShowServices(boolean setting) {
+		lock();
+		host_acknowledged_show_services = setting;
 		unlock();
 	}
 }

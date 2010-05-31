@@ -1021,7 +1021,7 @@ public class CoffeeSaint
 		java.util.List<Problem> problems = new ArrayList<Problem>();
 
 		// collect problems
-		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems(), config.getShowFlapping(), config.getHostsFilterExclude(), config.getHostsFilterInclude(), config.getServicesFilterExclude(), config.getServicesFilterInclude());
+		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems(), config.getShowFlapping(), config.getHostsFilterExclude(), config.getHostsFilterInclude(), config.getServicesFilterExclude(), config.getServicesFilterInclude(), config.getHostScheduledDowntimeShowServices(), config.getHostAcknowledgedShowServices());
 		// sort problems
 		Problems.sortList(problems, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
 		Problems.sortList(lessImportant, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
@@ -1736,6 +1736,10 @@ public class CoffeeSaint
 						config.setLogoPosition(arg[++loop]);
 					else if (arg[loop].equals("--split-text-put-at-offset"))
 						config.setPutSplitAtOffset(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--suppress-services-for-scheduled-host-downtime"))
+						config.setHostScheduledDowntimeShowServices(false);
+					else if (arg[loop].equals("--suppress-services-for-acknowledged-host-problems"))
+						config.setHostAcknowledgedShowServices(false);
 					else if (arg[loop].equals("--sparkline-mode"))
 					{
 						String mode = arg[++loop];

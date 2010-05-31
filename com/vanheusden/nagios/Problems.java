@@ -92,47 +92,49 @@ public class Problems implements Comparator<Problem>
 	{
 		boolean add = true;
 
-System.out.println("---");
+//System.out.println("---");
 		if (filterExclude != null)
 		{
-System.out.println("filterExclude");
+//System.out.println("filterExclude");
 			for(Pattern currentPattern : filterExclude)
 			{
-System.out.println(" pattern: " + currentPattern.pattern() + ": " + currentPattern.matcher(pattern).find());
+//System.out.println(" pattern: " + currentPattern.pattern() + ": " + currentPattern.matcher(pattern).find());
 				if (currentPattern.matcher(pattern).find())
 					add = false;
 			}
 		}
 		if (filterInclude != null && add == false)
 		{
-System.out.println("filterInclude");
+//System.out.println("filterInclude");
 			for(Pattern currentPattern : filterInclude)
 			{
-System.out.println(" pattern: " + currentPattern.pattern() + ": " + currentPattern.matcher(pattern).find());
+//System.out.println(" pattern: " + currentPattern.pattern() + ": " + currentPattern.matcher(pattern).find());
 				if (currentPattern.matcher(pattern).find())
 					add = true;
 			}
 		}
 
-System.out.println(" ADD: " + add + ": " + pattern);
+//System.out.println(" ADD: " + add + ": " + pattern);
 		return add;
 	}
 
-	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> prioProblems, List<Problem> lessImportant, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_services_from_host_with_problems, boolean display_flapping, List<Pattern> hostsFilterExclude, List<Pattern> hostsFilterInclude, List<Pattern> servicesFilterExclude, List<Pattern> servicesFilterInclude)
+	public static void collectProblems(JavNag javNag, List<Pattern> prioPatterns, List<Problem> prioProblems, List<Problem> lessImportant, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_services_from_host_with_problems, boolean display_flapping, List<Pattern> hostsFilterExclude, List<Pattern> hostsFilterInclude, List<Pattern> servicesFilterExclude, List<Pattern> servicesFilterInclude, boolean host_scheduled_downtime_show_services, boolean host_acknowledged_show_services)
 	{
+System.out.println("host_scheduled_downtime_show_services: " + host_scheduled_downtime_show_services);
+System.out.println("host_acknowledged_show_services: " + host_acknowledged_show_services);
 		for(Host currentHost: javNag.getListOfHosts())
 		{
 			final String hostName = currentHost.getHostName();
-			boolean showHost = false;
+			boolean showHost = false, showServices = true;
+			String hostState = currentHost.getParameter("current_state");
 
 			if (javNag.shouldIShowHost(currentHost, always_notify, also_acknowledged, also_scheduled_downtime, also_soft_state, also_disabled_active_checks, display_flapping))
 			{
 				String useState = null;
-				String state = currentHost.getParameter("current_state");
 
-				if (state.equals("0")) /* UP = OK */
+				if (hostState.equals("0")) /* UP = OK */
 					useState = "0";
-				else if (state.equals("1") || state.equals("2")) /* DOWN & UNREACHABLE = CRITICAL */
+				else if (hostState.equals("1") || hostState.equals("2")) /* DOWN & UNREACHABLE = CRITICAL */
 					useState = "2";
 				else /* all other states (including 'pending' ("3")) are WARNING */
 					useState = "1";
@@ -145,7 +147,18 @@ System.out.println(" ADD: " + add + ": " + pattern);
 				showHost = true;
 			}
 
-			if (showHost == false || show_services_from_host_with_problems == true)
+System.out.println(hostName + " " + hostState);
+			if (hostState.equals("0") == false) {
+System.out.println(hostName + " error state");
+				if (!host_scheduled_downtime_show_services && Double.valueOf(currentHost.getParameter("scheduled_downtime_depth")) != 0.0)
+					showServices = false;
+				if (!host_acknowledged_show_services && currentHost.getParameter("problem_has_been_acknowledged").equals("1") == true)
+					showServices = false;
+			}
+
+System.out.println(hostName + " " + showHost + " " + show_services_from_host_with_problems + " " + showServices);
+System.out.println("" + Double.valueOf(currentHost.getParameter("scheduled_downtime_depth")) + " " + currentHost.getParameter("problem_has_been_acknowledged").equals("1"));
+			if ((showHost == false || show_services_from_host_with_problems == true) && showServices)
 			{
 				for(Service currentService : currentHost.getServices())
 				{

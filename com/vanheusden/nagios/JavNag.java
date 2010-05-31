@@ -389,7 +389,7 @@ public class JavNag
 	 * @param also_acknowledged	Also return true when the problem has been acknowledged in Nagios.
 	 * @return 			true/false
 	 */
-	public boolean shouldIShowService(Service service, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping)
+	public boolean shouldIShowService(Service service, boolean always_notify, boolean service_also_acknowledged, boolean service_also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping)
 	{
 		if (!also_soft_state && service.getParameter("state_type").equals("1") == false)
 			return false;
@@ -403,13 +403,13 @@ public class JavNag
 		if (!also_disabled_active_checks && service.getParameter("active_checks_enabled").equals("0") == true && service.getParameter("passive_checks_enabled").equals("0") == true)
 			return false;
 
-		if (!also_scheduled_downtime && Double.valueOf(service.getParameter("scheduled_downtime_depth")) != 0.0)
+		if (!service_also_scheduled_downtime && Double.valueOf(service.getParameter("scheduled_downtime_depth")) != 0.0)
 			return false;
 
 		if (!always_notify && service.getParameter("notifications_enabled").equals("0") == true)
 			return false;
 
-		if (!also_acknowledged && service.getParameter("problem_has_been_acknowledged").equals("1") == true)
+		if (!service_also_acknowledged && service.getParameter("problem_has_been_acknowledged").equals("1") == true)
 			return false;
 
 		return true;

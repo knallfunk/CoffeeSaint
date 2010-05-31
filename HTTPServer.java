@@ -586,7 +586,9 @@ class HTTPServer implements Runnable
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Always notify:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"always_notify\" VALUE=\"on\" " + isChecked(config.getAlwaysNotify()) + "></TD><TD>Also display when notifications are disabled</TD></TR>\n");
 		reply.add("<TR><TD>Also acknowledged:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_acknowledged\" VALUE=\"on\" " + isChecked(config.getAlsoAcknowledged()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Host problem acknowledged, show services problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"host_also_acknowledged\" VALUE=\"on\" " + isChecked(config.getHostAcknowledgedShowServices()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also scheduled downtime</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_scheduled_downtime\" VALUE=\"on\" " + isChecked(config.getAlsoScheduledDowntime()) + "></TD><TD>Also display problems for which downtime has been scheduled</TD></TR>\n");
+		reply.add("<TR><TD>Host scheduled downtime, show services problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"host_also_scheduled_downtime\" VALUE=\"on\" " + isChecked(config.getHostScheduledDowntimeShowServices()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also soft state:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_soft_State\" VALUE=\"on\" " + isChecked(config.getAlsoSoftState()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also disabled checks:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_disabled_active_checks\" VALUE=\"on\" " + isChecked(config.getAlsoDisabledActiveChecks()) + "></TD><TD>Also display problems for which active checks have been disabled</TD></TR>\n");
 		reply.add("<TR><TD>Show services for host with problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show_services_for_host_with_problems\" VALUE=\"on\" " + isChecked(config.getShowServicesForHostWithProblems()) + "></TD><TD></TD></TR>\n");
@@ -1077,6 +1079,9 @@ class HTTPServer implements Runnable
 		config.setShowServicesForHostWithProblems(getCheckBox(socket, requestData, "show_services_for_host_with_problems"));
 
 		config.setShowFlapping(getCheckBox(socket, requestData, "show-flapping"));
+
+		config.setHostAcknowledgedShowServices(getCheckBox(socket, requestData, "host_also_acknowledged"));
+		config.setHostScheduledDowntimeShowServices(getCheckBox(socket, requestData, "host_also_scheduled_downtime"));
 
 		config.setCounter(getCheckBox(socket, requestData, "counter"));
 
