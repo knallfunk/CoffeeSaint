@@ -114,6 +114,7 @@ public class Config
 	private String footer;
 	private boolean noProbTextBg;
 	private boolean host_scheduled_downtime_show_services, host_acknowledged_show_services;
+	private boolean host_scheduled_downtime_or_ack_show_services;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -227,6 +228,7 @@ public class Config
 		noProbTextBg = true;
 		host_scheduled_downtime_show_services = true;
 		host_acknowledged_show_services = true;
+		host_scheduled_downtime_or_ack_show_services = true;
 		unlock();
 	}
 
@@ -566,6 +568,8 @@ public class Config
 						setNoProblemsText(data);
 					else if (name.equals("state-problems-text"))
 						setStateProblemsText(data);
+					else if (name.equals("host-scheduled-downtime-or-ack-show-services"))
+						setHostSDOrAckShowServices(isTrue);
 					else if (name.equals("no-problems-text-position"))
 						setNoProblemsTextPosition(data);
 					else if (name.equals("web-username"))
@@ -634,6 +638,7 @@ public class Config
 		writeLine(out, "no-problems-text-with-bg-color = " + (getNoProblemsTextBg() ? "true" : "false"));
 		writeLine(out, "host-scheduled-downtime-show-services = " + (getHostScheduledDowntimeShowServices() ? "true" : "false"));
 		writeLine(out, "host-acknowledged-show-services = " + (getHostAcknowledgedShowServices() ? "true" : "false"));
+		writeLine(out, "host-scheduled-downtime-or-ack-show-services = " + (getHostSDOrAckShowServices() ? " true" : "false"));
 		writeLine(out, "interval = " + getSleepTime());
 		for(String imgUrl : getImageUrls())
 			writeLine(out, "image = " + imgUrl);
@@ -2868,6 +2873,20 @@ public class Config
 	public void setHostAcknowledgedShowServices(boolean setting) {
 		lock();
 		host_acknowledged_show_services = setting;
+		unlock();
+	}
+
+	public boolean getHostSDOrAckShowServices() {
+		boolean copy;
+		lock();
+		copy = host_scheduled_downtime_or_ack_show_services;
+		unlock();
+		return copy;
+	}
+
+	public void setHostSDOrAckShowServices(boolean setting) {
+		lock();
+		host_scheduled_downtime_or_ack_show_services = setting;
 		unlock();
 	}
 }

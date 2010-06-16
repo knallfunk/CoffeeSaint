@@ -185,12 +185,14 @@ class HTTPServer implements Runnable
 
 	public BufferedImage createBufferedImage(Image image)
 	{
+return (BufferedImage)image;
+/*
 		BufferedImage bufferedImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
 		Graphics g = bufferedImage.createGraphics();
 
 		g.drawImage(image, 0, 0, null);
 
-		return bufferedImage;
+		return bufferedImage; */
 	}
 
 	public long getModificationDate(String fileName) throws Exception
@@ -592,6 +594,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Also soft state:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_soft_State\" VALUE=\"on\" " + isChecked(config.getAlsoSoftState()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Also disabled checks:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"also_disabled_active_checks\" VALUE=\"on\" " + isChecked(config.getAlsoDisabledActiveChecks()) + "></TD><TD>Also display problems for which active checks have been disabled</TD></TR>\n");
 		reply.add("<TR><TD>Show services for host with problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show_services_for_host_with_problems\" VALUE=\"on\" " + isChecked(config.getShowServicesForHostWithProblems()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Show services for host with acked/scheduled downtime:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"host_scheduled_downtime_or_ack_show_services\" VALUE=\"on\" " + isChecked(config.getHostSDOrAckShowServices()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Show flapping:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-flapping\" VALUE=\"on\" " + isChecked(config.getShowFlapping()) + "></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
@@ -686,12 +689,14 @@ class HTTPServer implements Runnable
 		reply.add(selectField(config.getFullscreenName(), "fullscreen"));
 		reply.add(selectField(config.getFullscreenName(), "allmonitors"));
 		reply.add("</SELECT></TD><TD>Requires restart of CoffeeSaint.</TD></TR>\n");
-		reply.add("<TR><TD>Select monitor:</TD><TD><SELECT NAME=\"use-screen\">\n");
-		reply.add(selectField(config.getUseScreen(), "ALL"));
-		List<Monitor> monitors = CoffeeSaint.getMonitors();
-		for(Monitor monitor : monitors)
-			reply.add(selectField(config.getUseScreen(), monitor.getDeviceName()));
-		reply.add("</SELECT></TD><TD>Requires restart of CoffeeSaint.</TD></TR>\n");
+		if (config.getRunGui()) {
+			reply.add("<TR><TD>Select monitor:</TD><TD><SELECT NAME=\"use-screen\">\n");
+			reply.add(selectField(config.getUseScreen(), "ALL"));
+			List<Monitor> monitors = CoffeeSaint.getMonitors();
+			for(Monitor monitor : monitors)
+				reply.add(selectField(config.getUseScreen(), monitor.getDeviceName()));
+			reply.add("</SELECT></TD><TD>Requires restart of CoffeeSaint.</TD></TR>\n");
+		}
 		reply.add("<TR><TD>Show counter:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"counter\" VALUE=\"on\" " + isChecked(config.getCounter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Counter position:</TD><TD><SELECT NAME=\"counter-position\">\n");
 		reply.add(selectField(config.getCounterPositionName(), "upper-left"));
@@ -1077,6 +1082,8 @@ class HTTPServer implements Runnable
 		config.setAlsoDisabledActiveChecks(getCheckBox(socket, requestData, "also_disabled_active_checks"));
 
 		config.setShowServicesForHostWithProblems(getCheckBox(socket, requestData, "show_services_for_host_with_problems"));
+
+		config.setHostSDOrAckShowServices(getCheckBox(socket, requestData, "host_scheduled_downtime_or_ack_show_services"));
 
 		config.setShowFlapping(getCheckBox(socket, requestData, "show-flapping"));
 
