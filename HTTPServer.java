@@ -596,6 +596,7 @@ return (BufferedImage)image;
 		reply.add("<TR><TD>Show services for host with problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show_services_for_host_with_problems\" VALUE=\"on\" " + isChecked(config.getShowServicesForHostWithProblems()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Show services for host with acked/scheduled downtime:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"host_scheduled_downtime_or_ack_show_services\" VALUE=\"on\" " + isChecked(config.getHostSDOrAckShowServices()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Show flapping:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-flapping\" VALUE=\"on\" " + isChecked(config.getShowFlapping()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Maximum check age (to see<BR>if Nagios still runs):</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"max-check-age\" VALUE=\"" + config.getMaxCheckAge() + "\"></TD><TD>Set to -1 to disable</TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
@@ -950,6 +951,9 @@ return (BufferedImage)image;
 			else
 				config.setSparkLineWidth(newSparklineSize);
 		}
+
+		String maxAge = getField(socket, requestData, "max-check-age");
+		config.setMaxCheckAge(maxAge.equals("") ? -1 : Long.valueOf(maxAge));
 
 		config.setFlexibleNColumns(getCheckBox(socket, requestData, "flexible-n-columns"));
 
@@ -1646,6 +1650,13 @@ return (BufferedImage)image;
 			bgColor = config.getBackgroundColor();
 		else
 			bgColor = coffeeSaint.predictWithColor(rightNow);
+
+		long maxAge = config.getMaxCheckAge();
+		if (maxAge != -1) {
+			long currentAge = javNag.findMostRecentCheckAge();
+			if (currentAge > maxAge)
+				reply.add("<FONT SIZE=+2>WARNING: Nagios has not done anything for the last " + currentAge + " seconds!</FONT><BR><BR>\n");
+		}
 
 		reply.add("<TABLE WIDTH=640 HEIGHT=400 TEXT=\"#" + htmlColorString(config.getTextColor()) + "\" BGCOLOR=\"#" + htmlColorString(bgColor) + "\">\n");
 

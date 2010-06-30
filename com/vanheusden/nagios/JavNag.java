@@ -541,6 +541,35 @@ public class JavNag
 		return output;
         }
 
+	public long findMostRecentCheckAge()
+	{
+		long mostRecent = 0;
+
+		for(Host currentHost : hosts)
+		{
+			String current_state = currentHost.getParameter("current_state");
+			if (current_state == null)
+				continue;
+
+			String last_check = currentHost.getParameter("last_check");
+			mostRecent = Math.max(mostRecent, last_check != null ? Long.valueOf(last_check) : 0);
+
+			String last_update = currentHost.getParameter("last_update");
+			mostRecent = Math.max(mostRecent, last_update != null ? Long.valueOf(last_update) : 0);
+
+			for(Service currentService : currentHost.getServices())
+			{
+				last_check = currentService.getParameter("last_check");
+				mostRecent = Math.max(mostRecent, last_check != null ? Long.valueOf(last_check) : 0);
+
+				last_update = currentService.getParameter("last_update");
+				mostRecent = Math.max(mostRecent, last_update != null ? Long.valueOf(last_update) : 0);
+			}
+		}
+
+		return (System.currentTimeMillis() / 1000) - mostRecent;
+	}
+
 	public void loadNagiosData(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();

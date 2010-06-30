@@ -1701,6 +1701,8 @@ public class CoffeeSaint
 						config.setAllowHTTPCompression(false);
 					else if (arg[loop].equals("--transparency"))
 						config.setTransparency(Float.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--max-check-age"))
+						config.setMaxCheckAge(Long.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--header-transparency"))
 						config.setHeaderTransparency(Float.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--hosts-filter-exclude"))

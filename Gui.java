@@ -771,10 +771,20 @@ public class Gui extends JPanel implements ImageObserver
 			if (config.getDrawProblemServiceSplitLine())
 				drawProblemServiceSplitLine(g, rowHeight, windowHeight, problems.size());
 
+			boolean toOld = false;
+			long maxAge = config.getMaxCheckAge();
+			if (maxAge != -1) {
+				long currentAge = javNag.findMostRecentCheckAge();
+				if (currentAge > maxAge) {
+					toOld = true;
+					prepareRow(g, windowWidth, 0, "NAGIOS STOPPED RUNNING!", config.getNRows() / 2, "2", Color.RED, 1.0f, null, false);
+				}
+			}
+
 			/* play sound */
-			if (problems.size() > 0)
+			if (problems.size() > 0 || toOld)
 			{
-				if (lastState == false)
+				if (lastState == false || toOld)
 				{
 					if (config.getProblemSound() != null)
 					{

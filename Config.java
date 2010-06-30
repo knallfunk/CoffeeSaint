@@ -115,6 +115,7 @@ public class Config
 	private boolean noProbTextBg;
 	private boolean host_scheduled_downtime_show_services, host_acknowledged_show_services;
 	private boolean host_scheduled_downtime_or_ack_show_services;
+	private long maxCheckAge;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -229,6 +230,7 @@ public class Config
 		host_scheduled_downtime_show_services = true;
 		host_acknowledged_show_services = true;
 		host_scheduled_downtime_or_ack_show_services = true;
+		maxCheckAge = -1;
 		unlock();
 	}
 
@@ -393,6 +395,8 @@ public class Config
 						setHeader(data);
 					else if (name.equals("host-issue"))
 						setHostIssue(data);
+					else if (name.equals("max-check-age"))
+						setMaxCheckAge(Long.valueOf(data));
 					else if (name.equals("sparkline-width"))
 						setSparkLineWidth(Integer.valueOf(data));
 					else if (name.equals("sparkline-graph-mode"))
@@ -654,6 +658,7 @@ public class Config
 		writeLine(out, "row-border = " + (getRowBorder() ? "true" : "false"));
 		writeLine(out, "draw-problems-service-split-line = " + (getDrawProblemServiceSplitLine() ? "true" : "false"));
 		writeLine(out, "row-border-color = " + getRowBorderColorName());
+		writeLine(out, "max-check-age = " + getMaxCheckAge());
 		writeLine(out, "upper-row-border-height = " + getUpperRowBorderHeight());
 		writeLine(out, "graph-color = " + getGraphColorName());
 		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
@@ -2888,5 +2893,19 @@ public class Config
 		lock();
 		host_scheduled_downtime_or_ack_show_services = setting;
 		unlock();
+	}
+
+	public void setMaxCheckAge(long setting) {
+		lock();
+		maxCheckAge = setting;
+		unlock();
+	}
+
+	public long getMaxCheckAge() {
+		long copy;
+		lock();
+		copy = maxCheckAge;
+		unlock();
+		return copy;
 	}
 }
