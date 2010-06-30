@@ -46,7 +46,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.5";
+	static String versionNr = "v3.6-test002";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -562,33 +562,45 @@ public class CoffeeSaint
 
 	public String execWithPars(Problem problem, String file)
 	{
-		String line;
+		String line = null;
 
 		try
 		{
-			Host host = problem.getHost();
-			Service service = problem.getService();
+			Service service = null;
+			Host host = null;
+			if (problem != null) {
+				host = problem.getHost();
+				service = problem.getService();
+			}
 
 			String pluginOutput = "";
 			if (service != null)
 				pluginOutput = service.getParameter("plugin_output");
-			else
+			else if (host != null)
 				pluginOutput = host.getParameter("plugin_output");
 
-			String [] args = { file, problem.getHost().getHostName(), service != null ? service.getServiceName() : "", problem.getCurrent_state(), pluginOutput };
+			String [] args = { file, problem != null ? problem.getHost().getHostName() : "", service != null ? service.getServiceName() : "", problem != null ? problem.getCurrent_state() : "", pluginOutput };
 
+			System.out.println("Invoking " + file);
 			Process p = Runtime.getRuntime().exec(args);
-			BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			p.waitFor();
+			BufferedReader output = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			line = output.readLine();
 
-			line = input.readLine();
+			if (line == null || line.equals("")) {
+				BufferedReader errStreamReader  = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+				line = errStreamReader.readLine();
+			}
+			System.out.println(file + " returned: " + line);
 
-			input.close();
+			output.close();
 
 			p.destroy();
 		}
 		catch(Exception e)
 		{
 			line = e.toString();
+			showException(e);
 		}
 
 		return line;
@@ -752,16 +764,21 @@ public class CoffeeSaint
 	{
 		final Totals totals = javNag.calculateStatistics();
 		log.add("" + totals.getNHosts() + " hosts, " + totals.getNServices() + " services");
-		boolean loadingCmd = false;
+		boolean loadingCmd = false, atTerminator = false;
 		String cmd = "", output = "";
 
-		for(int index=0; index<in.length(); index++)
-		{
-			if (loadingCmd)
-			{
+		for(int index=0; index<in.length(); index++) {
+			if (loadingCmd) {
 				char currentChar = in.charAt(index);
 
-				if (!(currentChar >= 'A' && currentChar <= 'Z') && !(currentChar >= 'a' && currentChar <= 'z') && currentChar != '^' && currentChar != '/' && currentChar != '_' && currentChar != '.')
+				if (atTerminator && currentChar == '@') {
+					output += processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
+
+					cmd = "";
+					atTerminator = loadingCmd = false;
+				}
+				else if (!atTerminator && !(currentChar >= 'A' && currentChar <= 'Z') && !(currentChar >= 'a' && currentChar <= 'z') &&
+					currentChar != '^' && currentChar != '/' && currentChar != '_' && currentChar != '.' && currentChar != '\\')
 				{
 					output += processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
 
@@ -773,15 +790,17 @@ public class CoffeeSaint
 					else
 						output += in.charAt(index);
 				}
-				else
-				{
+				else {
 					cmd += in.charAt(index);
 				}
 			}
-			else
-			{
+			else {
 				if (in.charAt(index) == '%')
 					loadingCmd = true;
+				else if (in.charAt(index) == '@') {
+					loadingCmd = true;
+					atTerminator = true;
+				}
 				else
 					output += in.charAt(index);
 			}
@@ -1314,6 +1333,7 @@ public class CoffeeSaint
 		System.out.println("--listen-adapter Network interface to listen for the internal webserver");
 		System.out.println("--disable-http-fileselect Do not allow web-interface to select a file to write configuration to");
 		System.out.println("--header x    String to display in header. Can contain escapes, see below");
+		System.out.println("--footer x    String to display in footer. Can contain escapes, see below");
 		System.out.println("--host-issue x  String defining how to format host-issues");
 		System.out.println("--service-issue x  String defining how to format service-issues");
 		System.out.println("--no-header   Do not display the statistics line in the upper row");
@@ -1372,7 +1392,9 @@ public class CoffeeSaint
 		System.out.println("  %FIELDBOOLEANSERVICE^field  Take 'field' from the service-fields (see 'Sort-fields' below) and interprete as yes/no");
 		System.out.println("  %FIELDHOST                Take 'field' from the host-fields (see 'Sort-fields' below) and display its contents");
 		System.out.println("  %FIELDSERVICE             Take 'field' from the service-fields (see 'Sort-fields' below) and display its contents");
-		System.out.println("  %EXEC^script              Invoke script 'script' with as parameters: hostname, servicename (or empty string in case of a host failure), current state, plugin-output");
+		System.out.println("  @EXEC^script@             Invoke script 'script' with as parameters: hostname, servicename (or empty string in case of a host failure), current state, plugin-output");
+		System.out.println("                            Unix example: @EXEC^/usr/local/bin/my_script@");
+		System.out.println("                            Windows example: @EXEC^c:\\programs\\myprogram.exec@");
 		System.out.println("  %CHECKLATENCY             Check latency");
 		System.out.println("");
 		System.out.println("Sort-fields:");
