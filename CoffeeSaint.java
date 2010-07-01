@@ -46,7 +46,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.6-test002";
+	static String versionNr = "v3.6";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -627,6 +627,12 @@ public class CoffeeSaint
 
 		if (cmd.equals("EXEC") && pars != null)
 			return execWithPars(problem, pars);
+
+		if (cmd.equals("PERCENT"))
+			return "%";
+
+		if (cmd.equals("AT"))
+			return "@";
 
 		if (cmd.equals("FIELDHOST") && pars != null && pars.length() > 0)
 		{
@@ -1395,6 +1401,8 @@ public class CoffeeSaint
 		System.out.println("  @EXEC^script@             Invoke script 'script' with as parameters: hostname, servicename (or empty string in case of a host failure), current state, plugin-output");
 		System.out.println("                            Unix example: @EXEC^/usr/local/bin/my_script@");
 		System.out.println("                            Windows example: @EXEC^c:\\programs\\myprogram.exec@");
+		System.out.println("  %PERCENT			% character");
+		System.out.println("  %AT                       @ character");
 		System.out.println("  %CHECKLATENCY             Check latency");
 		System.out.println("");
 		System.out.println("Sort-fields:");
