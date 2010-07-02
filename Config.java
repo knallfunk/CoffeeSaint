@@ -48,6 +48,7 @@ public class Config
 	private String problemSound = null;
 	private boolean counter;
 	private java.util.List<String> imageFiles = new ArrayList<String>();
+	private java.util.List<ImageUrlType> iut = new ArrayList<ImageUrlType>();
 	private boolean adaptImgSize;
 	private String execCmd;
 	private String predictorBrainFileName;
@@ -231,6 +232,7 @@ public class Config
 		host_acknowledged_show_services = true;
 		host_scheduled_downtime_or_ack_show_services = true;
 		maxCheckAge = -1;
+		fullscreen = FullScreenMode.NONE;
 		unlock();
 	}
 
@@ -644,8 +646,10 @@ public class Config
 		writeLine(out, "host-acknowledged-show-services = " + (getHostAcknowledgedShowServices() ? "true" : "false"));
 		writeLine(out, "host-scheduled-downtime-or-ack-show-services = " + (getHostSDOrAckShowServices() ? " true" : "false"));
 		writeLine(out, "interval = " + getSleepTime());
-		for(String imgUrl : getImageUrls())
-			writeLine(out, "image = " + imgUrl);
+		List<String> iu = getImageUrls();
+		List<ImageUrlType> iut = getImageUrlTypes();
+		for(int index=0; index<iu.size(); index++)
+			writeLine(out, "image = " + iut.get(index) + " " + iu.get(index));
 		writeLine(out, "prefer = " + getPrefersList());
 		writeLine(out, "always-notify = " + (getAlwaysNotify() ? "true" : "false"));
 		writeLine(out, "also-acknowledged = " + (getAlsoAcknowledged() ? "true" : "false"));
@@ -1376,10 +1380,40 @@ public class Config
 		imageFiles = new ArrayList<String>();
 	}
 
-	public void addImageUrl(String url)
+	public void addImageUrl(String urlStr, ImageUrlType type)
 	{
 		lock();
+		imageFiles.add(urlStr);
+		iut.add(type);
+		unlock();
+	}
+
+	public void addImageUrl(String url) throws Exception
+	{
+		ImageUrlType type = ImageUrlType.FILE;
+
+		int space = url.indexOf(" ");
+		if (space != -1) {
+			String typeStr = url.substring(0, space);
+			url = url.substring(space).trim();
+
+			if (typeStr.equalsIgnoreCase("MJPEG"))
+				type = ImageUrlType.HTTP_MJPEG;
+			else if (typeStr.equalsIgnoreCase("HTTP") || typeStr.equalsIgnoreCase("HTTPS"))
+				type = ImageUrlType.HTTP;
+			else if (typeStr.equalsIgnoreCase("FILE"))
+				type = ImageUrlType.FILE;
+			else
+				throw new Exception("Unknown image-type: " + typeStr);
+		}
+		else
+		{
+			if (url.length() >= 8 && (url.substring(0, 7).equalsIgnoreCase("http://") || url.substring(0, 8).equalsIgnoreCase("https://")))
+				type = ImageUrlType.HTTP;
+		}
+		lock();
 		imageFiles.add(url);
+		iut.add(type);
 		unlock();
 	}
 
@@ -1391,6 +1425,7 @@ public class Config
 			if (imageFiles.get(index).equals(url))
 			{
 				imageFiles.remove(index);
+				iut.remove(index);
 				break;
 			}
 		}
@@ -1405,6 +1440,7 @@ public class Config
 			if (imageFiles.get(index).hashCode() == hash)
 			{
 				imageFiles.remove(index);
+				iut.remove(index);
 				break;
 			}
 		}
@@ -2907,5 +2943,15 @@ public class Config
 		copy = maxCheckAge;
 		unlock();
 		return copy;
+	}
+
+	public List<ImageUrlType> getImageUrlTypes() {
+		// FIXME make a copy, this is not threadsafe
+		List<ImageUrlType> iutCopy;
+		lock();
+		iutCopy = iut;
+		unlock();
+
+		return iutCopy;
 	}
 }

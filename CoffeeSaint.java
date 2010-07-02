@@ -22,6 +22,7 @@ import java.awt.Toolkit;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Rectangle2D;
 import java.awt.font.FontRenderContext;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -33,6 +34,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
+import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -40,13 +42,14 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.Random;
 import java.util.regex.Pattern;
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.6";
+	static String versionNr = "v3.7";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -851,10 +854,86 @@ public class CoffeeSaint
 			gui.prepareRow(g, windowWidth, 0, message, 0, "0", config.getBackgroundColor(), 1.0f, null, false);
 	}
 
+	Image getMJPEGFrame(String urlStr) throws Exception {
+		URL url = new URL(urlStr);
+		URLConnection connection = url.openConnection();
+		InputStreamReader isr = new InputStreamReader(connection.getInputStream());
+		String cType = connection.getContentType();
+		int bOffset = cType.indexOf("boundary=");
+		if (bOffset == -1)
+			throw new Exception("Don't know how to handle " + urlStr + ", stream not understood");
+		String boundary = cType.substring(bOffset + 9);
+		int bEnd = boundary.indexOf(" ");
+		if (bEnd == -1)
+			bEnd = boundary.indexOf(";");
+		if (bEnd != -1)
+			boundary = boundary.substring(0, bEnd);
+		int bLen = boundary.length();
+
+		int maxSize = 1024 * 1024;
+		byte [] imageData = new byte[maxSize]; // really frames should not be that large
+		int idLen = 0;
+
+		InputStream input = connection.getInputStream();
+
+		byte [] crlf = new byte[4];
+		do
+		{
+			crlf[0] = crlf[1];
+			crlf[1] = crlf[2];
+			crlf[2] = crlf[3];
+			int c = input.read();
+			if (c == -1)
+				break;
+			crlf[3] = (byte)c;
+		}
+		while(crlf[0] != '\r' || crlf[1] != '\n' || crlf[2] != '\r' || crlf[3] != '\n');
+
+		boolean found = false;
+		while(idLen < maxSize) {
+			int c = input.read();
+			if (c == -1)
+				break;
+			imageData[idLen++] = (byte)c;
+			if (idLen >= bLen) {
+				int index = -1;
+				found = false;
+				for(index=bLen; index<(idLen - bLen); index++) {
+					found = true;
+					for(int checkLoop=0; checkLoop<bLen; checkLoop++) {
+						if (imageData[index + checkLoop] != (byte)boundary.charAt(checkLoop)) {
+							found = false;
+							break;
+						}
+					}
+					if (found)
+						break;
+				}
+
+				if (found) {
+					idLen = index;
+					break;
+				}
+			}
+		}
+
+		if (found) {
+			byte [] result = new byte[idLen];
+			System.arraycopy(imageData, 0, result, 0, idLen);
+
+			MyInputStream misr = new MyInputStream(result);
+
+			return ImageIO.read((InputStream)misr);
+		}
+
+		return null;
+	}
+
 	public ImageParameters [] loadImage(Gui gui, int windowWidth, Graphics g) throws Exception
 	{
 		int nr;
 		java.util.List<String> imageUrls = config.getImageUrls();
+		java.util.List<ImageUrlType> imageUrlTypes = config.getImageUrlTypes();
 		int nImages = imageUrls.size();
 		if (nImages == 0)
 			return null;
@@ -904,8 +983,10 @@ public class CoffeeSaint
 			log.add("Load image(1) " + loadImage);
 			drawLoadStatus(gui, windowWidth, g, "Start load img " + loadImage);
 
-			if (loadImage.length() >= 8 && (loadImage.substring(0, 7).equalsIgnoreCase("http://") || loadImage.substring(0, 8).equalsIgnoreCase("https://")))
+			if (imageUrlTypes.get(indexes[nr]) == ImageUrlType.HTTP)
 				img[nr] = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
+			else if (imageUrlTypes.get(indexes[nr]) == ImageUrlType.HTTP_MJPEG)
+			{ /* loading is done below */ }
 			else
 				img[nr] = Toolkit.getDefaultToolkit().createImage(loadImage);
 		}
@@ -915,8 +996,13 @@ public class CoffeeSaint
 			String loadImage = imageUrls.get(indexes[nr]);
 			drawLoadStatus(gui, windowWidth, g, "Load image " + loadImage);
 
-			new ImageIcon(img[nr]); //loads the image
-			Toolkit.getDefaultToolkit().sync();
+			if (imageUrlTypes.get(indexes[nr]) != ImageUrlType.HTTP_MJPEG) {
+				new ImageIcon(img[nr]); //loads the image
+				Toolkit.getDefaultToolkit().sync();
+			}
+			else {
+				img[nr] = getMJPEGFrame(loadImage);
+			}
 
 			int imgWidth = img[nr].getWidth(null);
 			int imgHeight = img[nr].getHeight(null);
@@ -1303,7 +1389,7 @@ public class CoffeeSaint
 		System.out.println("--use-screen x  Select screen 'x' to display the output on. This is usefull if you have multiple monitors connected to the system.");
 		System.out.println("--problem-columns x  Split the screen in x columns so that it can display x * nrows");
 		System.out.println("--flexible-n-columns Dynamically adjust number of columns (up to the maximum set with --problem-columns)");
-		System.out.println("--image x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin");
+		System.out.println("--image y x     Display image x on background. Can be a filename or an http-URL. One can have multiple files/url which will be shown roundrobin. y must be MJPEG/HTTP/HTTPS/FILE (HTTP[S]/FILE can be jpg/png)");
 		System.out.println("--adapt-img   Reduce image-size to fit below the listed problems");
 		System.out.println("--random-img  Randomize order of images shown");
 		System.out.println("--transparency x Transparency for drawing (0.0...1.0) - only usefull with background image/webcam");
@@ -1631,6 +1717,7 @@ public class CoffeeSaint
 						config.setSleepTime(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--image"))
 					{
+						String type = arg[++loop];
 						String what = arg[++loop];
 						if (what.length() > 7 && what.substring(0, 7).equalsIgnoreCase("http://"))
 						{
@@ -1648,7 +1735,7 @@ public class CoffeeSaint
 							if (result != null)
 								errorExit("Cannot open image-file " + what + " (" + result + ")");
 						}
-						config.addImageUrl(what);
+						config.addImageUrl(type + " " + what);
 					}
 					else if (arg[loop].equals("--problem-columns"))
 						config.setNProblemCols(Integer.valueOf(arg[++loop]));

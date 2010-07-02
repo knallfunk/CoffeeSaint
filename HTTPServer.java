@@ -832,10 +832,11 @@ return (BufferedImage)image;
 		reply.add("<BR>\n");
 
 		reply.add("<H1>Webcams</H1>\n");
+		reply.add("Please note: regular JPEG camera's require type \"HTTP\" or \"HTTPS\". Streaming webcams require \"MJPEG\".<BR>\n");
 		reply.add("<TABLE>\n");
 		for(String image : config.getImageUrls())
 			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
-		reply.add("<TR><TD>Add webcam:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
+		reply.add("<TR><TD>Add webcam:</TD><TD><SELECT NAME=\"newWebcamType\"><OPTION VALUE=\"MJPEG\">MJPEG</OPTION><OPTION VALUE=\"HTTP\">HTTP</OPTION><OPTION VALUE=\"HTTPS\">HTTPS</OPTION><OPTION VALUE=\"FILE\">FILE</OPTION></SELECT> <INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
 		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + isChecked(config.getAdaptImageSize()) + "> (fit below list of problems)</TD></TR>\n");
 		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + isChecked(config.getRandomWebcam()) + "></TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"cam-cols\" VALUE=\"" + config.getCamCols() + "\"></TD></TR>\n");
@@ -1144,8 +1145,9 @@ return (BufferedImage)image;
 		}
 
 		String newWebcam = getFieldDecoded(socket, requestData, "newWebcam");
-		if (newWebcam != null && newWebcam.equals("") == false)
-			config.addImageUrl(newWebcam);
+		String newWebcamType = getFieldDecoded(socket, requestData, "newWebcamType");
+		if (newWebcam != null && newWebcam.equals("") == false && newWebcamType != null && newWebcamType.equals("") == false)
+			config.addImageUrl(newWebcamType + " " + newWebcam);
 
 		for(HTTPRequestData webcam : requestData)
 		{
