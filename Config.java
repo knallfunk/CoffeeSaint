@@ -286,6 +286,324 @@ public class Config
 		unlock();
 	}
 
+	boolean isIsTrue(String str) {
+		return str.equalsIgnoreCase("true") ? true : false;
+	}
+
+	public void loadAppletParameters(Applet a) throws Exception {
+		String data = null;
+
+		data = a.getParameter("source");
+		if (data != null)
+		{
+			String [] parameters = data.split(" ");
+			NagiosDataSource nds = null;
+			NagiosVersion nv = null;
+			String type = parameters[0];
+			String versionStr = parameters[1];
+
+			if (versionStr.equals("1"))
+				nv = NagiosVersion.V1;
+			else if (versionStr.equals("2"))
+				nv = NagiosVersion.V2;
+			else if (versionStr.equals("3"))
+				nv = NagiosVersion.V3;
+			else
+				throw new Exception("Nagios version '" + versionStr + "' not known.");
+
+			if (type.equalsIgnoreCase("http"))
+				nds = new NagiosDataSource(new URL(parameters[2]), nv);
+			else if (type.equalsIgnoreCase("http-auth"))
+				nds = new NagiosDataSource(new URL(parameters[2]), parameters[3], parameters[4], nv);
+			else if (type.equalsIgnoreCase("file"))
+				nds = new NagiosDataSource(parameters[2], nv);
+			else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
+			{
+				String host = parameters[2];
+				int port = Integer.valueOf(parameters[3]);
+				nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
+			}
+			else
+				throw new Exception("Data source-type '" + type + "' not understood.");
+
+			addNagiosDataSource(nds);
+		}
+
+		data = a.getParameter("splitter");
+		if (data != null)
+		{
+			if (data.equalsIgnoreCase("none") || data.length() < 1)
+				setLineScrollSplitter(null);
+			else
+				setLineScrollSplitter(data.charAt(0));
+		}
+
+		data = a.getParameter("counter-position");
+		if (data != null)
+			setCounterPosition(data);
+		data = a.getParameter("logo-position");
+		if (data != null)
+			setLogoPosition(data);
+		data = a.getParameter("footer");
+		if (data != null)
+			setFooter(data);
+		data = a.getParameter("adapt-img");
+		if (data != null)
+			setAdaptImageSize(isIsTrue(data));
+		data = a.getParameter("header");
+		if (data != null)
+			setHeader(data);
+		data = a.getParameter("host-issue");
+		if (data != null)
+			setHostIssue(data);
+		data = a.getParameter("max-check-age");
+		if (data != null)
+			setMaxCheckAge(Long.valueOf(data));
+		data = a.getParameter("sparkline-width");
+		if (data != null)
+			setSparkLineWidth(Integer.valueOf(data));
+		data = a.getParameter("sparkline-graph-mode");
+		if (data != null)
+		{
+			if (data.equals("avg-sd"))
+				setSparklineGraphMode(SparklineGraphMode.AVG_SD);
+			else if (data.equals("min-max"))
+				setSparklineGraphMode(SparklineGraphMode.MIN_MAX);
+			else
+				throw new Exception("sparkline-graph-mode " + data + " unknown");
+		}
+		data = a.getParameter("service-issue");
+		if (data != null)
+			setServiceIssue(data);
+		// else if (name.equals("logo"))
+		// 	setLogo(data);
+		data = a.getParameter("counter");
+		if (data != null)
+			setCounter(isIsTrue(data));
+		data = a.getParameter("flexible-n-columns");
+		if (data != null)
+			setFlexibleNColumns(isIsTrue(data));
+		data = a.getParameter("row-border");
+		if (data != null)
+			setRowBorder(isIsTrue(data));
+		data = a.getParameter("anti-alias");
+		if (data != null)
+			setAntiAlias(isIsTrue(data));
+		data = a.getParameter("draw-problems-service-split-line");
+		if (data != null)
+			setDrawProblemServiceSplitLine(isIsTrue(data));
+		data = a.getParameter("no-problems-text-with-bg-color");
+		if (data != null)
+			setNoProblemsTextBg(isIsTrue(data));
+		data = a.getParameter("max-quality-graphics");
+		if (data != null)
+			setMaxQualityGraphics(isIsTrue(data));
+		data = a.getParameter("row-border-color");
+		if (data != null)
+			setRowBorderColor(data);
+		// else if (name.equals("sound"))
+		// 	setProblemSound(data);
+		data = a.getParameter("color-bg-to-state");
+		if (data != null)
+			setSetBgColorToState(isIsTrue(data));
+		data = a.getParameter("problem-columns");
+		if (data != null)
+			setNProblemCols(Integer.valueOf(data));
+		data = a.getParameter("web-expire-time");
+		if (data != null)
+			setWebSessionExpire(Integer.valueOf(data));
+		data = a.getParameter("listen-port");
+		if (data != null)
+			setHTTPServerListenPort(Integer.valueOf(data));
+		data = a.getParameter("upper-row-border-height");
+		if (data != null)
+			setUpperRowBorderHeight(Integer.valueOf(data));
+		data = a.getParameter("split-text-put-at-offset");
+		if (data != null)
+			setPutSplitAtOffset(Integer.valueOf(data));
+		data = a.getParameter("listen-adapter");
+		if (data != null)
+			setHTTPServerListenAdapter(data);
+		data = a.getParameter("bgcolor");
+		if (data != null)
+			setBackgroundColor(data);
+		data = a.getParameter("bgcolor-fade-to");
+		if (data != null)
+			setBackgroundColorFadeTo(data);
+		data = a.getParameter("problem-row-gradient");
+		if (data != null)
+			setProblemRowGradient(data);
+		data = a.getParameter("reduce-textwidth");
+		if (data != null)
+			setReduceTextWidth(isIsTrue(data));
+		data = a.getParameter("also-scheduled-downtime");
+		if (data != null)
+			setAlsoScheduledDowntime(isIsTrue(data));
+		data = a.getParameter("header-always-bgcolor");
+		if (data != null)
+			setHeaderAlwaysBGColor(isIsTrue(data));
+		data = a.getParameter("show-flapping");
+		if (data != null)
+			setShowFlapping(isIsTrue(data));
+		data = a.getParameter("also-soft-state");
+		if (data != null)
+			setAlsoSoftState(isIsTrue(data));
+		data = a.getParameter("also-disabled-active-checks");
+		if (data != null)
+			setAlsoDisabledActiveChecks(isIsTrue(data));
+		data = a.getParameter("show-services-for-host-with-problems");
+		if (data != null)
+			setShowServicesForHostWithProblems(isIsTrue(data));
+		data = a.getParameter("host-scheduled-downtime-show-services");
+		if (data != null)
+			setHostScheduledDowntimeShowServices(isIsTrue(data));
+		data = a.getParameter("host-acknowledged-show-services");
+		if (data != null)
+			setHostAcknowledgedShowServices(isIsTrue(data));
+		data = a.getParameter("textcolor");
+		if (data == null)
+			data = a.getParameter("text-color");
+		if (data != null)
+			setTextColor(data);
+		data = a.getParameter("warning-textcolor");
+		if (data != null)
+			setWarningTextColor(data);
+		data = a.getParameter("critical-textcolor");
+		if (data != null)
+			setCriticalTextColor(data);
+		data = a.getParameter("graph-color");
+		if (data != null)
+			setGraphColor(data);
+
+		data = a.getParameter("hosts-filter-exclude");
+		if (data != null)
+		{
+			if (data.trim().equals("") == false)
+				setHostsFilterExclude(data);
+		}
+		data = a.getParameter("hosts-filter-include");
+		if (data != null)
+		{
+			if (data.trim().equals("") == false)
+				setHostsFilterInclude(data);
+		}
+		data = a.getParameter("services-filter-exclude");
+		if (data != null)
+		{
+			if (data.trim().equals("") == false)
+				setServicesFilterExclude(data);
+		}
+		data = a.getParameter("services-filter-include");
+		if (data != null)
+		{
+			if (data.trim().equals("") == false)
+				setServicesFilterInclude(data);
+		}
+
+		data = a.getParameter("bgcolorok");
+		if (data != null)
+			setBackgroundColorOkStatus(data);
+		data = a.getParameter("nrows");
+		if (data != null)
+			setNRows(Integer.valueOf(data));
+		data = a.getParameter("interval");
+		if (data != null)
+			setSleepTime(Integer.valueOf(data));
+		data = a.getParameter("scrolling-header");
+		if (data != null)
+			setScrollingHeader(isIsTrue(data));
+		data = a.getParameter("scrolling-footer");
+		if (data != null)
+			setScrollingFooter(isIsTrue(data));
+		data = a.getParameter("scroll-pixels-per-sec");
+		if (data != null)
+			setScrollingPixelsPerSecond(Integer.valueOf(data));
+		data = a.getParameter("transparency");
+		if (data != null)
+			setTransparency(Float.valueOf(data));
+		data = a.getParameter("header-transparency");
+		if (data != null)
+			setHeaderTransparency(Float.valueOf(data));
+		data = a.getParameter("image");
+		if (data != null)
+			addImageUrl(data);
+		// else if (name.equals("cam-rows"))
+		// 	setCamRows(Integer.valueOf(data));
+		// else if (name.equals("cam-cols"))
+		// 	setCamCols(Integer.valueOf(data));
+		data = a.getParameter("ignore-aspect-ratio");
+		if (data != null)
+			setKeepAspectRatio(!(isIsTrue(data)));
+		data = a.getParameter("sort-order");
+		if (data != null)
+		{
+			String field = null;
+			boolean numeric = false, reverse = false;
+			String [] fields = data.split(" ");
+			for(int index=0; index<fields.length; index++)
+			{
+				if (fields[index].equals("numeric"))
+					numeric = true;
+				else if (fields[index].equals("reverse"))
+					reverse = true;
+				else
+					field = fields[index];
+			}
+			setSortOrder(field, numeric, reverse);
+		}
+		data = a.getParameter("always-notify");
+		if (data != null)
+			setAlwaysNotify(isIsTrue(data));
+		data = a.getParameter("also-acknowledged");
+		if (data != null)
+			setAlsoAcknowledged(isIsTrue(data));
+		data = a.getParameter("show-header");
+		if (data != null)
+			setShowHeader(isIsTrue(data));
+		data = a.getParameter("scroll-if-not-fitting");
+		if (data != null)
+			setScrollIfNotFit(isIsTrue(data));
+		data = a.getParameter("font");
+		if (data != null)
+			setFontName(data);
+		data = a.getParameter("critical-font");
+		if (data != null)
+			setCriticalFontName(data);
+		data = a.getParameter("warning-font");
+		if (data != null)
+			setWarningFontName(data);
+		data = a.getParameter("warning-bg-color");
+		if (data != null)
+			setWarningBgColor(data);
+		data = a.getParameter("critical-bg-color");
+		if (data != null)
+			setCriticalBgColor(data);
+		data = a.getParameter("nagios-unknown-bg-color");
+		if (data != null)
+			setNagiosUnknownBgColor(data);
+		data = a.getParameter("disable-http-compression");
+		if (data != null)
+			setAllowHTTPCompression(isIsTrue(data) ? false : true);
+		data = a.getParameter("no-problems-text");
+		if (data != null)
+			setNoProblemsText(data);
+		data = a.getParameter("state-problems-text");
+		if (data != null)
+			setStateProblemsText(data);
+		data = a.getParameter("host-scheduled-downtime-or-ack-show-services");
+		if (data != null)
+			setHostSDOrAckShowServices(isIsTrue(data));
+		data = a.getParameter("no-problems-text-position");
+		if (data != null)
+			setNoProblemsTextPosition(data);
+		data = a.getParameter("web-username");
+		if (data != null)
+			setWebUsername(data);
+		data = a.getParameter("web-password");
+		if (data != null)
+			setWebPassword(data);
+	}
+
 	public void loadConfig(String fileName) throws Exception
 	{
 		lock();

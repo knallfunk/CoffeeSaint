@@ -3,3 +3,10 @@ java -Djava.compiler= -Xrunhprof:cpu=times,depth=6,thread=y -jar CoffeeSaint.jar
 
 rcsdiff *java ./build ./todo com/vanheusden/sockets/*java com/vanheusden/nagios/*java 2>&1  | more
 ci -l *java com/vanheusden/*/*java ./build Changelog ./todo ./cmds 
+
+----
+
+1. keytool -genkey -alias cskey -keystore cskeystore.dat -keysize 4096 -validity 36500
+2. keytool -keystore cskeystore.dat -alias cskey -selfcert -validity 36500
+
+t. jarsigner -keystore cskeystore.dat CoffeeSaint.jar cskey

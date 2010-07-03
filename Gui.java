@@ -839,6 +839,10 @@ public class Gui extends JPanel implements ImageObserver
 		System.out.println("+++ PAINT END +++");
 	}
 
+	public Graphics gg() {
+		return getGraphics();
+	}
+
 	public void guiLoop() throws Exception
 	{
 		final Graphics g = getGraphics();

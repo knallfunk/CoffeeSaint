@@ -856,8 +856,7 @@ public class CoffeeSaint
 
 	Image getMJPEGFrame(String urlStr) throws Exception {
 		URL url = new URL(urlStr);
-		URLConnection connection = url.openConnection();
-		InputStreamReader isr = new InputStreamReader(connection.getInputStream());
+		HttpURLConnection connection = (HttpURLConnection)url.openConnection();
 		String cType = connection.getContentType();
 		int bOffset = cType.indexOf("boundary=");
 		if (bOffset == -1)
@@ -916,6 +915,9 @@ public class CoffeeSaint
 				}
 			}
 		}
+
+		input.close();
+		connection.disconnect();
 
 		if (found) {
 			byte [] result = new byte[idLen];
@@ -1092,6 +1094,7 @@ public class CoffeeSaint
 				String source = dataSource.getHost() + " " + dataSource.getPort();
 				logStr += source;
 				drawLoadStatus(gui, windowWidth, g, "zLoad Nagios " + source);
+				System.out.println("zLoad Nagios " + source);
 				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), true);
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
