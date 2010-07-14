@@ -44,6 +44,15 @@ public class NagiosDataSource
 		this.version = version;
 	}
 
+	// livestatus
+	public NagiosDataSource(String host, int port)
+	{
+		this.type = NagiosDataSourceType.LS;
+		this.host = host;
+		this.port = port;
+		this.version = NagiosVersion.V3;
+	}
+
 	public String getUsername()
 	{
 		return username;

@@ -375,8 +375,9 @@ public class Config
 		data = a.getParameter("service-issue");
 		if (data != null)
 			setServiceIssue(data);
-		// else if (name.equals("logo"))
-		// 	setLogo(data);
+		data = a.getParameter("logo");
+		if (data != null)
+		 	setLogo(data);
 		data = a.getParameter("counter");
 		if (data != null)
 			setCounter(isIsTrue(data));
@@ -667,6 +668,14 @@ public class Config
 							String host = parameters[2];
 							int port = Integer.valueOf(parameters[3]);
 							nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
+						}
+						else if (type.equalsIgnoreCase("ls"))
+						{
+							String host = parameters[2];
+							int port = Integer.valueOf(parameters[3]);
+							nds = new NagiosDataSource(host, port);
+							if (nv != NagiosVersion.V3)
+								throw new Exception("LiveStatus source only accepts version 3");
 						}
 						else
 							throw new Exception("Data source-type '" + type + "' not understood.");
@@ -1054,6 +1063,8 @@ public class Config
 				type = "tcp";
 			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
 				type = "ztcp";
+			else if (dataSource.getType() == NagiosDataSourceType.LS)
+				type = "ls";
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 				type = "http";
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
@@ -1068,7 +1079,7 @@ public class Config
 				version = "3";
 
 			String parameters = "?";
-			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP)
+			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP || dataSource.getType() == NagiosDataSourceType.LS)
 				parameters = dataSource.getHost() + " " + dataSource.getPort();
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 			{

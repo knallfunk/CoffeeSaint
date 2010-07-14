@@ -635,6 +635,8 @@ return (BufferedImage)image;
 				type = "tcp";
 			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
 				type = "compressed tcp";
+			else if (dataSource.getType() == NagiosDataSourceType.LS)
+				type = "LiveStatus tcp socket";
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 			{
 				if (dataSource.getUsername() != null)
@@ -658,7 +660,7 @@ return (BufferedImage)image;
 				version = "3";
 
 			String parameters = "?";
-			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP)
+			if (dataSource.getType() == NagiosDataSourceType.TCP || dataSource.getType() == NagiosDataSourceType.ZTCP || dataSource.getType() == NagiosDataSourceType.LS)
 				parameters = dataSource.getHost() + " " + dataSource.getPort();
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 				parameters = dataSource.getURL().toString();
@@ -669,7 +671,7 @@ return (BufferedImage)image;
 			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD><TD>" + username + "</TD><TD>" + password +"</TD></TR>\n");
 		}
 		reply.add("<TR>\n");
-		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"ztcp\">compressed tcp</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
+		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"ztcp\">GZIP compressed TCP</OPTION><OPTION VALUE=\"ls\">LiveStatus TCP socket</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
 		reply.add("<TD><SELECT NAME=\"server-add-version\"><OPTION VALUE=\"1\">1</OPTION><OPTION VALUE=\"2\">2</OPTION><OPTION VALUE=\"3\" SELECTED>3</OPTION></SELECT></TD>\n");
 		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"server-add-parameters\"></TD>\n");
 		reply.add("<TD></TD>\n");
@@ -1270,6 +1272,8 @@ return (BufferedImage)image;
 				ndst = NagiosDataSourceType.TCP;
 			else if (type.equals("ztcp"))
 				ndst = NagiosDataSourceType.ZTCP;
+			else if (type.equals("ls"))
+				ndst = NagiosDataSourceType.LS;
 			else if (type.equals("http"))
 				ndst = NagiosDataSourceType.HTTP;
 			else if (type.equals("file"))
@@ -1304,6 +1308,22 @@ return (BufferedImage)image;
 						reply.add("Error: address " + server_add_parameters + ":" + port + " has an issue (" + result + "). Nagios server was <I>not</I> added.<BR>\n");
 					else
 						config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, nv, ndst == NagiosDataSourceType.ZTCP));
+				}
+				else if (ndst == NagiosDataSourceType.LS)
+				{
+					int port = 6557;
+					int space = server_add_parameters.indexOf(" ");
+					if (space != -1)
+					{
+						port = Integer.valueOf(server_add_parameters.substring(space + 1).trim());
+						server_add_parameters = server_add_parameters.substring(0, space);
+					}
+
+					String result = CoffeeSaint.testPort(server_add_parameters, port);
+					if (result != null)
+						reply.add("Error: address " + server_add_parameters + ":" + port + " has an issue (" + result + "). Nagios server was <I>not</I> added.<BR>\n");
+					else
+						config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port));
 				}
 				else if (ndst == NagiosDataSourceType.HTTP)
 				{

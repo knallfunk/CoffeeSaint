@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.7";
+	static String versionNr = "v3.8";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -1109,6 +1109,13 @@ public class CoffeeSaint
 				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getFile());
 				javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion());
 			}
+			else if (dataSource.getType() == NagiosDataSourceType.LS)
+			{
+				String source = dataSource.getHost() + " " + dataSource.getPort();
+				logStr += source;
+				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
+				javNag.loadNagiosDataLiveStatus(dataSource.getHost(), dataSource.getPort());
+			}
 			else
 				throw new Exception("Unknown data-source type: " + dataSource.getType());
 
@@ -1578,7 +1585,7 @@ public class CoffeeSaint
 								errorExit("Cannot access file " + filename + " (" + result + ")");
 							nds = new NagiosDataSource(filename, nv);
 						}
-						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
+						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp") || type.equalsIgnoreCase("ls"))
 						{
 							String host = arg[++loop];
 							int port;
@@ -1588,7 +1595,10 @@ public class CoffeeSaint
 								String result = testPort(host, port);
 								if (result != null)
 									errorExit("Cannot open socket on " + host + ":" + port + " (" + result + ")");
-								nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
+								if (type.equalsIgnoreCase("ls"))
+									nds = new NagiosDataSource(host, port);
+								else
+									nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
 							}
 							catch(NumberFormatException nfe)
 							{

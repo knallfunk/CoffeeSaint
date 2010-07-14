@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.FileReader;
 import java.net.HttpURLConnection;
@@ -500,74 +501,178 @@ public class JavNag
 		}
 	}
 
-	String encode3Chars(String in)
-	{
-		String result = new String();
-		String encodingChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	// via livestatus
+	public void loadNagiosDataLiveStatus(String host, int port) throws Exception {
+		loadNagiosDataLiveStatus_hosts(host, port);
 
-		int tripple;
-		tripple = in.charAt(0);
-		tripple <<= 8;
-		if (in.length() >= 2)
-			tripple += in.charAt(1);
-		tripple <<= 8;
-		if (in.length() >= 3)
-			tripple += in.charAt(2);
-
-		for (int outputIndex=0; outputIndex<4; outputIndex++)
-		{   
-			int ecIndex = tripple % 64;
-			result = encodingChars.substring(ecIndex, ecIndex + 1) + result;
-			tripple /= 64;
-		}
-
-		return result;
+		loadNagiosDataLiveStatus_services(host, port);
 	}
 
+	private void loadNagiosDataLiveStatus_hosts(String host, int port) throws Exception {
+		Socket socket = new Socket(host, port);
+		BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-	public String encodeBase64(String input)
-	{
-		String output = new String();
-		int inputLength = input.length(), index = 0;
+		String [][] map = {
+			{ "accept_passive_checks", "passive_checks_enabled" },
+			{ "acknowledged", "problem_has_been_acknowledged" },
+			{ "acknowledgement_type", "acknowledgement_type" },
+			{ "active_checks_enabled", "active_checks_enabled" },
+			{ "check_command", "check_command" },
+			{ "check_interval", "check_interval" },
+			{ "check_options", "check_options" },
+			{ "check_period", "check_period" },
+			{ "check_type", "check_type" },
+			{ "current_attempt", "current_attempt" },
+			{ "flap_detection_enabled", "flap_detection_enabled" },
+			{ "has_been_checked", "has_been_checked" },
+			{ "is_flapping", "is_flapping" },
+			{ "last_check", "last_check" },
+			{ "last_hard_state", "last_hard_state" },
+			{ "last_hard_state_change", "last_hard_state_change" },
+			{ "last_notification", "last_notification" },
+			{ "last_state_change", "last_state_change" },
+			{ "long_plugin_output", "long_plugin_output" },
+			{ "name", "host_name" },
+			{ "next_check", "next_check" },
+			{ "next_notification", "next_notification" },
+			{ "notification_period", "notification_period" },
+			{ "notifications_enabled", "notifications_enabled" },
+			{ "obsess_over_host", "obsess_over_host" },
+			{ "percent_state_change", "percent_state_change" },
+			{ "perf_data", "performance_data" },
+			{ "plugin_output", "plugin_output" },
+			{ "process_performance_data", "process_performance_data" },
+			{ "retry_interval", "retry_interval" },
+			{ "scheduled_downtime_depth", "scheduled_downtime_depth" },
+			{ "state", "current_state" },
+			{ "state_type", "state_type" }
+		};
 
-                while(inputLength > 0)
-		{
-			output += encode3Chars(input.substring(index, index + Math.min(3, inputLength)));
+		String request = "GET hosts\nSeparators: 10 124 44 125\nColumns:";
+		int nameIndex = -1;
+		int nFieldsRequested = 0, index = 0;
+		for(String [] curMapEntry : map) {
+			if (curMapEntry[0].equals("name")) {
+				nameIndex = index;
+			}
+			request += " " + curMapEntry[0];
+			nFieldsRequested++;
+			index++;
+		}
+		if (nameIndex == -1)
+			throw new Exception("Cannot parse livestatus stream: 'name' missing");
+		request += "\n";
+		out.write(request, 0, request.length());
+		out.flush();
+		socket.shutdownOutput();
 
-			index += 3;
-			inputLength -= 3;
-                }
+		for(;;) {
+			String line = in.readLine();
+			if (line == null)
+				break;
 
-		return output;
-        }
+			String [] fieldsCur = line.split("\\|");
+System.out.println("hostline: " + line);
+			System.out.println("Adding host: " + fieldsCur[nameIndex]);
+			Host hostObj = addAndOrFindHost(fieldsCur[nameIndex]);
 
-	public long findMostRecentCheckAge()
-	{
-		long mostRecent = 0;
+			int fieldIndex = 0;
+			for(String [] mapEntry : map) {
+				addHostParameterEntry(hostObj, mapEntry[1], fieldsCur[fieldIndex]);
+				fieldIndex++;
+			}
+		}
+	}
 
-		for(Host currentHost : hosts)
-		{
-			String current_state = currentHost.getParameter("current_state");
-			if (current_state == null)
-				continue;
+	private void loadNagiosDataLiveStatus_services(String host, int port) throws Exception {
+		Socket socket = new Socket(host, port);
+		BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-			String last_check = currentHost.getParameter("last_check");
-			mostRecent = Math.max(mostRecent, last_check != null ? Long.valueOf(last_check) : 0);
+		String [][] map = {
+			{ "accept_passive_checks", "passive_checks_enabled" },
+			{ "acknowledged", "problem_has_been_acknowledged" },
+			{ "acknowledgement_type", "acknowledgement_type" },
+			{ "active_checks_enabled", "active_checks_enabled" },
+			{ "check_command", "check_command" },
+			{ "check_interval", "check_interval" },
+			{ "check_options", "check_options" },
+			{ "check_period", "check_period" },
+			{ "check_type", "check_type" },
+			{ "current_attempt", "current_attempt" },
+			{ "current_notification_number", "current_notification_number" },
+			{ "description", "service_description" },
+			{ "event_handler", "event_handler" },
+			{ "event_handler_enabled", "event_handler_enabled" },
+			{ "execution_time", "check_execution_time" },
+			{ "flap_detection_enabled", "flap_detection_enabled" },
+			{ "has_been_checked", "has_been_checked" },
+			{ "host_name", "host_name" },
+			{ "is_flapping", "is_flapping" },
+			{ "last_check", "last_check" },
+			{ "last_hard_state", "last_hard_state" },
+			{ "last_hard_state_change", "last_hard_state_change" },
+			{ "last_notification", "last_notification" },
+			{ "last_state_change", "last_state_change" },
+			{ "latency", "check_latency" },
+			// { "long_plugin_output", "long_plugin_output" },
+			{ "max_check_attempts", "max_attempts" },
+			{ "next_check", "next_check" },
+			{ "next_notification", "next_notification" },
+			{ "notification_period", "notification_period" },
+			{ "notifications_enabled", "notifications_enabled" },
+			{ "obsess_over_service", "obsess_over_service" },
+			{ "percent_state_change", "percent_state_change" },
+			{ "perf_data", "performance_data" },
+			{ "plugin_output", "plugin_output" },
+			{ "process_performance_data", "process_performance_data" },
+			{ "retry_interval", "retry_interval" },
+			{ "scheduled_downtime_depth", "scheduled_downtime_depth" },
+			{ "state", "current_state" },
+			{ "state_type", "state_type" }
+		};
 
-			String last_update = currentHost.getParameter("last_update");
-			mostRecent = Math.max(mostRecent, last_update != null ? Long.valueOf(last_update) : 0);
+		String request = "GET services\nSeparators: 10 124 44 125\nColumns:";
+		int hostNameIndex = -1, serviceNameIndex = -1;
+		int nFieldsRequested = 0, index = 0;
+		for(String [] curMapEntry : map) {
+			if (curMapEntry[0].equals("host_name")) {
+				hostNameIndex = index;
+			}
+			else if (curMapEntry[0].equals("description")) {
+				serviceNameIndex = index;
+			}
+			request += " " + curMapEntry[0];
+			nFieldsRequested++;
+			index++;
+		}
+		request += "\n";
+		out.write(request, 0, request.length());
+		out.flush();
+		socket.shutdownOutput();
 
-			for(Service currentService : currentHost.getServices())
-			{
-				last_check = currentService.getParameter("last_check");
-				mostRecent = Math.max(mostRecent, last_check != null ? Long.valueOf(last_check) : 0);
+		for(;;) {
+			String line = in.readLine();
+			if (line == null)
+				break;
 
-				last_update = currentService.getParameter("last_update");
-				mostRecent = Math.max(mostRecent, last_update != null ? Long.valueOf(last_update) : 0);
+System.out.println(line);
+			String [] fieldsCur = line.split("\\|");
+			if (fieldsCur.length != nFieldsRequested)
+				throw new Exception("Cannot parse livestatus stream: number of elements mismatch (requested: " + nFieldsRequested + ", got: " + fieldsCur.length + ")");
+			System.out.println("Finding host: " + fieldsCur[hostNameIndex]);
+			Host hostObj = addAndOrFindHost(fieldsCur[hostNameIndex]);
+			System.out.println("Adding service: " + fieldsCur[serviceNameIndex]);
+			Service service = hostObj.addAndOrFindService(fieldsCur[serviceNameIndex]);
+			int fieldIndex = 0;
+			for(String [] mapEntry : map) {
+				addServiceEntry(service, mapEntry[1], fieldsCur[fieldIndex]);
+				fieldIndex++;
 			}
 		}
 
-		return (System.currentTimeMillis() / 1000) - mostRecent;
+		socket.close();
 	}
 
 	public void loadNagiosData(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression) throws Exception
@@ -620,6 +725,76 @@ public class JavNag
 		}
 	}
 
+	String encode3Chars(String in)
+	{
+		String result = new String();
+		String encodingChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+		int tripple;
+		tripple = in.charAt(0);
+		tripple <<= 8;
+		if (in.length() >= 2)
+			tripple += in.charAt(1);
+		tripple <<= 8;
+		if (in.length() >= 3)
+			tripple += in.charAt(2);
+
+		for (int outputIndex=0; outputIndex<4; outputIndex++)
+		{   
+			int ecIndex = tripple % 64;
+			result = encodingChars.substring(ecIndex, ecIndex + 1) + result;
+			tripple /= 64;
+		}
+
+		return result;
+	}
+
+
+	public String encodeBase64(String input)
+	{
+		String output = new String();
+		int inputLength = input.length(), index = 0;
+
+		while(inputLength > 0)
+		{
+			output += encode3Chars(input.substring(index, index + Math.min(3, inputLength)));
+
+			index += 3;
+			inputLength -= 3;
+		}
+
+		return output;
+	}
+
+	public long findMostRecentCheckAge()
+	{
+		long mostRecent = 0;
+
+		for(Host currentHost : hosts)
+		{
+			String current_state = currentHost.getParameter("current_state");
+			if (current_state == null)
+				continue;
+
+			String last_check = currentHost.getParameter("last_check");
+			mostRecent = Math.max(mostRecent, last_check != null ? Long.valueOf(last_check) : 0);
+
+			String last_update = currentHost.getParameter("last_update");
+			mostRecent = Math.max(mostRecent, last_update != null ? Long.valueOf(last_update) : 0);
+
+			for(Service currentService : currentHost.getServices())
+			{
+				last_check = currentService.getParameter("last_check");
+				mostRecent = Math.max(mostRecent, last_check != null ? Long.valueOf(last_check) : 0);
+
+				last_update = currentService.getParameter("last_update");
+				mostRecent = Math.max(mostRecent, last_update != null ? Long.valueOf(last_update) : 0);
+			}
+		}
+
+		return (System.currentTimeMillis() / 1000) - mostRecent;
+	}
+
 	public JavNag()
 	{
 	}
@@ -659,5 +834,16 @@ public class JavNag
 	public JavNag(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression) throws Exception
 	{
 		loadNagiosData(url, nagiosVersion, username, password, allowCompression);
+	}
+
+	/**
+	 * Loads the Nagios status via LiveStatus.
+	 *
+	 * @param host		host
+	 * @param port		port
+	 */
+	public JavNag(String host, int port) throws Exception
+	{
+		loadNagiosDataLiveStatus(host, port);
 	}
 }

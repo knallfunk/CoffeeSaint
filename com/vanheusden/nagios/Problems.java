@@ -147,17 +147,18 @@ System.out.println("host_acknowledged_show_services: " + host_acknowledged_show_
 				showHost = true;
 			}
 
-System.out.println(hostName + " " + hostState);
+System.out.println(hostName + " hoststate " + hostState + " bla");
 			boolean host_scheduled_downtime = Double.valueOf(currentHost.getParameter("scheduled_downtime_depth")) != 0.0;
 			boolean host_has_acked = currentHost.getParameter("problem_has_been_acknowledged").equals("1") == true;
 			if (hostState.equals("0") == false) {
-System.out.println(hostName + " error state");
-				if (!host_scheduled_downtime_show_services && host_scheduled_downtime);
+System.out.println(hostName + " error state " + host_scheduled_downtime_show_services + " " + host_scheduled_downtime + " " + host_acknowledged_show_services + " " + host_has_acked);
+				if (!host_scheduled_downtime_show_services && host_scheduled_downtime)
 					showServices = false;
 				if (!host_acknowledged_show_services && host_has_acked)
 					showServices = false;
 			}
 
+			System.out.println("flags: " + host_scheduled_downtime_or_ack_show_services + " " + host_scheduled_downtime + " " + host_has_acked);
 			if (host_scheduled_downtime_or_ack_show_services == false && (host_scheduled_downtime || host_has_acked))
 				showServices = false;
 

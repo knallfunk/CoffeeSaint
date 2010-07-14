@@ -593,6 +593,8 @@ public class Gui extends JPanel implements ImageObserver
 				String footer = coffeeSaint.processStringWithEscapes(config.getFooter(), javNag, rightNow, null, problems.size() > 0, true);
 				String stateForColor = problems.size() == 0 ? "0" : "255";
 				int row = config.getNRows() - 1;
+				if (config.getHeaderAlwaysBGColor())
+					stateForColor = "255";
 
 				int xStart = 0, ww = windowWidth;;
 				if (logo != null && config.getLogoPosition() == Position.LOWER_LEFT || config.getLogoPosition() == Position.LOWER_RIGHT)
