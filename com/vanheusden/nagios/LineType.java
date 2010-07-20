@@ -8,4 +8,4 @@ package com.vanheusden.nagios;
  * @version	%I%, %G%
  * @since	0.1 
  */
-enum LineType { host, service, ignore }
+enum LineType { host, service, host_comment, service_comment, ignore }

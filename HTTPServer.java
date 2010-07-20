@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.io.IOException;
+import java.lang.Class;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -23,6 +24,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.security.ProtectionDomain;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -122,7 +124,19 @@ class HTTPServer implements Runnable
 		whereTo.add("				<a href=\"/cgi-bin/performance-data.cgi\">Performance data</a><br />\n");
 		whereTo.add("				<a href=\"/latency-graph.html\">Latency graph</a><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/list-all.cgi\">List of hosts/services</a><br />\n");
-		whereTo.add("				<a href=\"/cgi-bin/nagios_status.cgi\">Problems overview</a><br />\n");
+
+		boolean file = false;
+		for(NagiosDataSource nds : config.getNagiosDataSources()) {
+			if (nds.getType() == NagiosDataSourceType.FILE) {
+				file = true;
+				break;
+			}
+		}
+		if (file)
+			whereTo.add("				<a href=\"/cgi-bin/nagios_status.cgi\">Problems overview</a><br />\n");
+		else
+			whereTo.add("				<a href=\"/applet.html\">Problems overview</a><br />\n");
+
 		whereTo.add("				<br /><strong>Logging</strong><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</a><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/log.cgi\">List of connecting hosts</a><br />\n");
@@ -183,18 +197,6 @@ class HTTPServer implements Runnable
 //		whereTo.add(formatDate(Calendar.getInstance()) + "</TD></TR></TABLE></BODY></HTML>");
 	}
 
-	public BufferedImage createBufferedImage(Image image)
-	{
-return (BufferedImage)image;
-/*
-		BufferedImage bufferedImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
-		Graphics g = bufferedImage.createGraphics();
-
-		g.drawImage(image, 0, 0, null);
-
-		return bufferedImage; */
-	}
-
 	public long getModificationDate(String fileName) throws Exception
 	{
 		URL url = getClass().getClassLoader().getResource(fileName);
@@ -217,6 +219,34 @@ return (BufferedImage)image;
 		calendar.setTimeInMillis(ts);
 
 		return getHTTPDate(calendar);
+	}
+
+	public void sendReply_CoffeeSaint_jar(MyHTTPServer socket) throws Exception {
+		URL jarFileURL = Applet.class.getProtectionDomain().getCodeSource().getLocation();
+
+		String reply = "HTTP/1.0 200 OK\r\n";
+		reply += "Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n";
+		reply += "Server: " + CoffeeSaint.getVersion() + "\r\n";
+		reply += "Last-Modified: Tue, 20 Jul 2010 07:56:40 GMT\r\n";
+		reply += "Connection: close\r\n";
+		reply += "Content-Type: application/java-archive\r\n";
+		reply += "\r\n";
+		socket.getOutputStream().write(reply.getBytes());
+
+		InputStream is = jarFileURL.openStream();
+		int length = is.available();
+		CoffeeSaint.log.add("Sending " + jarFileURL + " which is " + length + " bytes long.");
+		byte [] jar = new byte[length];
+		while(length > 0)
+		{
+			int nRead = is.read(jar);
+			if (nRead < 0)
+				break;
+			socket.getOutputStream().write(jar, 0, nRead);
+			length -= nRead;
+		}
+
+		socket.close();
 	}
 
 	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType, boolean headRequest/*, String cookie*/) throws Exception
@@ -303,7 +333,7 @@ return (BufferedImage)image;
 		{
 			socket.getOutputStream().write(header.getBytes());
 			Image img = coffeeSaint.loadImage(null, -1, null)[0].getImage();
-			ImageIO.write(createBufferedImage(img), "jpg", socket.getOutputStream());
+			ImageIO.write(CoffeeSaint.createBufferedImage(img), "jpg", socket.getOutputStream());
 			socket.close();
 		}
 		catch(Exception e)
@@ -1418,8 +1448,29 @@ return (BufferedImage)image;
 		socket.sendReply(reply);
 	}
 
-	public void sendReply_cgibin_listlog_cgi(MyHTTPServer socket, String cookie) throws Exception
-	{
+	public void sendReply_applet_html(MyHTTPServer socket) throws Exception {
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply, null);
+		reply.add("<HTML>\n");
+		reply.add("<BODY>\n");
+		reply.add("<CENTER>\n");
+		reply.add("<TABLE BORDER=1><TR><TD>\n");
+
+		reply.add("<applet archive=\"/CoffeeSaint.jar\" code=Applet width=\"1024\" height=\"768\">");
+		for(String [] entry : config.collectConfig()) {
+			reply.add("<PARAM NAME=\"" + entry[0] + "\" VALUE=\"" + entry[1] + "\">\n");
+		}
+		reply.add("</applet>\n");
+		reply.add("</TD></TR></TABLE>\n");
+		reply.add("</CENTER>\n");
+		reply.add("</BODY>\n");
+		reply.add("</HTML>\n");
+
+		socket.sendReply(reply);
+	}
+
+	public void sendReply_cgibin_listlog_cgi(MyHTTPServer socket, String cookie) throws Exception {
 		List<String> reply = new ArrayList<String>();
 
 		addHTTP200(reply, cookie);
@@ -2247,6 +2298,10 @@ return (BufferedImage)image;
 						sendReply_cgibin_latency_cgi(socket, getData, authCookie);
 					else if (url.equals("/latency-graph.html"))
 						sendReply_latencygraph_html(socket, authCookie);
+					else if (url.equals("/CoffeeSaint.jar"))
+						sendReply_CoffeeSaint_jar(socket);
+					else if (url.equals("/applet.html"))
+						sendReply_applet_html(socket);
 					else
 					{
 						sendReply_404(socket, url);

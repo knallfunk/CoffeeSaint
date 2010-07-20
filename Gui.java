@@ -2,22 +2,25 @@
 import com.vanheusden.nagios.*;
 
 import java.awt.*;
-import javax.swing.*;
-import java.net.URL;
-import java.awt.image.*;
-import java.util.*;
-import java.awt.event.WindowEvent;
-import java.util.regex.Pattern;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.awt.geom.Rectangle2D;
+import java.awt.event.*;
 import java.awt.font.FontRenderContext;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.*;
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.InputStream;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Semaphore;
+import java.util.regex.Pattern;
+import javax.imageio.ImageIO;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.swing.*;
 
-public class Gui extends JPanel implements ImageObserver
-{
+public class Gui extends JPanel implements ImageObserver, MouseListener {
 	final Config config;
 	final CoffeeSaint coffeeSaint;
 	final Statistics statistics;
@@ -28,14 +31,83 @@ public class Gui extends JPanel implements ImageObserver
 	//
 	Image logo = null;
 
+	enum DataType { HOST, SERVICE, TEXT };
+
+	class RowData {
+		Object data1, data2;
+		DataType type;
+
+		RowData(Host host, Service service) {
+			data1 = (Object)host;
+			data2 = (Object)service;
+			if (service != null)
+				type = DataType.SERVICE;
+			else
+			type = DataType.HOST;
+		}
+
+		RowData(String text) {
+			data1 = (Object)text;
+			type = DataType.TEXT;
+		}
+
+		DataType getType() {
+			return type;
+		}
+
+		Object getObject1() {
+			return data1;
+		}
+
+		Object getObject2() {
+			return data2;
+		}
+	}
+	RowData [][] rowData = null;
+	RowData currentRow = null;
+
 	boolean lastState = false;	// false: no problems
 	// because making a frame visible already causes
 	// a call to paint() so no need to do that (again)
 	// at start
 	long lastRefresh = System.currentTimeMillis();
+	boolean firstDraw = true;
 
-	public boolean imageUpdate(Image img, int flags, int x, int y, int width, int height)
-	{
+	public void mouseEntered (MouseEvent me) {} 
+	public void mousePressed (MouseEvent me) {} 
+	public void mouseReleased (MouseEvent me) {}  
+	public void mouseExited (MouseEvent me) {}
+
+	public void mouseClicked(MouseEvent me) {
+		System.out.println("Mouse clicked: " + me);
+		if (me.getButton() == MouseEvent.BUTTON1) {
+			if (currentRow != null) {
+				currentRow = null;
+				repaint();
+			}
+			else if (rowData != null) {
+				try {
+					int rowHeight = getHeight() / config.getNRows();
+					int colWidth = getWidth() / rowData[0].length;
+					int row = (int)((double)me.getY() / (double)rowHeight);
+					int col = (int)((double)me.getX() / (double)colWidth);
+					System.out.println("ROW: " + row + " rowheight: " + rowHeight + " y: " + me.getY());
+					System.out.println("COL: " + col + " colwidth: " + colWidth + " x: " + me.getX());
+
+					currentRow = rowData[row][col];
+
+					if (currentRow != null)
+						repaint();
+				}
+				catch(IndexOutOfBoundsException ioobe) {
+					// clicked where no row was drawn, ignore
+					System.out.println("no row known");
+				}
+			}
+		}
+	}
+
+	public boolean imageUpdate(Image img, int flags, int x, int y, int width, int height) {
 		String add = ", img: " + img + ", flags: " + flags + ", x/y: " + x + "," + y + ", width: " + width + ", height: " + height;
 		if ((flags & ABORT) != 0)
 			CoffeeSaint.log.add("Image aborted" + add);
@@ -273,14 +345,14 @@ public class Gui extends JPanel implements ImageObserver
 		else if (counterPosition == Position.LOWER_LEFT)
 		{
 			xOffset = 0;
-			yBase = windowHeight - rowHeight;
-			yOffset = windowHeight - rowHeight + (int)newAsc;
+			yBase = rowHeight * (config.getNRows() - 1);
+			yOffset = yBase + (int)newAsc;
 		}
 		else if (counterPosition == Position.LOWER_RIGHT)
 		{
 			xOffset = windowWidth - (int)boundingRectangle.getWidth();
-			yBase = windowHeight - rowHeight;
-			yOffset = windowHeight - rowHeight + (int)newAsc;
+			yBase = rowHeight * (config.getNRows() - 1);
+			yOffset = yBase + (int)newAsc;
 		}
 		else if (counterPosition == Position.CENTER)
 		{
@@ -294,6 +366,127 @@ public class Gui extends JPanel implements ImageObserver
 
 		g.setColor(config.getTextColor());
 		g.drawString("" + counter, xOffset, yOffset);
+	}
+
+	double hue2rgb(double p, double q, double t) {
+		if(t < 0.0)
+			t += 1.0;
+		if(t > 1.0)
+			t -= 1.0;
+
+		if(t < 1.0/6.0)
+			return p + (q - p) * 6.0 * t;
+		if(t < 1.0/2.0)
+			return q;
+		if(t < 2.0/3.0)
+			return p + (q - p) * (2.0/3.0 - t) * 6.0;
+
+		return p;
+	}
+
+	public Color setHue(Color in, double hue) {
+		/* RGB to HLS */
+		double r = ((in.getRGB() >> 16) & 255) / 255.0, g = ((in.getRGB() >> 8) & 255) / 255.0, b = (in.getRGB() & 255) / 255.0;
+		double max = Math.max(Math.max(r, g), b), min = Math.min(Math.min(r, g), b);
+		double h, s, l = (max + min) / 2;
+
+		if (max == min) {
+			h = s = 0; // achromatic
+		}
+		else{
+			double d = max - min;
+			s = l > 0.5 ? d / (2.0 - max - min) : d / (max + min);
+			if (max == r)
+				h = (g - b) / d + (g < b ? 6.0 : 0.0);
+			else if (max == g)
+				h = (b - r) / d + 2.0;
+			else // if (max == b)
+				h = (r - g) / d + 4.0;
+
+			h *= 60.0;
+		}
+
+		/* change color */
+		h = hue;
+
+		/* HLS to RGB */
+		if (s == 0.0) {
+			r = g = b = l; // achromatic
+		}
+		else {
+			double q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+			double p = 2.0 * l - q;
+			r = hue2rgb(p, q, h + 1.0/3.0);
+			g = hue2rgb(p, q, h);
+			b = hue2rgb(p, q, h - 1.0/3.0);
+		}
+
+		return new Color((int)Math.max(Math.min(r * 255.0, 255), 0), (int)Math.max(Math.min(g * 255.0, 255), 0), (int)Math.max(Math.min(b * 255.0, 255), 0));
+	}
+
+	public Image remapColors(Image img, Color darkColor, Color lightColor) {
+		int darkr = (darkColor.getRGB() >> 16) & 255, darkg = (darkColor.getRGB() >> 8) & 255, darkb = darkColor.getRGB() & 255;
+		double scaleR = (double)(((lightColor.getRGB() >> 16) & 255) - ((darkColor.getRGB() >> 16) & 255)) / 255.0;
+		double scaleG = (double)(((lightColor.getRGB() >>  8) & 255) - ((darkColor.getRGB() >>  8) & 255)) / 255.0;
+		double scaleB = (double)(((lightColor.getRGB()      ) & 255) - ((darkColor.getRGB()      ) & 255)) / 255.0;
+		System.out.println("" + scaleR);
+		System.out.println("" + scaleG);
+		System.out.println("" + scaleB);
+
+		BufferedImage bimg = CoffeeSaint.createBufferedImage(img);
+		int width = bimg.getWidth();
+		int height = bimg.getHeight();
+		for(int imgY=0; imgY < height; imgY++) {
+			for(int imgX=0; imgX < width; imgX++) {
+				int imgr = (bimg.getRGB(imgX, imgY) >> 16) & 255, imgg = (bimg.getRGB(imgX, imgY) >> 8) & 255, imgb = bimg.getRGB(imgX, imgY) & 255;
+				int gray = (imgr + imgg + imgb) / 3;
+				int newimgr = Math.max(Math.min(255, (int)(darkr + (double)gray * scaleR)), 0);
+				int newimgg = Math.max(Math.min(255, (int)(darkg + (double)gray * scaleG)), 0);
+				int newimgb = Math.max(Math.min(255, (int)(darkb + (double)gray * scaleB)), 0);
+				bimg.setRGB(imgX, imgY, (newimgr << 16) + (newimgg << 8) + (newimgb));
+			}
+		}
+
+		return bimg;
+	}
+
+	public Image remapColors(Image img, double hue) {
+		BufferedImage bimg = CoffeeSaint.createBufferedImage(img);
+		int width = bimg.getWidth();
+		int height = bimg.getHeight();
+
+		for(int imgY=0; imgY < height; imgY++) {
+			for(int imgX=0; imgX < width; imgX++) {
+				Color out = setHue(new Color(bimg.getRGB(imgX, imgY)), hue);
+
+				bimg.setRGB(imgX, imgY, out.getRGB());
+			}
+		}
+
+		return bimg;
+	}
+
+	public Image remapColors(Image img, Color add) {
+		BufferedImage bimg = CoffeeSaint.createBufferedImage(img);
+		int width = bimg.getWidth();
+		int height = bimg.getHeight();
+
+		int radd = (add.getRGB() >> 16) & 255;
+		int gadd = (add.getRGB() >>  8) & 255;
+		int badd = (add.getRGB()      ) & 255;
+
+		for(int imgY=0; imgY < height; imgY++) {
+			for(int imgX=0; imgX < width; imgX++) {
+				int rgb = bimg.getRGB(imgX, imgY);
+				int r = (rgb >> 16) & 255;
+				int g = (rgb >>  8) & 255;
+				int b = (rgb      ) & 255;
+				Color out = new Color((r + radd) / 2, (g + gadd) / 2, (b + badd) / 2);
+				bimg.setRGB(imgX, imgY, out.getRGB());
+			}
+		}
+
+		return bimg;
 	}
 
 	public void displayImage(ImageParameters [] imageParameters, int nProblems, Graphics g, int rowHeight, boolean adaptImgSize, int windowWidth, int windowHeight)
@@ -366,7 +559,23 @@ public class Gui extends JPanel implements ImageObserver
 						}
 						plotX += Math.max(0, spacingX - newWidth) / 2;
 						plotY += Math.max(0, spacingY - newHeight) / 2;
-						if (g.drawImage(imageParameters[nr].getImage(), plotX, plotY, newWidth, newHeight, this) == false)
+
+						Image img = imageParameters[nr].getImage();
+
+						if (false) { // FIXME if config.getTransFormImage()
+							Color darkColor = new Color(0, 0, 0);
+							Color lightColor = new Color(0, 0, 255);
+							// Color color = new Color(0xee82ee);
+							// Color color = Color.BLUE;
+							img = remapColors(img, darkColor, lightColor);
+							// img = remapColors(img, color.darker(), color.brighter());
+						}
+						if (false)
+							img = remapColors(img, 193.0);
+						if (false)
+							img = remapColors(img, Color.BLUE);
+
+						if (g.drawImage(img, plotX, plotY, newWidth, newHeight, this) == false)
 							CoffeeSaint.log.add("drawImage " + imageParameters[nr].getImage() + " returns false");
 					}
 					else
@@ -387,6 +596,7 @@ public class Gui extends JPanel implements ImageObserver
 		/* block in upper right to inform about error */
 		g.setColor(Color.RED);
 		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
+		String error = e.toString().replaceAll("java\\.[a-z]*\\.", "");
 		prepareRow(g, windowWidth, 0, "Error: " + e, config.getNRows() - 1, "2", Color.GRAY, 1.0f, null, false);
 	}
 
@@ -463,6 +673,41 @@ public class Gui extends JPanel implements ImageObserver
 			double took;
 			Color bgColor = config.getBackgroundColor();
 			int newLogoHeight = -1, newLogoWidth = -1;
+
+			if (firstDraw) {
+				// Let user know what app xe is using
+				// load logo
+				InputStream is = getClass().getClassLoader().getResourceAsStream("com/vanheusden/CoffeeSaint/footer01.png");
+				Image logo = ImageIO.read(is);
+				new ImageIcon(logo); //loads the image
+				// draw
+				g.setColor(Color.WHITE);
+				g.fillRect(0, 0, getWidth(), getHeight());
+				g.setColor(Color.BLACK);
+				Font f = new Font("Arial", Font.PLAIN, 20);
+				g.setFont(f);
+				int halfX = getWidth() / 2;
+				int halfY = getHeight() / 2;
+				String msg1 = "CoffeeSaint " + CoffeeSaint.getVersionNr();
+				int w1 = getTextWidth(f, msg1);
+				g.drawString(msg1, Math.max(0, halfX - w1 / 2), halfY - 25);
+				String msg2 = "(C) 2009-2010 by folkert@vanheusden.com";
+				int w2 = getTextWidth(f, msg2);
+				g.drawString(msg2, Math.max(0, halfX - w2 / 2), halfY + 25);
+				f = new Font("Arial", Font.PLAIN, 10);
+				g.setFont(f);
+				String msg3 = "Please wait...";
+				int w3 = getTextWidth(f, msg3);
+				g.drawString(msg3, Math.max(0, halfX - w3 / 2), halfY + 50);
+				//
+                                Toolkit.getDefaultToolkit().sync();
+				System.out.println("logo: " + logo.getHeight(null) + ", res: " + getHeight());
+				g.drawImage(logo, halfX - logo.getWidth(null) / 2, halfY + 75, this);
+				// annoy user :-D
+				Thread.sleep(1000);
+
+				firstDraw = false;
+			}
 
 			/* determine new size of logo; keep correct aspect ratio */
 			if (logo != null)
@@ -559,7 +804,17 @@ public class Gui extends JPanel implements ImageObserver
 			if (imageParameters != null)
 				displayImage(imageParameters, problems.size(), g, rowHeight, config.getAdaptImageSize(), windowWidth, windowHeight);
 
+			/**** start of headers/rows/footers displaying ****/
 			int curNRows = 0;
+			int dummyNRows = config.getNRows() - ((config.getShowHeader() ? 1 : 0) + (config.getFooter() != null ? 1 : 0));
+			int curNColumns = -1;
+			if (config.getFlexibleNColumns())
+				curNColumns = Math.min(config.getNProblemCols(), (problems.size() + dummyNRows - 1) / dummyNRows);
+			else
+				curNColumns = config.getNProblemCols();
+			curNColumns = Math.max(curNColumns, 1);
+
+			rowData = new RowData[config.getNRows()][curNColumns];
 
 			/* header */
 			if (config.getShowHeader())
@@ -568,8 +823,8 @@ public class Gui extends JPanel implements ImageObserver
 				String stateForColor = problems.size() == 0 ? "0" : "255";
 				if (config.getHeaderAlwaysBGColor())
 					stateForColor = "255";
-// if (config.getHeaderTransparency() != 1.0f)
-//	stateForColor = "254";
+				// if (config.getHeaderTransparency() != 1.0f)
+				//	stateForColor = "254";
 				int xStart = 0, ww = windowWidth;;
 				if (logo != null && config.getLogoPosition() == Position.UPPER_LEFT || config.getLogoPosition() == Position.UPPER_RIGHT)
 				{
@@ -585,45 +840,14 @@ public class Gui extends JPanel implements ImageObserver
 					prepareRow(g, ww, xStart, header, curNRows, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
 
 				curNRows++;
-			}
 
-			/* footer */
-			if (config.getFooter() != null)
-			{
-				String footer = coffeeSaint.processStringWithEscapes(config.getFooter(), javNag, rightNow, null, problems.size() > 0, true);
-				String stateForColor = problems.size() == 0 ? "0" : "255";
-				int row = config.getNRows() - 1;
-				if (config.getHeaderAlwaysBGColor())
-					stateForColor = "255";
-
-				int xStart = 0, ww = windowWidth;;
-				if (logo != null && config.getLogoPosition() == Position.LOWER_LEFT || config.getLogoPosition() == Position.LOWER_RIGHT)
-				{
-					if (config.getLogoPosition() == Position.LOWER_LEFT)
-						xStart = newLogoWidth;
-
-					ww -= newLogoWidth;
-				}
-
-				if (config.getScrollingFooter())
-				{
-					int y = config.getShowHeader() ? config.getUpperRowBorderHeight(): 0;
-					y += row * rowHeight;
-					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer, stateForColor, bgColor, rowHeight, null), xStart, y, ww));
-				}
-				else
-					prepareRow(g, ww, xStart, footer, row, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
+				RowData headerRow = new RowData(header);
+				for(int col=0; col<curNColumns; col++)
+					rowData[0][col] = headerRow;
 			}
 
 			/* problems */
 			int colNr = 0;
-			int dummyNRows = config.getNRows() - ((config.getShowHeader() ? 1 : 0) + (config.getFooter() != null ? 1 : 0));
-			int curNColumns;
-			if (config.getFlexibleNColumns())
-				curNColumns = Math.min(config.getNProblemCols(), (problems.size() + dummyNRows - 1) / dummyNRows);
-			else
-				curNColumns = config.getNProblemCols();
-			curNColumns = Math.max(curNColumns, 1);
 			final int rowColWidth = windowWidth / curNColumns;
 			for(Problem currentProblem : problems)
 			{
@@ -674,6 +898,8 @@ public class Gui extends JPanel implements ImageObserver
 				}
 				movingPartsSemaphore.release();
 
+				rowData[curNRows][colNr] = new RowData(currentProblem.getHost(), currentProblem.getService());
+
 				curNRows++;
 
 				if (curNRows == (config.getNRows() - (config.getFooter() != null ? 1 : 0)))
@@ -683,6 +909,34 @@ public class Gui extends JPanel implements ImageObserver
 					if (colNr == curNColumns)
 						break;
 				}
+			}
+
+			/* footer */
+			if (config.getFooter() != null)
+			{
+				String footer = coffeeSaint.processStringWithEscapes(config.getFooter(), javNag, rightNow, null, problems.size() > 0, true);
+				String stateForColor = problems.size() == 0 ? "0" : "255";
+				int row = config.getNRows() - 1;
+				if (config.getHeaderAlwaysBGColor())
+					stateForColor = "255";
+
+				int xStart = 0, ww = windowWidth;;
+				if (logo != null && config.getLogoPosition() == Position.LOWER_LEFT || config.getLogoPosition() == Position.LOWER_RIGHT)
+				{
+					if (config.getLogoPosition() == Position.LOWER_LEFT)
+						xStart = newLogoWidth;
+
+					ww -= newLogoWidth;
+				}
+
+				if (config.getScrollingFooter())
+				{
+					int y = config.getShowHeader() ? config.getUpperRowBorderHeight(): 0;
+					y += row * rowHeight;
+					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer, stateForColor, bgColor, rowHeight, null), xStart, y, ww));
+				}
+				else
+					prepareRow(g, ww, xStart, footer, row, stateForColor, bgColor, config.getHeaderTransparency(), null, false);
 			}
 
 			/* no problems message */
@@ -828,6 +1082,166 @@ public class Gui extends JPanel implements ImageObserver
 		System.out.println(">>> DRAW PROBLEMS END <<<");
 	}
 
+	int getTextWidth(final Font f, final String text) {
+		Rectangle2D boundingRectangle = f.getStringBounds(text, 0, text.length(), new FontRenderContext(null, false, false));
+		return (int)Math.ceil(boundingRectangle.getWidth());
+	}
+
+	public String shrinkStringToFit(String input, int width, Font f) {
+		while(input.length() > 1 && getTextWidth(f, input) > width) {
+			input = input.substring(0, input.length() - 1);
+		}
+
+		return input;
+	}
+
+	public void putLine(Graphics g, String font, int x, int yBase, int width, int rowHeight, String str) {
+		RowParameters rowParameters = fitText(font, str, rowHeight, new Integer(width));
+		g.setFont(rowParameters.getAdjustedFont());
+		g.drawString(shrinkStringToFit(str, width, rowParameters.getAdjustedFont()), x, yBase + (int)rowParameters.getAsc());
+	}
+
+	String getEitherParameter(RowData r, String name) {
+		String par = null;
+
+		if (r.getType() == DataType.SERVICE)
+			par = ((Service)r.getObject2()).getParameter(name);
+
+		if (r.getType() == DataType.HOST)
+			par = ((Host)r.getObject1()).getParameter(name);
+
+		if (par == null)
+			par = "?";
+
+		return par;
+	}
+
+	public String cnvSec(String sse) {
+		Long value = Long.valueOf(sse);
+
+		java.util.Date when = new java.util.Date(value * 1000);
+		SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		return dateFormatter.format(when.getTime());
+	}
+
+	public void initPopup(Graphics g, int useWidth, int useHeight) {
+		g.setColor(Color.WHITE);
+		g.fillRect(51, 51, useWidth - 2, useHeight - 2);
+
+		g.setColor(Color.BLACK);
+		g.drawRect(50, 50, useWidth, useHeight);
+
+		g.setFont(new Font("Arial", Font.PLAIN, 10));
+		g.drawString(CoffeeSaint.getVersion(), 51, useHeight - 11 + 51);
+	}
+
+	public void drawPopup(RowData r, Graphics g, int width, int height) {
+		int useWidth = width - 100;
+		int halfWidth = useWidth / 2;
+		int useHeight = height - 100;
+		int useNRows = (config.getNRows() * 3) / 2;
+		int curRowHeight = useHeight / useNRows;
+		String font = config.getFontName();
+
+		try {
+			initPopup(g, useWidth, useHeight);
+
+			if (r.getType() == DataType.TEXT) {
+				putLine(g, font, 51, 51 + curRowHeight * 1, useWidth, curRowHeight, "Please wait...");
+
+				long dataLoadStart = System.currentTimeMillis();
+				JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
+				// java.util.List<Problem> problems = CoffeeSaint.findProblems(javNag);
+				final Totals totals = javNag.calculateStatistics();
+				long dataLoadEnd = System.currentTimeMillis();
+
+				initPopup(g, useWidth, useHeight);
+
+				putLine(g, font, 51, 51 + curRowHeight * 0, useWidth, curRowHeight, (String)r.getObject1());
+				putLine(g, font, 51, 51 + curRowHeight * 1, useWidth, curRowHeight, "hosts: " + totals.getNHosts() + ", services: " + totals.getNServices());
+				putLine(g, font, 51, 51 + curRowHeight * 2, useWidth, curRowHeight, "OK: " + totals.getNOk() + ", warning: " + totals.getNWarning() + ", critical: " + totals.getNCritical());
+				putLine(g, font, 51, 51 + curRowHeight * 3, useWidth, curRowHeight, "UP: " + totals.getNUp() + ", down: " + totals.getNDown() + ", unr.: " + totals.getNUnreachable() + ", pending: " + totals.getNPending());
+				putLine(g, font, 51, 51 + curRowHeight * 4, useWidth, curRowHeight, "Average check latency: " + javNag.getAvgCheckLatency());
+				putLine(g, font, 51, 51 + curRowHeight * 5, useWidth, curRowHeight, "Last check age: " + javNag.findMostRecentCheckAge() + "s");
+				putLine(g, font, 51, 51 + curRowHeight * 6, useWidth, curRowHeight, "Time to load data: " + (dataLoadEnd - dataLoadStart) / 1000.0 + "s");
+			}
+			else
+			{
+				int rowOffset = 0;
+
+				g.setColor(Color.BLACK);
+
+				String which = getEitherParameter(r, "host_name");
+				if (r.getType() == DataType.SERVICE)
+					which += " / " + ((Service)r.getObject2()).getServiceName();
+				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, which);
+
+				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, getEitherParameter(r, "plugin_output"));
+				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "exec time: " + getEitherParameter(r, "check_execution_time") + ", latency: " + getEitherParameter(r, "check_latency") + ", " + getEitherParameter(r, "performance_data"));
+
+				putLine(g, font, 51, 51 + curRowHeight * rowOffset, halfWidth, curRowHeight, "last check: " + cnvSec(getEitherParameter(r, "last_check")));
+				putLine(g, font, 51 + halfWidth, 51 + curRowHeight * (rowOffset++), halfWidth, curRowHeight, "next: " + cnvSec(getEitherParameter(r, "next_check")));
+
+				putLine(g, font, 51, 51 + curRowHeight * rowOffset, halfWidth, curRowHeight, "last state change: " + cnvSec(getEitherParameter(r, "last_state_change")));
+				putLine(g, font, 51 + halfWidth, 51 + curRowHeight * (rowOffset++), halfWidth, curRowHeight, "last hard change: " + cnvSec(getEitherParameter(r, "last_hard_state_change")));
+
+				if (r.getType() == DataType.HOST) {
+					putLine(g, font, 51, 51 + curRowHeight * rowOffset, halfWidth, curRowHeight, "last up: " + cnvSec(getEitherParameter(r, "last_time_up")));
+					putLine(g, font, 51 + halfWidth, 51 + curRowHeight * (rowOffset++), halfWidth, curRowHeight, "last down: " + cnvSec(getEitherParameter(r, "last_time_down")));
+					putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "last time unreachable: " + cnvSec(getEitherParameter(r, "last_time_unreachable")));
+				}
+				else {
+					putLine(g, font, 51, 51 + curRowHeight * rowOffset, halfWidth, curRowHeight, "last ok: " + cnvSec(getEitherParameter(r, "last_time_ok")));
+					putLine(g, font, 51 + halfWidth, 51 + curRowHeight * (rowOffset++), halfWidth, curRowHeight, "warning: " + cnvSec(getEitherParameter(r, "last_time_warning")));
+					putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "last critical: " + cnvSec(getEitherParameter(r, "last_time_critical")));
+				}
+				putLine(g, font, 51, 51 + curRowHeight * rowOffset, halfWidth, curRowHeight, "last notification: " + cnvSec(getEitherParameter(r, "last_notification")));
+				putLine(g, font, 51 + halfWidth, 51 + curRowHeight * (rowOffset++), halfWidth, curRowHeight, "next: " + cnvSec(getEitherParameter(r, "next_notification")));
+				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "last update: " + cnvSec(getEitherParameter(r, "last_update")));
+				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "is flapping: " + getEitherParameter(r, "is_flapping") + ", state change: " + getEitherParameter(r, "percent_state_change") + "%");
+				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "acked: " + getEitherParameter(r, "problem_has_been_acknowledged") + ", active checks: " + getEitherParameter(r, "active_checks_enabled") + ", passive checks: " + getEitherParameter(r, "passive_checks_enabled"));
+				String entry_time = getEitherParameter(r, "entry_time");
+				if (entry_time.equals("?") == false) {
+					putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "Comment entry time: " + cnvSec(entry_time) + ":");
+					putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "comment: " + getEitherParameter(r, "comment_data"));
+				}
+
+				String longPluginOutput = getEitherParameter(r, "long_plugin_output");
+				while(rowOffset < useNRows && longPluginOutput != null) {
+					int lf = longPluginOutput.indexOf("\n");
+					String emit = "";
+					if (lf == -1) {
+						emit = longPluginOutput.trim();
+						longPluginOutput = null;
+					}
+					else {
+						if (lf > 0)
+							emit = longPluginOutput.substring(0, lf - 1).trim();
+						if ((lf + 1) < longPluginOutput.length())
+							longPluginOutput = longPluginOutput.substring(lf + 1);
+						else
+							longPluginOutput = null;
+					}
+					if (emit.length() > 0)
+						putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, emit);
+				}
+
+				if (rowOffset < useNRows && config.getSparkLineWidth() > 0) {
+					BufferedImage sparkLine = coffeeSaint.getSparkLine((Host)r.getObject1(), (Service)r.getObject2(), useWidth - 2, curRowHeight, false);
+					g.drawImage(sparkLine, 51, 51 + rowOffset * curRowHeight, null);
+				}
+			}
+		}
+		catch(Exception e) {
+			statistics.incExceptions();
+
+			CoffeeSaint.showException(e);
+
+			if (g != null)
+				showCoffeeSaintProblem(e, g, width, curRowHeight);
+		}
+	}
+
 	public void paintComponent(Graphics g)
 	{
 		System.out.println("+++ PAINT START +++ " + getWidth() + "x" + getHeight());
@@ -838,6 +1252,11 @@ public class Gui extends JPanel implements ImageObserver
 		configureRendered(g2d, true);
 
 		drawProblems(g, getWidth(), getHeight(), rowHeight);
+
+		if (currentRow != null && getWidth() > 200 && getHeight() > 200) {
+			drawPopup(currentRow, g, getWidth(), getHeight());
+		}
+
 		System.out.println("+++ PAINT END +++");
 	}
 
@@ -852,6 +1271,8 @@ public class Gui extends JPanel implements ImageObserver
 		long lastLeft = -1;
 		int headerScrollerX = 0;
 		double scrollTs = (double)System.currentTimeMillis() / 1000.0;
+
+		addMouseListener(this);
 
 		for(;;)
 		{

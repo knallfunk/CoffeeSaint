@@ -15,7 +15,7 @@ import javax.swing.JFrame;
 
 public class Applet extends JApplet implements Runnable
 {
-	final static String rcsId = "$Id: Applet.java,v 1.1 2010-07-03 19:13:25 folkert Exp $";
+	final static String rcsId = "$Id: Applet.java,v 1.2 2010-07-20 08:52:54 folkert Exp $";
 	Thread mainLoop;
 	JFrame	frame;
 	Gui gui;
@@ -39,6 +39,8 @@ public class Applet extends JApplet implements Runnable
 
 	public void init()
 	{
+		System.out.println("Please wait while initializing...");
+
 		try {
 			getContentPane().setLayout(new BorderLayout());
 

@@ -84,6 +84,7 @@ public class JavNag
 				else
 					current_state = 2;
 				addHostParameterEntry(host, "current_state", "" + current_state);
+				addHostParameterEntry(host, "host_name", "" + hostName);
 				addHostParameterEntry(host, "last_check", elements[3]);
 				addHostParameterEntry(host, "last_state_change", elements[4]);
 				addHostParameterEntry(host, "problem_has_been_acknowledged", elements[5]);
@@ -132,6 +133,7 @@ public class JavNag
 				else
 					stateType = elements[5];
 				addServiceEntry(service, "state_type", stateType);
+				addServiceEntry(service, "host_name", hostName);
 				addServiceEntry(service, "last_check", elements[6]);
 				addServiceEntry(service, "next_check", elements[7]);
 				addServiceEntry(service, "check_type", elements[8]);
@@ -169,6 +171,7 @@ public class JavNag
 
 	private void addFromNagios2And3(List<String> fileDump) throws Exception
 	{
+		String host_name = null;
 		Host host = null;
 		Service service = null;
 		LineType lineType = LineType.ignore;
@@ -188,6 +191,10 @@ public class JavNag
 					lineType = LineType.host;
 				else if (type.equals("servicestatus"))
 					lineType = LineType.service;
+				else if (type.equals("hostcomment"))
+					lineType = LineType.host_comment;
+				else if (type.equals("servicecomment"))
+					lineType = LineType.service_comment;
 				else
 					lineType = LineType.ignore;
 
@@ -201,8 +208,10 @@ public class JavNag
 
 				if (isIndex == -1)
 				{
-					if (currentLine.indexOf("}") != -1)
+					if (currentLine.indexOf("}") != -1) {
 						lineType = LineType.ignore;
+						host_name = null;
+					}
 				}
 				else
 				{
@@ -212,14 +221,27 @@ public class JavNag
 
 				if (parameter != null && value != null)
 				{
-					if (parameter.equals("host_name"))
+					if (parameter.equals("host_name")) {
 						host = addAndOrFindHost(value);
-					else if (parameter.equals("service_description"))
+						host_name = value;
+						addHostParameterEntry(host, parameter, value);
+					}
+					else if (parameter.equals("service_description")) {
 						service = host.addAndOrFindService(value);
+						addServiceEntry(service, "host_name", host_name);
+					}
 					else if (lineType == LineType.host && host != null)
 						addHostParameterEntry(host, parameter, value);
 					else if (lineType == LineType.service && host != null && service != null)
 						addServiceEntry(service, parameter, value);
+					else if (lineType == LineType.host_comment && host != null) {
+						if (parameter.equals("comment_data") || parameter.equals("entry_time"))
+							addHostParameterEntry(host, parameter, value);
+					}
+					else if (lineType == LineType.service_comment && service != null) {
+						if (parameter.equals("comment_data") || parameter.equals("entry_time"))
+							addServiceEntry(service, parameter, value);
+					}
 					else
 						throw new Exception("expected host_name/service_description to be at the start of a definition, got line: " + currentLine);
 				}

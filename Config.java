@@ -939,122 +939,121 @@ public class Config
 		out.newLine();
 	}
 
-	public void writeConfig(String fileName) throws Exception
-	{
-		BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
+	public List<String []> collectConfig() {
+		List<String []> output = new ArrayList<String []>();
 
-		writeLine(out, "allow-all-ssl = " + (getAllowAllSSL() ? "true" : "false"));
+		output.add(new String [] { "allow-all-ssl", (getAllowAllSSL() ? "true" : "false")});
 		if (getBrainFileName() != null)
-			writeLine(out, "predict = " + getBrainFileName());
+			output.add(new String [] { "predict", getBrainFileName()});
 		if (getExec() != null)
-			writeLine(out, "exec = " + getExec());
-		writeLine(out, "adapt-img = " + (getAdaptImageSize() ? "true" : "false"));
-		writeLine(out, "random-img = " + (getRandomWebcam() ? "true" : "false"));
-		writeLine(out, "counter = " + (getCounter() ? "true" : "false"));
+			output.add(new String [] { "exec", getExec()});
+		output.add(new String [] { "adapt-img", (getAdaptImageSize() ? "true" : "false")});
+		output.add(new String [] { "random-img", (getRandomWebcam() ? "true" : "false")});
+		output.add(new String [] { "counter", (getCounter() ? "true" : "false")});
 		if (getProblemSound() != null)
-			writeLine(out, "sound = " + getProblemSound());
-		writeLine(out, "listen-port = " + getHTTPServerListenPort());
-		writeLine(out, "listen-adapter = " + getHTTPServerListenAdapter());
-		writeLine(out, "bgcolor = " + getBackgroundColorName());
+			output.add(new String [] { "sound", getProblemSound()});
+		output.add(new String [] { "listen-port", "" + getHTTPServerListenPort()});
+		output.add(new String [] { "listen-adapter", getHTTPServerListenAdapter()});
+		output.add(new String [] { "bgcolor", getBackgroundColorName()});
 		if (getBackgroundColorFadeTo() != null)
-			writeLine(out, "bgcolor-fade-to = " + getBackgroundColorFadeToName());
+			output.add(new String [] { "bgcolor-fade-to", getBackgroundColorFadeToName()});
 		if (getProblemRowGradient() != null)
-			writeLine(out, "problem-row-gradient = " + getProblemRowGradientName());
+			output.add(new String [] { "problem-row-gradient", getProblemRowGradientName()});
 		if (getPerformanceDataFileName() != null)
-			writeLine(out, "performance-data-filename = " + getPerformanceDataFileName());
-		writeLine(out, "textcolor = " + getTextColorName());
-		writeLine(out, "warning-textcolor = " + getWarningTextColorName());
-		writeLine(out, "critical-textcolor = " + getCriticalTextColorName());
-		writeLine(out, "bgcolorok = " + getBackgroundColorOkStatusName());
-		writeLine(out, "nrows = " + getNRows());
-		writeLine(out, "flexible-n-columns = " + (getFlexibleNColumns() ? "true" : "false"));
-		writeLine(out, "no-problems-text-with-bg-color = " + (getNoProblemsTextBg() ? "true" : "false"));
-		writeLine(out, "host-scheduled-downtime-show-services = " + (getHostScheduledDowntimeShowServices() ? "true" : "false"));
-		writeLine(out, "host-acknowledged-show-services = " + (getHostAcknowledgedShowServices() ? "true" : "false"));
-		writeLine(out, "host-scheduled-downtime-or-ack-show-services = " + (getHostSDOrAckShowServices() ? " true" : "false"));
-		writeLine(out, "interval = " + getSleepTime());
+			output.add(new String [] { "performance-data-filename", getPerformanceDataFileName()});
+		output.add(new String [] { "textcolor", getTextColorName()});
+		output.add(new String [] { "warning-textcolor", getWarningTextColorName()});
+		output.add(new String [] { "critical-textcolor", getCriticalTextColorName()});
+		output.add(new String [] { "bgcolorok", getBackgroundColorOkStatusName()});
+		output.add(new String [] { "nrows", "" + getNRows()});
+		output.add(new String [] { "flexible-n-columns", (getFlexibleNColumns() ? "true" : "false")});
+		output.add(new String [] { "no-problems-text-with-bg-color", (getNoProblemsTextBg() ? "true" : "false")});
+		output.add(new String [] { "host-scheduled-downtime-show-services", (getHostScheduledDowntimeShowServices() ? "true" : "false")});
+		output.add(new String [] { "host-acknowledged-show-services", (getHostAcknowledgedShowServices() ? "true" : "false")});
+		output.add(new String [] { "host-scheduled-downtime-or-ack-show-services", (getHostSDOrAckShowServices() ? " true" : "false")});
+		output.add(new String [] { "interval", "" + getSleepTime()});
 		List<String> iu = getImageUrls();
 		List<ImageUrlType> iut = getImageUrlTypes();
 		for(int index=0; index<iu.size(); index++)
-			writeLine(out, "image = " + iut.get(index) + " " + iu.get(index));
-		writeLine(out, "prefer = " + getPrefersList());
-		writeLine(out, "always-notify = " + (getAlwaysNotify() ? "true" : "false"));
-		writeLine(out, "also-acknowledged = " + (getAlsoAcknowledged() ? "true" : "false"));
-		writeLine(out, "font = " + getFontName());
-		writeLine(out, "critical-font = " + getCriticalFontName());
-		writeLine(out, "warning-font = " + getWarningFontName());
-		writeLine(out, "verbose = " + (getVerbose() ? "true" : "false"));
-		writeLine(out, "anti-alias = " + (getAntiAlias() ? "true" : "false"));
-		writeLine(out, "max-quality-graphics = " + (getMaxQualityGraphics() ? "true" : "false"));
-		writeLine(out, "row-border = " + (getRowBorder() ? "true" : "false"));
-		writeLine(out, "draw-problems-service-split-line = " + (getDrawProblemServiceSplitLine() ? "true" : "false"));
-		writeLine(out, "row-border-color = " + getRowBorderColorName());
-		writeLine(out, "max-check-age = " + getMaxCheckAge());
-		writeLine(out, "upper-row-border-height = " + getUpperRowBorderHeight());
-		writeLine(out, "graph-color = " + getGraphColorName());
-		writeLine(out, "no-gui = " + (!getRunGui() ? "true" : "false"));
-		writeLine(out, "fullscreen = " + getFullscreenName());
+			output.add(new String [] { "image", iut.get(index) + " " + iu.get(index)});
+		output.add(new String [] { "prefer", getPrefersList()});
+		output.add(new String [] { "always-notify", (getAlwaysNotify() ? "true" : "false")});
+		output.add(new String [] { "also-acknowledged", (getAlsoAcknowledged() ? "true" : "false")});
+		output.add(new String [] { "font", getFontName()});
+		output.add(new String [] { "critical-font", getCriticalFontName()});
+		output.add(new String [] { "warning-font", getWarningFontName()});
+		output.add(new String [] { "verbose", (getVerbose() ? "true" : "false")});
+		output.add(new String [] { "anti-alias", (getAntiAlias() ? "true" : "false")});
+		output.add(new String [] { "max-quality-graphics", (getMaxQualityGraphics() ? "true" : "false")});
+		output.add(new String [] { "row-border", (getRowBorder() ? "true" : "false")});
+		output.add(new String [] { "draw-problems-service-split-line", (getDrawProblemServiceSplitLine() ? "true" : "false")});
+		output.add(new String [] { "row-border-color", getRowBorderColorName()});
+		output.add(new String [] { "max-check-age", "" + getMaxCheckAge()});
+		output.add(new String [] { "upper-row-border-height", "" + getUpperRowBorderHeight()});
+		output.add(new String [] { "graph-color", getGraphColorName()});
+		output.add(new String [] { "no-gui", (!getRunGui() ? "true" : "false")});
+		output.add(new String [] { "fullscreen", getFullscreenName()});
 		if (getUseScreen() != null)
-			writeLine(out, "use-screen = " + getUseScreen());
-		writeLine(out, "reduce-textwidth = " + (getReduceTextWidth() ? "true" : "false"));
+			output.add(new String [] { "use-screen", getUseScreen()});
+		output.add(new String [] { "reduce-textwidth", (getReduceTextWidth() ? "true" : "false")});
 		if (getHeaderSet() == true)
-			writeLine(out, "header = " + getHeader());
+			output.add(new String [] { "header", getHeader()});
 		if (getFooter() != null)
-			writeLine(out, "footer = " + getFooter());
-		writeLine(out, "show-header = " + (getShowHeader() ? "true" : "false"));
-		writeLine(out, "scrolling-header = " + (getScrollingHeader() ? "true" : "false"));
-		writeLine(out, "scrolling-footer = " + (getScrollingFooter() ? "true" : "false"));
-		writeLine(out, "scroll-pixels-per-sec = " + getScrollingPixelsPerSecond());
-		writeLine(out, "host-issue = " + getHostIssue());
-		writeLine(out, "service-issue = " + getServiceIssue());
-		writeLine(out, "transparency = " + getTransparency());
-		writeLine(out, "header-transparency = " + getHeaderTransparency());
-		writeLine(out, "hosts-filter-exclude = " + getHostsFilterExcludeList());
-		writeLine(out, "hosts-filter-include = " + getHostsFilterIncludeList());
-		writeLine(out, "services-filter-exclude = " + getServicesFilterExcludeList());
-		writeLine(out, "services-filter-include = " + getServicesFilterIncludeList());
-		writeLine(out, "scroll-if-not-fitting = " + (getScrollIfNotFit() ? "true" : "false"));
-		writeLine(out, "splitter = " + ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter()));
-		writeLine(out, "counter-position = " + getCounterPositionName());
-		writeLine(out, "sparkline-width = " + getSparkLineWidth());
-		writeLine(out, "header-always-bgcolor = " + (getHeaderAlwaysBGColor() ? "true" : "false"));
+			output.add(new String [] { "footer", getFooter()});
+		output.add(new String [] { "show-header", (getShowHeader() ? "true" : "false")});
+		output.add(new String [] { "scrolling-header", (getScrollingHeader() ? "true" : "false")});
+		output.add(new String [] { "scrolling-footer", (getScrollingFooter() ? "true" : "false")});
+		output.add(new String [] { "scroll-pixels-per-sec", "" + getScrollingPixelsPerSecond()});
+		output.add(new String [] { "host-issue", getHostIssue()});
+		output.add(new String [] { "service-issue", getServiceIssue()});
+		output.add(new String [] { "transparency", "" + getTransparency()});
+		output.add(new String [] { "header-transparency", "" + getHeaderTransparency()});
+		output.add(new String [] { "hosts-filter-exclude", getHostsFilterExcludeList()});
+		output.add(new String [] { "hosts-filter-include", getHostsFilterIncludeList()});
+		output.add(new String [] { "services-filter-exclude", getServicesFilterExcludeList()});
+		output.add(new String [] { "services-filter-include", getServicesFilterIncludeList()});
+		output.add(new String [] { "scroll-if-not-fitting", (getScrollIfNotFit() ? "true" : "false")});
+		output.add(new String [] { "splitter", ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter())});
+		output.add(new String [] { "counter-position", getCounterPositionName()});
+		output.add(new String [] { "sparkline-width", "" + getSparkLineWidth()});
+		output.add(new String [] { "header-always-bgcolor", (getHeaderAlwaysBGColor() ? "true" : "false")});
 		if (getPutSplitAtOffset() != null)
-			writeLine(out, "split-text-put-at-offset = " + getPutSplitAtOffset());
+			output.add(new String [] { "split-text-put-at-offset", "" + getPutSplitAtOffset()});
 		if (getLogo() != null)
-			writeLine(out, "logo = " + getLogo());
+			output.add(new String [] { "logo", getLogo()});
 		if (getLogoPosition() != null)
-			writeLine(out, "logo-position = " + getLogoPositionName());
-		writeLine(out, "web-expire-time = " + getWebSessionExpire());
+			output.add(new String [] { "logo-position", getLogoPositionName()});
+		output.add(new String [] { "web-expire-time", "" + getWebSessionExpire()});
 		if (getLatencyFile() != null)
-			writeLine(out, "latency-file = " + getLatencyFile());
+			output.add(new String [] { "latency-file", getLatencyFile()});
 		if (getNoProblemsText() != null)
-			writeLine(out, "no-problems-text = " + getNoProblemsText());
+			output.add(new String [] { "no-problems-text", getNoProblemsText()});
 		if (getStateProblemsText() != null)
-			writeLine(out, "state-problems-text = " + getStateProblemsText());
-		writeLine(out, "no-problems-text-position = " + getNoProblemsTextPositionName());
-		String sparkMode = "sparkline-graph-mode = ";
+			output.add(new String [] { "state-problems-text", getStateProblemsText()});
+		output.add(new String [] { "no-problems-text-position", getNoProblemsTextPositionName()});
+		String sparkMode = "";
 		if (getSparklineGraphMode() == SparklineGraphMode.AVG_SD)
 			sparkMode += "avg-sd";
 		else if (getSparklineGraphMode() == SparklineGraphMode.MIN_MAX)
 			sparkMode += "min-max";
-		writeLine(out, sparkMode);
+		output.add(new String [] { "sparkline-graph-mode", sparkMode });
 		String sort = "";
 		if (getSortOrderNumeric())
 			sort += "numeric ";
 		if (getSortOrderReverse())
 			sort += "reverse ";
 		sort += getSortOrder();
-		writeLine(out, "sort-order = " + sort);
-		writeLine(out, "also-scheduled-downtime = " + (getAlsoScheduledDowntime() ? "true" : "false"));
-		writeLine(out, "also-soft-state = " + (getAlsoSoftState() ? "true" : "false"));
-		writeLine(out, "also-disabled-active-checks = " + (getAlsoDisabledActiveChecks() ? "true" : "false"));
-		writeLine(out, "show-services-for-host-with-problems = " + (getShowServicesForHostWithProblems() ? "true" : "false"));
-		writeLine(out, "show-flapping = " + (getShowFlapping() ? "true" : "false"));
-		writeLine(out, "problem-columns = " + getNProblemCols());
+		output.add(new String [] { "sort-order", sort});
+		output.add(new String [] { "also-scheduled-downtime", (getAlsoScheduledDowntime() ? "true" : "false")});
+		output.add(new String [] { "also-soft-state", (getAlsoSoftState() ? "true" : "false")});
+		output.add(new String [] { "also-disabled-active-checks", (getAlsoDisabledActiveChecks() ? "true" : "false")});
+		output.add(new String [] { "show-services-for-host-with-problems", (getShowServicesForHostWithProblems() ? "true" : "false")});
+		output.add(new String [] { "show-flapping", (getShowFlapping() ? "true" : "false")});
+		output.add(new String [] { "problem-columns", "" + getNProblemCols()});
 		if (getWebUsername() != null)
-			writeLine(out, "web-username = " + getWebUsername());
+			output.add(new String [] { "web-username", getWebUsername()});
 		if (getWebPassword() != null)
-			writeLine(out, "web-password = " + getWebPassword());
+			output.add(new String [] { "web-password", getWebPassword()});
 
 		for(NagiosDataSource dataSource : getNagiosDataSources())
 		{
@@ -1093,17 +1092,28 @@ public class Config
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 				parameters = dataSource.getFile();
 
-			writeLine(out, "source = " + type + " " + version + " " + parameters);
+			output.add(new String [] { "source", type + " " + version + " " + parameters});
 		}
 
-		writeLine(out, "cam-rows = " + getCamRows());
-		writeLine(out, "cam-cols = " + getCamCols());
-		writeLine(out, "ignore-aspect-ratio = " + (!getKeepAspectRatio() ? "true" : "false"));
-		writeLine(out, "warning-bg-color = " + getWarningBgColorName());
-		writeLine(out, "critical-bg-color = " + getCriticalBgColorName());
-		writeLine(out, "nagios-unknown-bg-color = " + getNagiosUnknownBgColorName());
-		writeLine(out, "disable-http-compression = " + (!getAllowHTTPCompression() ? "true" : "false"));
-		writeLine(out, "color-bg-to-state = " + (getSetBgColorToState() ? "true" : "false"));
+		output.add(new String [] { "cam-rows", "" + getCamRows()});
+		output.add(new String [] { "cam-cols", "" + getCamCols()});
+		output.add(new String [] { "ignore-aspect-ratio", (!getKeepAspectRatio() ? "true" : "false")});
+		output.add(new String [] { "warning-bg-color", getWarningBgColorName()});
+		output.add(new String [] { "critical-bg-color", getCriticalBgColorName()});
+		output.add(new String [] { "nagios-unknown-bg-color", getNagiosUnknownBgColorName()});
+		output.add(new String [] { "disable-http-compression", (!getAllowHTTPCompression() ? "true" : "false")});
+		output.add(new String [] { "color-bg-to-state", (getSetBgColorToState() ? "true" : "false")});
+
+		return output;
+	}
+
+	public void writeConfig(String fileName) throws Exception
+	{
+		BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
+
+		List<String []> conf = collectConfig();
+		for(String [] entry : conf)
+			writeLine(out, entry[0] + " = " + entry[1]);
 
 		out.close();
 	}
@@ -3280,7 +3290,6 @@ public class Config
 		lock();
 		iutCopy = iut;
 		unlock();
-
 		return iutCopy;
 	}
 }

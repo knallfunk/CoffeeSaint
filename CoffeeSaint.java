@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.8";
+	static String versionNr = "v3.9";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -155,7 +155,7 @@ public class CoffeeSaint
 
 	BufferedImage getSparkLine(Host host, Service service, int width, int height, boolean withMeta)
 	{
-		return getSparkLine(host.getHostName(), service.getServiceName(), null, width, height, withMeta);
+		return getSparkLine(host.getHostName(), service != null ?service.getServiceName() : null, null, width, height, withMeta);
 	}
 
 	BufferedImage getSparkLine(Host host, Service service, String selectedDataSourceName, int width, int height, boolean withMeta)
@@ -612,11 +612,10 @@ public class CoffeeSaint
 	public String processStringEscapes(JavNag javNag, Totals totals, Calendar rightNow, Problem problem, boolean haveNotifiedProblems, String cmd, boolean recurse)
 	{
 		String pars = null;
-		int splitter = cmd.indexOf("^");
-		if (splitter != -1)
-		{
-			if (cmd.length() > splitter)
-				pars = cmd.substring(splitter + 1);
+                int splitter = cmd.indexOf("^");
+                if (splitter != -1)
+                {
+			pars = cmd.substring(splitter + 1);
 			cmd = cmd.substring(0, splitter);
 		}
 
@@ -773,7 +772,7 @@ public class CoffeeSaint
 	{
 		final Totals totals = javNag.calculateStatistics();
 		log.add("" + totals.getNHosts() + " hosts, " + totals.getNServices() + " services");
-		boolean loadingCmd = false, atTerminator = false;
+		boolean loadingCmd = false, atTerminator = false, hadSplitter = false;
 		String cmd = "", output = "";
 
 		for(int index=0; index<in.length(); index++) {
@@ -785,14 +784,16 @@ public class CoffeeSaint
 
 					cmd = "";
 					atTerminator = loadingCmd = false;
+					hadSplitter = false;
 				}
 				else if (!atTerminator && !(currentChar >= 'A' && currentChar <= 'Z') && !(currentChar >= 'a' && currentChar <= 'z') &&
-					currentChar != '^' && currentChar != '/' && currentChar != '_' && currentChar != '.' && currentChar != '\\')
+					(currentChar != '^' && ((currentChar != '/' && currentChar != '_' && currentChar != '.' && currentChar != '\\') || hadSplitter == false)))
 				{
 					output += processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
 
 					cmd = "";
 					loadingCmd = false;
+					hadSplitter = false;
 
 					if (currentChar == '%')
 						loadingCmd = true;
@@ -801,6 +802,8 @@ public class CoffeeSaint
 				}
 				else {
 					cmd += in.charAt(index);
+					if (in.charAt(index) == '^')
+						hadSplitter = true;
 				}
 			}
 			else {
@@ -1013,6 +1016,16 @@ public class CoffeeSaint
 		}
 
 		return result;
+	}
+
+	public static BufferedImage createBufferedImage(Image image)
+	{
+		BufferedImage bufferedImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_RGB);
+		Graphics g = bufferedImage.createGraphics();
+
+		g.drawImage(image, 0, 0, null);
+
+		return bufferedImage;
 	}
 
 	public Double predictProblemCount(Calendar rightNow)
@@ -1380,12 +1393,13 @@ public class CoffeeSaint
 	public static void showHelp()
 	{
 		System.out.println("--source type version x  Source to retrieve from");
-		System.out.println("              Type can be: http, tcp, file");
-		System.out.println("              http expects an url like http://keetweej.vanheusden.com/status.dat");
+		System.out.println("              Type can be: http, tcp, ztcp, file and ls");
+		System.out.println("              http  expects an url like http://keetweej.vanheusden.com/status.dat");
 		System.out.println("              http-auth expects an url like http://keetweej.vanheusden.com/status.dat and a username and a password");
-		System.out.println("              tcp expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
-		System.out.println("              ztcp also expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
-		System.out.println("              file expects a file-name, e.g. /var/cache/nagios3/status.dat");
+		System.out.println("              tcp   expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
+		System.out.println("              ztcp  also expects a host and portnumber, e.g.: keetweej.vanheusden.com 33333");
+		System.out.println("              ls    expects a livestatus host and portnumber, e.g.: keetweej.vanheusden.com 6557");
+		System.out.println("              file  expects a file-name, e.g. /var/cache/nagios3/status.dat");
 		System.out.println("              version selects the nagios-version. E.g. 1, 2 or 3");
 		System.out.println("              You can add as many Nagios servers as you like");
 		System.out.println("              Example: --source file 3 /var/cache/nagios3/status.dat");
@@ -1394,6 +1408,7 @@ public class CoffeeSaint
 		System.out.println("--disable-http-compression Don't use gzip/deflate compression in HTTP connection - usefull for fast links as the server has less load then");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
+		System.out.println("--use-host-alias Show host-alias instead of hostname");
 		System.out.println("--fullscreen x Run in a fullscreen mode, e.g. without any borders (undecorated), no menu bars (fullscreen), spread over all monitors (allmonitors) or none (none)");
 		System.out.println("--list-screens  To see a list of screens connected to the system on which CoffeeSaint is running");
 		System.out.println("--use-screen x  Select screen 'x' to display the output on. This is usefull if you have multiple monitors connected to the system.");
@@ -1514,6 +1529,7 @@ public class CoffeeSaint
 
 			System.out.println(version);
 			System.out.println("");
+			System.out.println("Please wait while initializing...");
 
 			config = new Config();
 
