@@ -117,6 +117,7 @@ public class Config
 	private boolean host_scheduled_downtime_show_services, host_acknowledged_show_services;
 	private boolean host_scheduled_downtime_or_ack_show_services;
 	private long maxCheckAge;
+	private boolean showFlappingIcon;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -233,6 +234,7 @@ public class Config
 		host_scheduled_downtime_or_ack_show_services = true;
 		maxCheckAge = -1;
 		fullscreen = FullScreenMode.NONE;
+		showFlappingIcon = false;
 		unlock();
 	}
 
@@ -446,6 +448,9 @@ public class Config
 		data = a.getParameter("show-flapping");
 		if (data != null)
 			setShowFlapping(isIsTrue(data));
+		data = a.getParameter("show-flapping-icon");
+		if (data != null)
+			setShowFlappingIcon(isIsTrue(data));
 		data = a.getParameter("also-soft-state");
 		if (data != null)
 			setAlsoSoftState(isIsTrue(data));
@@ -791,6 +796,8 @@ public class Config
 						setHeaderAlwaysBGColor(isTrue);
 					else if (name.equals("show-flapping"))
 						setShowFlapping(isTrue);
+					else if (name.equals("show-flapping-icon"))
+						setShowFlappingIcon(isTrue);
 					else if (name.equals("also-soft-state"))
 						setAlsoSoftState(isTrue);
 					else if (name.equals("also-disabled-active-checks"))
@@ -1049,6 +1056,7 @@ public class Config
 		output.add(new String [] { "also-disabled-active-checks", (getAlsoDisabledActiveChecks() ? "true" : "false")});
 		output.add(new String [] { "show-services-for-host-with-problems", (getShowServicesForHostWithProblems() ? "true" : "false")});
 		output.add(new String [] { "show-flapping", (getShowFlapping() ? "true" : "false")});
+		output.add(new String [] { "show-flapping-icon", (getShowFlappingIcon() ? "true" : "false")});
 		output.add(new String [] { "problem-columns", "" + getNProblemCols()});
 		if (getWebUsername() != null)
 			output.add(new String [] { "web-username", getWebUsername()});
@@ -3291,5 +3299,19 @@ public class Config
 		iutCopy = iut;
 		unlock();
 		return iutCopy;
+	}
+
+	public boolean getShowFlappingIcon() {
+		boolean copy;
+		lock();
+		copy = showFlappingIcon;
+		unlock();
+		return copy;
+	}
+
+	public void setShowFlappingIcon(boolean value) {
+		lock();
+		showFlappingIcon = value;
+		unlock();
 	}
 }

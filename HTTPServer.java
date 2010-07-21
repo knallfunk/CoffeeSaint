@@ -805,6 +805,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Footer:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"footer\" VALUE=\"" + (config.getFooter() != null ? config.getFooter() : "") + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Show flapping icon:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-flapping-icon\" VALUE=\"on\" " + isChecked(config.getShowFlappingIcon()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Header always bg color:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"header-always-bgcolor\" VALUE=\"on\" " + isChecked(config.getHeaderAlwaysBGColor()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll footer:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-footer\" VALUE=\"on\" " + isChecked(config.getScrollingFooter()) + "></TD><TD></TD></TR>\n");
@@ -1123,6 +1124,8 @@ class HTTPServer implements Runnable
 		config.setHostSDOrAckShowServices(getCheckBox(socket, requestData, "host_scheduled_downtime_or_ack_show_services"));
 
 		config.setShowFlapping(getCheckBox(socket, requestData, "show-flapping"));
+
+		config.setShowFlappingIcon(getCheckBox(socket, requestData, "show-flapping-icon"));
 
 		config.setHostAcknowledgedShowServices(getCheckBox(socket, requestData, "host_also_acknowledged"));
 		config.setHostScheduledDowntimeShowServices(getCheckBox(socket, requestData, "host_also_scheduled_downtime"));

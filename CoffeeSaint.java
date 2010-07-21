@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v3.9";
+	static String versionNr = "v4.0-beta-2";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -593,6 +593,7 @@ public class CoffeeSaint
 			if (line == null || line.equals("")) {
 				BufferedReader errStreamReader  = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 				line = errStreamReader.readLine();
+				errStreamReader.close();
 			}
 			System.out.println(file + " returned: " + line);
 
@@ -854,7 +855,7 @@ public class CoffeeSaint
 	public static void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.prepareRow(g, windowWidth, 0, message, 0, "0", config.getBackgroundColor(), 1.0f, null, false);
+			gui.prepareRow(g, windowWidth, 0, message, 0, "0", config.getBackgroundColor(), 1.0f, null, false, false);
 	}
 
 	Image getMJPEGFrame(String urlStr) throws Exception {
@@ -1092,19 +1093,20 @@ public class CoffeeSaint
 
 		long startLoadTs = System.currentTimeMillis();
 
+		int prevNHosts = -1;
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
 		{
-			String logStr = "Loading data from: ";
+			String logStr = "Loading data from: ", source;
 			if (dataSource.getType() == NagiosDataSourceType.TCP)
 			{
-				String source = dataSource.getHost() + " " + dataSource.getPort();
+				source = dataSource.getHost() + " " + dataSource.getPort();
 				logStr += source;
 				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
 				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), false);
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
 			{
-				String source = dataSource.getHost() + " " + dataSource.getPort();
+				source = dataSource.getHost() + " " + dataSource.getPort();
 				logStr += source;
 				drawLoadStatus(gui, windowWidth, g, "zLoad Nagios " + source);
 				System.out.println("zLoad Nagios " + source);
@@ -1112,25 +1114,33 @@ public class CoffeeSaint
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
 			{
+				source = "" + dataSource.getURL();
 				logStr += dataSource.getURL();
-				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getURL());
+				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
 				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion(), dataSource.getUsername(), dataSource.getPassword(), config.getAllowHTTPCompression());
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 			{
+				source = dataSource.getFile();
 				logStr += dataSource.getFile();
-				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + dataSource.getFile());
+				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
 				javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion());
 			}
 			else if (dataSource.getType() == NagiosDataSourceType.LS)
 			{
-				String source = dataSource.getHost() + " " + dataSource.getPort();
+				source = dataSource.getHost() + " " + dataSource.getPort();
 				logStr += source;
 				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
 				javNag.loadNagiosDataLiveStatus(dataSource.getHost(), dataSource.getPort());
 			}
 			else
 				throw new Exception("Unknown data-source type: " + dataSource.getType());
+
+			if (javNag.getNumberOfHosts() == prevNHosts) {
+				System.err.println(source + " did not return any hosts!");
+				// FIXME on screen error or so?
+			}
+			prevNHosts = javNag.getNumberOfHosts();
 
 			logStr += " - done.";
 			log.add(logStr);
@@ -1190,6 +1200,7 @@ public class CoffeeSaint
 			FileReader fileHandle = new FileReader(filename); 
 			if (fileHandle == null)
 				return "Opening file returned null";
+			fileHandle.close();
 		}
 		catch(Exception e)
 		{
@@ -1431,6 +1442,7 @@ public class CoffeeSaint
 		System.out.println("--also-soft-state   Also display problems that are not yet in hard state");
 		System.out.println("--also-disabled-active-checks Also display problems for which active checks have been disabled");
 		System.out.println("--suppress-flapping Do not show hosts that are flapping");
+		System.out.println("--show-flapping-icon Show an icon in front of problems indicating wether they're flapping or not");
 		System.out.println("--show-services-for-host-with-problems");
 		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray");
 		System.out.println("--bgcolor-fade-to x If set, don't draw a solid color but fade (gradient) the --bgcolor color to this one.");
@@ -1786,6 +1798,8 @@ public class CoffeeSaint
 						config.setAlwaysNotify(true);
 					else if (arg[loop].equals("--suppress-flapping"))
 						config.setShowFlapping(false);
+					else if (arg[loop].equals("--show-flapping-icon"))
+						config.setShowFlappingIcon(true);
 					else if (arg[loop].equals("--also-acknowledged"))
 						config.setAlsoAcknowledged(true);
 					else if (arg[loop].equals("--font"))
