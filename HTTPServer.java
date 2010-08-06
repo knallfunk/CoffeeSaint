@@ -633,8 +633,9 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Network parameters</H1>\n");
 		reply.add("Please note that after you click on submit, the new network-settings are applied immeditately.<BR>\n");
 		reply.add("<TABLE>\n");
-		reply.add("<TR><TD>HTTP proxy (for outbound<BR>connections) host:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"proxy-host\" VALUE=\"" + config.getProxyHost() + "\"></TD></TR>\n");
-		reply.add("<TR><TD>HTTP proxy port:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"proxy-port\" VALUE=\"" + config.getProxyPort() + "\"></TD></TR>\n");
+		String proxyHost = config.getProxyHost();
+		reply.add("<TR><TD>HTTP proxy (for outbound connections) host:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"proxy-host\" VALUE=\"" + (proxyHost != null ? proxyHost : "") + "\"></TD><TD>empty to disable</TD></TR>\n");
+		reply.add("<TR><TD>HTTP proxy port:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"proxy-port\" VALUE=\"" + (proxyHost != null ? "" + config.getProxyPort() : "8080") + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Network interface to listen on:</TD><TD><SELECT NAME=\"network-interface\"><OPTION VALUE=\"0.0.0.0\"" + (config.getHTTPServerListenAdapter().equals("0.0.0.0") == true ? " SELECTED" : "") + ">All interfaces</OPTION>");
 		Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
 		for (NetworkInterface netint : Collections.list(nets))
@@ -649,8 +650,8 @@ class HTTPServer implements Runnable
 				reply.add("<OPTION VALUE\"" + address + "\"" + (config.getHTTPServerListenAdapter().equals(address) == true ? " SELECTED" : "") + ">" + address + "</OPTION>");
 			}
 		}
-		reply.add("</TD></TR>\n");
-		reply.add("<TR><TD>Port to listen on:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"network-port\" VALUE=\"" + config.getHTTPServerListenPort() + "\"></TD></TR>\n");
+		reply.add("</TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Port to listen on:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"network-port\" VALUE=\"" + config.getHTTPServerListenPort() + "\"></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
