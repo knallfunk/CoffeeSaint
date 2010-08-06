@@ -1,3 +1,8 @@
+- dynamic interval: 
+	Math.max(interval, Max[Math.ceil(next_check + check_execution_time + check_latency + 1)]);
+                           ^^^
+			   max over alle services/hosts
+
 - timeout op laden image - in een aparte thread?
 - die andere monitoring dinges, zabbix
 - toggle fullscreen @ runtime
@@ -16,3 +21,49 @@
 - resize gaat mis
 
 - iets met de execution time: check_execution_time
+
+
+proxy
+-----
+The Authenticator method isn't working for me, using JDK 1.3.1_06 and JSSE 1.0.3_01. I still get the 407 error. My code works just fine under 1.4.1, however. 
+
+Is there a way to make it work under 1.3.1. Are other people having these problems with it?
+
+Here's my code: 
+// get proxy and port from command line 
+SecureClient.proxyhost = args[2]; // 
+SecureClient.proxyport = args[3]; //
+
+
+// set the JSSE system properties 
+System.setProperty("https.proxyHost", SecureClient.proxyhost); 
+System.setProperty("https.proxyPort", SecureClient.proxyport);
+
+
+System.out.println("using proxy: "+ SecureClient.proxyhost + " port " + SecureClient.proxyport);
+
+
+// now create http authentication
+
+
+// this didn't work 
+// System.setProperty("http.proxyUser", "myuser"); 
+// System.setProperty("http.proxyPassword", "mypassword");
+
+
+// this worked in 1.4.1 
+Authenticator.setDefault( new httpAuthenticateProxy() ); 
+.......................................... 
+
+and here's my authenticator class: 
+
+public class httpAuthenticateProxy extends Authenticator { 
+
+protected PasswordAuthentication getPasswordAuthentication() { 
+// username, password 
+// sets http authentication 
+return new PasswordAuthentication("myuser","mypassword".toCharArray()); 
+} 
+
+} 
+............................................. 

@@ -187,9 +187,9 @@ public class JavNag
 
 				if (type == null)
 					lineType = LineType.ignore;
-				else if (type.equals("hoststatus"))
+				else if (type.equals("hoststatus") || type.equals("host"))
 					lineType = LineType.host;
-				else if (type.equals("servicestatus"))
+				else if (type.equals("servicestatus") || type.equals("service"))
 					lineType = LineType.service;
 				else if (type.equals("hostcomment"))
 					lineType = LineType.host_comment;
@@ -414,26 +414,43 @@ public class JavNag
 	 */
 	public boolean shouldIShowService(Service service, boolean always_notify, boolean service_also_acknowledged, boolean service_also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping)
 	{
-		if (!also_soft_state && service.getParameter("state_type").equals("1") == false)
+		System.out.print(service.getServiceName() + " ");
+		if (!also_soft_state && service.getParameter("state_type").equals("1") == false) {
+			System.out.println("state_type != 1");
 			return false;
+		}
 
-		if (service.getParameter("current_state").equals("0") == true)
+		if (service.getParameter("current_state").equals("0") == true) {
+			System.out.println("current_state == 0");
 			return false;
+		}
 
-		if (!show_flapping && service.getParameter("is_flapping").equals("1") == true)
+		if (!show_flapping && service.getParameter("is_flapping").equals("1") == true) {
+			System.out.println("is_flapping");
 			return false;
+		}
 
-		if (!also_disabled_active_checks && service.getParameter("active_checks_enabled").equals("0") == true && service.getParameter("passive_checks_enabled").equals("0") == true)
+		if (!also_disabled_active_checks && service.getParameter("active_checks_enabled").equals("0") == true && service.getParameter("passive_checks_enabled").equals("0") == true) {
+			System.out.println("checks enabled = false");
 			return false;
+		}
 
-		if (!service_also_scheduled_downtime && Double.valueOf(service.getParameter("scheduled_downtime_depth")) != 0.0)
+		if (!service_also_scheduled_downtime && Double.valueOf(service.getParameter("scheduled_downtime_depth")) != 0.0) {
+			System.out.println("scheduled downtime depth != 0");
 			return false;
+		}
 
-		if (!always_notify && service.getParameter("notifications_enabled").equals("0") == true)
+		if (!always_notify && service.getParameter("notifications_enabled").equals("0") == true) {
+			System.out.println("notifications not enabled");
 			return false;
+		}
 
-		if (!service_also_acknowledged && service.getParameter("problem_has_been_acknowledged").equals("1") == true)
+		if (!service_also_acknowledged && service.getParameter("problem_has_been_acknowledged").equals("1") == true) {
+			System.out.println("problem has been acked");
 			return false;
+		}
+
+		System.out.println("show service true: ");
 
 		return true;
 	}

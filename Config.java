@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2010 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
 
 import java.awt.Color;
@@ -13,6 +13,7 @@ import java.util.concurrent.Semaphore;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.regex.Pattern;
 
 public class Config
@@ -40,8 +41,8 @@ public class Config
 	private String backgroundColorName;
 	private Color textColor, warningTextColor, criticalTextColor;
 	private String textColorName, warningTextColorName, criticalTextColorName;
-	private Color warningBgColor, criticalBgColor, nagiosUnknownBgColor;
-	private String warningBgColorName, criticalBgColorName, nagiosUnknownBgColorName;
+	private Color warningBgColor, warningBgColorSoft, criticalBgColor, criticalBgColorSoft, nagiosUnknownBgColor;
+	private String warningBgColorName, warningBgColorNameSoft, criticalBgColorName, criticalBgColorNameSoft, nagiosUnknownBgColorName;
 	private boolean bgColorToState;
 	private String bgColorOkStatusName;
 	private Color bgColorOkStatus;
@@ -193,8 +194,12 @@ public class Config
 		flexibleNColumns = false;
 		warningBgColor = Color.YELLOW;
 		warningBgColorName = "yellow";
+		warningBgColorNameSoft = "lightyellow";
+		warningBgColorSoft = selectColor(warningBgColorNameSoft);
 		criticalBgColor = Color.RED;
 		criticalBgColorName = "red";
+		criticalBgColorNameSoft = "lightred";
+		criticalBgColorSoft = selectColor(criticalBgColorNameSoft);
 		nagiosUnknownBgColor = Color.MAGENTA;
 		nagiosUnknownBgColorName = "magenta";
 		allowCompression = true;
@@ -240,16 +245,16 @@ public class Config
 
 	public Config()
 	{
-		setDefaultParameterValues();
 		initColors();
 		initSortFields();
+		setDefaultParameterValues();
 	}
 
 	public Config(String fileName) throws Exception
 	{
-		setDefaultParameterValues();
 		initColors();
 		initSortFields();
+		setDefaultParameterValues();
 
 		loadConfig(fileName);
 	}
@@ -349,6 +354,14 @@ public class Config
 		data = a.getParameter("footer");
 		if (data != null)
 			setFooter(data);
+
+		data = a.getParameter("proxy-host");
+		if (data != null)
+			setProxyHost(data);
+		data = a.getParameter("proxy-port");
+		if (data != null)
+			setProxyPort(Integer.valueOf(data));
+
 		data = a.getParameter("adapt-img");
 		if (data != null)
 			setAdaptImageSize(isIsTrue(data));
@@ -584,6 +597,14 @@ public class Config
 		data = a.getParameter("critical-bg-color");
 		if (data != null)
 			setCriticalBgColor(data);
+
+		data = a.getParameter("warning-bg-color-soft");
+		if (data != null)
+			setWarningBgColorSoft(data);
+		data = a.getParameter("critical-bg-color-soft");
+		if (data != null)
+			setCriticalBgColorSoft(data);
+
 		data = a.getParameter("nagios-unknown-bg-color");
 		if (data != null)
 			setNagiosUnknownBgColor(data);
@@ -766,6 +787,10 @@ public class Config
 						setRowBorderColor(data);
 					else if (name.equals("sound"))
 						setProblemSound(data);
+					else if (name.equals("proxy-host"))
+						setProxyHost(data);
+					else if (name.equals("proxy-port"))
+						setProxyPort(Integer.valueOf(data));
 					else if (name.equals("color-bg-to-state"))
 						setSetBgColorToState(isTrue);
 					else if (name.equals("problem-columns"))
@@ -898,6 +923,10 @@ public class Config
 						setWarningBgColor(data);
 					else if (name.equals("critical-bg-color"))
 						setCriticalBgColor(data);
+					else if (name.equals("warning-bg-color-soft"))
+						setWarningBgColorSoft(data);
+					else if (name.equals("critical-bg-color-soft"))
+						setCriticalBgColorSoft(data);
 					else if (name.equals("nagios-unknown-bg-color"))
 						setNagiosUnknownBgColor(data);
 					else if (name.equals("disable-http-compression"))
@@ -1108,9 +1137,16 @@ public class Config
 		output.add(new String [] { "ignore-aspect-ratio", (!getKeepAspectRatio() ? "true" : "false")});
 		output.add(new String [] { "warning-bg-color", getWarningBgColorName()});
 		output.add(new String [] { "critical-bg-color", getCriticalBgColorName()});
+		output.add(new String [] { "warning-bg-color-soft", getWarningBgColorNameSoft()});
+		output.add(new String [] { "critical-bg-color-soft", getCriticalBgColorNameSoft()});
 		output.add(new String [] { "nagios-unknown-bg-color", getNagiosUnknownBgColorName()});
 		output.add(new String [] { "disable-http-compression", (!getAllowHTTPCompression() ? "true" : "false")});
 		output.add(new String [] { "color-bg-to-state", (getSetBgColorToState() ? "true" : "false")});
+
+		if (getProxyHost() != null) {
+			output.add(new String [] { "proxy-host", getProxyHost()});
+			output.add(new String [] { "proxy-port", "" + getProxyPort()});
+		}
 
 		return output;
 	}
@@ -1222,6 +1258,7 @@ public class Config
 		colorPairs.add(new ColorPair("lightgreen", 0x90ee90));
 		colorPairs.add(new ColorPair("lightgrey", 0xd3d3d3));
 		colorPairs.add(new ColorPair("lightpink", 0xffb6c1));
+		colorPairs.add(new ColorPair("lightred", 0xee9090));
 		colorPairs.add(new ColorPair("lightsalmon", 0xffa07a));
 		colorPairs.add(new ColorPair("lightseagreen", 0x20b2aa));
 		colorPairs.add(new ColorPair("lightskyblue", 0x87cefa));
@@ -2501,6 +2538,35 @@ public class Config
 		return copy;
 	}
 
+	public void setCriticalBgColorSoft(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		criticalBgColorSoft = color;
+		criticalBgColorNameSoft = colorName;
+		unlock();
+	}
+
+	public Color getCriticalBgColorSoft()
+	{
+		Color copy;
+		lock();
+		copy = criticalBgColorSoft;
+		unlock();
+		return copy;
+	}
+
+	public String getCriticalBgColorNameSoft()
+	{
+		String copy;
+		lock();
+		copy = criticalBgColorNameSoft;
+		unlock();
+		return copy;
+	}
+
 	public void setWarningBgColor(String colorName) throws Exception
 	{
 		Color color = selectColor(colorName);
@@ -2526,6 +2592,35 @@ public class Config
 		String copy;
 		lock();
 		copy = warningBgColorName;
+		unlock();
+		return copy;
+	}
+
+	public void setWarningBgColorSoft(String colorName) throws Exception
+	{
+		Color color = selectColor(colorName);
+		if (color == null)
+			throw new Exception("Color " + colorName + " is not known.");
+		lock();
+		warningBgColorSoft = color;
+		warningBgColorNameSoft = colorName;
+		unlock();
+	}
+
+	public Color getWarningBgColorSoft()
+	{
+		Color copy;
+		lock();
+		copy = warningBgColorSoft;
+		unlock();
+		return copy;
+	}
+
+	public String getWarningBgColorNameSoft()
+	{
+		String copy;
+		lock();
+		copy = warningBgColorNameSoft;
 		unlock();
 		return copy;
 	}
@@ -3313,5 +3408,25 @@ public class Config
 		lock();
 		showFlappingIcon = value;
 		unlock();
+	}
+
+	public void setProxyHost(String host) {
+		Properties properties = System.getProperties();
+		properties.put("http.proxyHost", host);
+	}
+
+	public void setProxyPort(int port) {
+		Properties properties = System.getProperties();
+		properties.put("http.proxyPort", "" + port);
+	}
+
+	public String getProxyHost() {
+		Properties properties = System.getProperties();
+		return (String)properties.get("http.proxyHost");
+	}
+
+	public int getProxyPort() {
+		Properties properties = System.getProperties();
+		return Integer.valueOf((String)properties.get("http.proxyPort"));
 	}
 }

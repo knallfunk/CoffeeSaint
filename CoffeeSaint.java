@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.0-beta-2";
+	static String versionNr = "v4.0-beta-3";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -833,14 +833,20 @@ public class CoffeeSaint
 			return processStringWithEscapes(config.getHeader(), javNag, rightNow, null, haveNotifiedProblems, true);
 	}
 
-	public Color stateToColor(String state)
+	public Color stateToColor(String state, boolean hard)
 	{
 		if (state.equals("0") == true)
 			return config.getBackgroundColorOkStatus();
-		else if (state.equals("1") == true)
-			return config.getWarningBgColor();
-		else if (state.equals("2") == true)
-			return config.getCriticalBgColor();
+		else if (state.equals("1") == true) {
+			if (hard)
+				return config.getWarningBgColor();
+			return config.getWarningBgColorSoft();
+		}
+		else if (state.equals("2") == true) {
+			if (hard)
+				return config.getCriticalBgColor();
+			return config.getCriticalBgColorSoft();
+		}
 		else if (state.equals("3") == true) // UNKNOWN STATE
 			return config.getNagiosUnknownBgColor();
 		else if (state.equals("254") == true) // no color at all
@@ -855,7 +861,7 @@ public class CoffeeSaint
 	public static void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.prepareRow(g, windowWidth, 0, message, 0, "0", config.getBackgroundColor(), 1.0f, null, false, false);
+			gui.prepareRow(g, windowWidth, 0, message, 0, "0", true, config.getBackgroundColor(), 1.0f, null, false, false);
 	}
 
 	Image getMJPEGFrame(String urlStr) throws Exception {
@@ -1417,6 +1423,8 @@ public class CoffeeSaint
 		System.out.println("");
 		System.out.println("--allow-all-ssl  For https: do not check if the certificate is valid. You can use this with hosts that have a self-signed certificate. Please note that this needs to be the first commandline switch!");
 		System.out.println("--disable-http-compression Don't use gzip/deflate compression in HTTP connection - usefull for fast links as the server has less load then");
+		System.out.println("--proxy-host");
+		System.out.println("--proxy-port  Proxy to use for outbound http requests.");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--use-host-alias Show host-alias instead of hostname");
@@ -1740,8 +1748,12 @@ public class CoffeeSaint
 					}
 					else if (arg[loop].equals("--warning-bg-color"))
 						config.setWarningBgColor(arg[++loop]);
+					else if (arg[loop].equals("--warning-bg-color-soft"))
+						config.setWarningBgColorSoft(arg[++loop]);
 					else if (arg[loop].equals("--critical-bg-color"))
 						config.setCriticalBgColor(arg[++loop]);
+					else if (arg[loop].equals("--critical-bg-color-soft"))
+						config.setCriticalBgColorSoft(arg[++loop]);
 					else if (arg[loop].equals("--nagios-unknown-bg-color"))
 						config.setNagiosUnknownBgColor(arg[++loop]);
 					else if (arg[loop].equals("--bgcolor"))
@@ -1896,6 +1908,10 @@ public class CoffeeSaint
 					}
 					else if (arg[loop].equals("--logo-position"))
 						config.setLogoPosition(arg[++loop]);
+					else if (arg[loop].equals("--proxy-host"))
+						config.setProxyHost(arg[++loop]);
+					else if (arg[loop].equals("--proxy-port"))
+						config.setProxyPort(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--split-text-put-at-offset"))
 						config.setPutSplitAtOffset(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--suppress-services-for-scheduled-host-downtime"))

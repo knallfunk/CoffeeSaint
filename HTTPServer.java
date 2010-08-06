@@ -633,6 +633,8 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Network parameters</H1>\n");
 		reply.add("Please note that after you click on submit, the new network-settings are applied immeditately.<BR>\n");
 		reply.add("<TABLE>\n");
+		reply.add("<TR><TD>HTTP proxy (for outbound<BR>connections) host:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"proxy-host\" VALUE=\"" + config.getProxyHost() + "\"></TD></TR>\n");
+		reply.add("<TR><TD>HTTP proxy port:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"proxy-port\" VALUE=\"" + config.getProxyPort() + "\"></TD></TR>\n");
 		reply.add("<TR><TD>Network interface to listen on:</TD><TD><SELECT NAME=\"network-interface\"><OPTION VALUE=\"0.0.0.0\"" + (config.getHTTPServerListenAdapter().equals("0.0.0.0") == true ? " SELECTED" : "") + ">All interfaces</OPTION>");
 		Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
 		for (NetworkInterface netint : Collections.list(nets))
@@ -790,11 +792,17 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Background color OK-status:</TD><TD>\n");
 		colorSelectorHTML(reply, "bgColorOk", config.getBackgroundColorOkStatusName(), false);
 		reply.add("</TD><TD></TD></TR>");
-		reply.add("<TR><TD>Background color warning-status:</TD><TD>\n");
+		reply.add("<TR><TD>Background color warning-status (HARD):</TD><TD>\n");
 		colorSelectorHTML(reply, "warning-bg-color", config.getWarningBgColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
-		reply.add("<TR><TD>Background color critical-status:</TD><TD>\n");
+		reply.add("<TR><TD>Background color warning-status (SOFT):</TD><TD>\n");
+		colorSelectorHTML(reply, "warning-bg-color-soft", config.getWarningBgColorNameSoft(), false);
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Background color critical-status (HARD):</TD><TD>\n");
 		colorSelectorHTML(reply, "critical-bg-color", config.getCriticalBgColorName(), false);
+		reply.add("</TD><TD></TD></TR>");
+		reply.add("<TR><TD>Background color critical-status (SOFT):</TD><TD>\n");
+		colorSelectorHTML(reply, "critical-bg-color-soft", config.getCriticalBgColorNameSoft(), false);
 		reply.add("</TD><TD></TD></TR>");
 		reply.add("<TR><TD>Background color unknown-status:</TD><TD>\n");
 		colorSelectorHTML(reply, "unknown-bg-color", config.getNagiosUnknownBgColorName(), false);
@@ -995,6 +1003,9 @@ class HTTPServer implements Runnable
 
 		config.setFontName(getFieldDecoded(socket, requestData, "font"));
 
+		config.setProxyHost(getFieldDecoded(socket, requestData, "proxy-host"));
+		config.setProxyPort(Integer.valueOf(getFieldDecoded(socket, requestData, "proxy-port")));
+
 		if (!config.getNoNetworkChange())
 		{
 			config.setHTTPServerListenAdapter(getFieldDecoded(socket, requestData, "network-interface"));
@@ -1026,7 +1037,9 @@ class HTTPServer implements Runnable
 
 		config.setBackgroundColorOkStatus(getField(socket, requestData, "bgColorOk"));
 		config.setWarningBgColor(getField(socket, requestData, "warning-bg-color"));
+		config.setWarningBgColorSoft(getField(socket, requestData, "warning-bg-color-soft"));
 		config.setCriticalBgColor(getField(socket, requestData, "critical-bg-color"));
+		config.setCriticalBgColorSoft(getField(socket, requestData, "critical-bg-color-soft"));
 		config.setNagiosUnknownBgColor(getField(socket, requestData, "unknown-bg-color"));
 		config.setSetBgColorToState(getCheckBox(socket, requestData, "color-bg-to-state"));
 
@@ -1544,7 +1557,7 @@ class HTTPServer implements Runnable
 			Host currentHost = hosts.get(index);
 
 			String hostState = currentHost.getParameter("state_type").equals("1") ? currentHost.getParameter("current_state") : "0";
-			String htmlHostStateColor = htmlColorString(coffeeSaint.stateToColor(hostState.equals("1") ? "2" : hostState));
+			String htmlHostStateColor = htmlColorString(coffeeSaint.stateToColor(hostState.equals("1") ? "2" : hostState, true));
 
 			String host;
 			if (coffeeSaint.havePerformanceData(currentHost.getHostName(), null))
@@ -1561,7 +1574,7 @@ class HTTPServer implements Runnable
 			for(Service currentService : currentHost.getServices())
 			{
 				String serviceState = currentService.getParameter("state_type").equals("1") ? currentService.getParameter("current_state") : "0";
-				String htmlServiceStateColor = htmlColorString(coffeeSaint.stateToColor(serviceState));
+				String htmlServiceStateColor = htmlColorString(coffeeSaint.stateToColor(serviceState, true));
 
 				String service;
 				if (coffeeSaint.havePerformanceData(currentHost.getHostName(), currentService.getServiceName()))
@@ -1738,7 +1751,7 @@ class HTTPServer implements Runnable
 
 		for(Problem currentProblem : problems)
 		{
-			String stateColor = htmlColorString(coffeeSaint.stateToColor(currentProblem.getCurrent_state()));
+			String stateColor = htmlColorString(coffeeSaint.stateToColor(currentProblem.getCurrent_state(), currentProblem.getHard()));
 
 			String escapeString;
 			if (currentProblem.getService() == null)
