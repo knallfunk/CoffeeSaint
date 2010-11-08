@@ -119,6 +119,9 @@ public class Config
 	private boolean host_scheduled_downtime_or_ack_show_services;
 	private long maxCheckAge;
 	private boolean showFlappingIcon;
+	private boolean doubleBuffering;
+	private boolean displayUnknown;
+	private boolean displayDown;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -240,6 +243,9 @@ public class Config
 		maxCheckAge = -1;
 		fullscreen = FullScreenMode.NONE;
 		showFlappingIcon = false;
+		doubleBuffering = false;
+		displayUnknown = true;
+		displayDown = true;
 		unlock();
 	}
 
@@ -356,7 +362,7 @@ public class Config
 			setFooter(data);
 
 		data = a.getParameter("proxy-host");
-		if (data != null)
+		if (data != null && data.equals("") == false)
 			setProxyHost(data);
 		data = a.getParameter("proxy-port");
 		if (data != null)
@@ -458,9 +464,15 @@ public class Config
 		data = a.getParameter("header-always-bgcolor");
 		if (data != null)
 			setHeaderAlwaysBGColor(isIsTrue(data));
+
 		data = a.getParameter("show-flapping");
 		if (data != null)
 			setShowFlapping(isIsTrue(data));
+
+		data = a.getParameter("double-buffering");
+		if (data != null)
+			setDoubleBuffering(isIsTrue(data));
+
 		data = a.getParameter("show-flapping-icon");
 		if (data != null)
 			setShowFlappingIcon(isIsTrue(data));
@@ -629,6 +641,13 @@ public class Config
 		data = a.getParameter("web-password");
 		if (data != null)
 			setWebPassword(data);
+
+		data = a.getParameter("display-unknown");
+		if (data != null)
+			setDisplayUnknown(isIsTrue(data));
+		data = a.getParameter("display-down");
+		if (data != null)
+			setDisplayDown(isIsTrue(data));
 	}
 
 	public void loadConfig(String fileName) throws Exception
@@ -736,12 +755,18 @@ public class Config
 						else
 							throw new Exception("Fullscreen mode " + data + " not recognized");
 					}
-					else if (name.equals("use-screen"))
+					else if (name.equals("use-screen") && data.equals("") == false && data.equals("null") == false)
 						setUseScreen(data);
 					else if (name.equals("footer"))
 						setFooter(data);
+					else if (name.equals("double-buffering"))
+						setDoubleBuffering(isTrue);
 					else if (name.equals("adapt-img"))
 						setAdaptImageSize(isTrue);
+					else if (name.equals("display-unknown"))
+						setDisplayUnknown(isTrue);
+					else if (name.equals("display-down"))
+						setDisplayDown(isTrue);
 					else if (name.equals("random-img"))
 						setRandomWebcam(isTrue);
 					else if (name.equals("no-gui"))
@@ -1015,10 +1040,13 @@ public class Config
 		output.add(new String [] { "prefer", getPrefersList()});
 		output.add(new String [] { "always-notify", (getAlwaysNotify() ? "true" : "false")});
 		output.add(new String [] { "also-acknowledged", (getAlsoAcknowledged() ? "true" : "false")});
+		output.add(new String [] { "display-unknown", (getDisplayUnknown() ? "true" : "false")});
+		output.add(new String [] { "display-down", (getDisplayDown() ? "true" : "false")});
 		output.add(new String [] { "font", getFontName()});
 		output.add(new String [] { "critical-font", getCriticalFontName()});
 		output.add(new String [] { "warning-font", getWarningFontName()});
 		output.add(new String [] { "verbose", (getVerbose() ? "true" : "false")});
+		output.add(new String [] { "double-buffering", (getDoubleBuffering() ? "true" : "false")});
 		output.add(new String [] { "anti-alias", (getAntiAlias() ? "true" : "false")});
 		output.add(new String [] { "max-quality-graphics", (getMaxQualityGraphics() ? "true" : "false")});
 		output.add(new String [] { "row-border", (getRowBorder() ? "true" : "false")});
@@ -1029,7 +1057,7 @@ public class Config
 		output.add(new String [] { "graph-color", getGraphColorName()});
 		output.add(new String [] { "no-gui", (!getRunGui() ? "true" : "false")});
 		output.add(new String [] { "fullscreen", getFullscreenName()});
-		if (getUseScreen() != null)
+		if (getUseScreen() != null && getUseScreen().equals("") == false)
 			output.add(new String [] { "use-screen", getUseScreen()});
 		output.add(new String [] { "reduce-textwidth", (getReduceTextWidth() ? "true" : "false")});
 		if (getHeaderSet() == true)
@@ -3428,5 +3456,47 @@ public class Config
 	public int getProxyPort() {
 		Properties properties = System.getProperties();
 		return Integer.valueOf((String)properties.get("http.proxyPort"));
+	}
+
+	public void setDoubleBuffering(boolean to) {
+		lock();
+		doubleBuffering = to;
+		unlock();
+	}
+
+	public boolean getDoubleBuffering() {
+		boolean copy;
+		lock();
+		copy = doubleBuffering;
+		unlock();
+		return copy;
+	}
+
+	public void setDisplayUnknown(boolean du) {
+		lock();
+		displayUnknown = du;
+		unlock();
+	}
+
+	public boolean getDisplayUnknown() {
+		boolean copy;
+		lock();
+		copy = displayUnknown;
+		unlock();
+		return copy;
+	}
+
+	public void setDisplayDown(boolean dd) {
+		lock();
+		displayDown = dd;
+		unlock();
+	}
+
+	public boolean getDisplayDown() {
+		boolean copy;
+		lock();
+		copy = displayDown;
+		unlock();
+		return copy;
 	}
 }

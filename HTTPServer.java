@@ -719,6 +719,7 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Look and feel parameters</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
+		reply.add("<TR><TD>Double buffering:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"double-buffering\" VALUE=\"" + config.getDoubleBuffering() + "\"></TD><TD>Might speed-up/slow-down screen refreshes</TD></TR>\n");
 		reply.add("<TR><TD>Fullscreen mode:</TD><TD><SELECT NAME=\"fullscreen\">\n");
 		reply.add(selectField(config.getFullscreenName(), "none"));
 		reply.add(selectField(config.getFullscreenName(), "undecorated"));
@@ -814,6 +815,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Footer:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"footer\" VALUE=\"" + (config.getFooter() != null ? config.getFooter() : "") + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Show unknown:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"display-unknown\" VALUE=\"on\" " + isChecked(config.getDisplayUnknown()) + "></TD><TD>Display with unknown/pending state</TD></TR>\n");
 		reply.add("<TR><TD>Show flapping icon:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-flapping-icon\" VALUE=\"on\" " + isChecked(config.getShowFlappingIcon()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Header always bg color:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"header-always-bgcolor\" VALUE=\"on\" " + isChecked(config.getHeaderAlwaysBGColor()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-header\" VALUE=\"on\" " + isChecked(config.getScrollingHeader()) + "></TD><TD></TD></TR>\n");
@@ -1291,6 +1293,10 @@ class HTTPServer implements Runnable
 		config.setSortOrder(getFieldDecoded(socket, requestData, "sort-order"), son, sor);
 
 		config.setVerbose(getCheckBox(socket, requestData, "verbose"));
+
+		config.setDisplayUnknown(getCheckBox(socket, requestData, "display-unknown"));
+
+		config.setDoubleBuffering(getCheckBox(socket, requestData, "double-buffering"));
 
 		config.setRowBorder(getCheckBox(socket, requestData, "row-border"));
 

@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.0";
+	static String versionNr = "v4.1";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -686,6 +686,11 @@ public class CoffeeSaint
 		if (cmd.equals("OK"))
 			return "" + totals.getNOk();
 
+		if (cmd.equals("NACKED"))
+			return "" + totals.getNAcked();
+		if (cmd.equals("NFLAPPING"))
+			return "" + totals.getNFlapping();
+
 		if (cmd.equals("UP"))
 			return "" + totals.getNUp();
 		if (cmd.equals("DOWN"))
@@ -1171,7 +1176,7 @@ public class CoffeeSaint
 		java.util.List<Problem> problems = new ArrayList<Problem>();
 
 		// collect problems
-		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems(), config.getShowFlapping(), config.getHostsFilterExclude(), config.getHostsFilterInclude(), config.getServicesFilterExclude(), config.getServicesFilterInclude(), config.getHostScheduledDowntimeShowServices(), config.getHostAcknowledgedShowServices(), config.getHostSDOrAckShowServices());
+		Problems.collectProblems(javNag, config.getPrioPatterns(), problems, lessImportant, config.getAlwaysNotify(), config.getAlsoAcknowledged(), config.getAlsoScheduledDowntime(), config.getAlsoSoftState(), config.getAlsoDisabledActiveChecks(), config.getShowServicesForHostWithProblems(), config.getShowFlapping(), config.getHostsFilterExclude(), config.getHostsFilterInclude(), config.getServicesFilterExclude(), config.getServicesFilterInclude(), config.getHostScheduledDowntimeShowServices(), config.getHostAcknowledgedShowServices(), config.getHostSDOrAckShowServices(), config.getDisplayUnknown(), config.getDisplayDown());
 		// sort problems
 		Problems.sortList(problems, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
 		Problems.sortList(lessImportant, config.getSortOrder(), config.getSortOrderNumeric(), config.getSortOrderReverse());
@@ -1450,6 +1455,8 @@ public class CoffeeSaint
 		System.out.println("--also-soft-state   Also display problems that are not yet in hard state");
 		System.out.println("--also-disabled-active-checks Also display problems for which active checks have been disabled");
 		System.out.println("--suppress-flapping Do not show hosts that are flapping");
+		System.out.println("--filter-unknown    Do not show unknown/pending state");
+		System.out.println("--filter-down       Do not show hosts in down state");
 		System.out.println("--show-flapping-icon Show an icon in front of problems indicating wether they're flapping or not");
 		System.out.println("--show-services-for-host-with-problems");
 		System.out.println("--bgcolor x   Select a background-color, used when there's something to notify about. Default is gray");
@@ -1523,18 +1530,20 @@ public class CoffeeSaint
 		System.out.println("  %PREDICT/%HISTORICAL      ");
 		System.out.println("  %HOSTDURATION/%SERVICEDURATION how long has a host/service been down");
 		System.out.println("  %OUTPUT                   Plugin output");
-		System.out.println("  %FIELDDATEHOST^field      Take 'field' from the host-fields (see 'Sort-fields' below) and convert it into a date-string");
-		System.out.println("  %FIELDDATESERVICE^field   Take 'field' from the service-fields (see 'Sort-fields' below) and convert it into a date-string");
-		System.out.println("  %FIELDBOOLEANHOST^field   Take 'field' from the host-fields (see 'Sort-fields' below) and interprete as yes/no");
-		System.out.println("  %FIELDBOOLEANSERVICE^field  Take 'field' from the service-fields (see 'Sort-fields' below) and interprete as yes/no");
-		System.out.println("  %FIELDHOST                Take 'field' from the host-fields (see 'Sort-fields' below) and display its contents");
-		System.out.println("  %FIELDSERVICE             Take 'field' from the service-fields (see 'Sort-fields' below) and display its contents");
+		System.out.println("  @FIELDDATEHOST^field@     Take 'field' from the host-fields (see 'Sort-fields' below) and convert it into a date-string");
+		System.out.println("  @FIELDDATESERVICE^field@  Take 'field' from the service-fields (see 'Sort-fields' below) and convert it into a date-string");
+		System.out.println("  @FIELDBOOLEANHOST^field@  Take 'field' from the host-fields (see 'Sort-fields' below) and interprete as yes/no");
+		System.out.println("  @FIELDBOOLEANSERVICE^field@  Take 'field' from the service-fields (see 'Sort-fields' below) and interprete as yes/no");
+		System.out.println("  @FIELDHOST^field@         Take 'field' from the host-fields (see 'Sort-fields' below) and display its contents");
+		System.out.println("  @FIELDSERVICE^field@      Take 'field' from the service-fields (see 'Sort-fields' below) and display its contents");
 		System.out.println("  @EXEC^script@             Invoke script 'script' with as parameters: hostname, servicename (or empty string in case of a host failure), current state, plugin-output");
 		System.out.println("                            Unix example: @EXEC^/usr/local/bin/my_script@");
 		System.out.println("                            Windows example: @EXEC^c:\\programs\\myprogram.exec@");
 		System.out.println("  %PERCENT			% character");
 		System.out.println("  %AT                       @ character");
 		System.out.println("  %CHECKLATENCY             Check latency");
+		System.out.println("  %NACKED                   # acknowledged problems");
+		System.out.println("  %NFLAPPING                # flapping problems");
 		System.out.println("");
 		System.out.println("Sort-fields:");
 		config.listSortFields();
@@ -1885,6 +1894,10 @@ public class CoffeeSaint
 						config.setHeaderAlwaysBGColor(true);
 					else if (arg[loop].equals("--color-bg-to-state"))
 						config.setSetBgColorToState(true);
+					else if (arg[loop].equals("--filter-unknown"))
+						config.setDisplayUnknown(false);
+					else if (arg[loop].equals("--filter-down"))
+						config.setDisplayDown(false);
 					else if (arg[loop].equals("--logo"))
 					{
 						String what = arg[++loop];
@@ -1918,6 +1931,8 @@ public class CoffeeSaint
 						config.setHostScheduledDowntimeShowServices(false);
 					else if (arg[loop].equals("--suppress-services-for-acknowledged-host-problems"))
 						config.setHostAcknowledgedShowServices(false);
+					else if (arg[loop].equals("--enable-double-buffering"))
+						config.setDoubleBuffering(true);
 					else if (arg[loop].equals("--sparkline-mode"))
 					{
 						String mode = arg[++loop];

@@ -1056,8 +1056,11 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "Total hosts: " + totals.getNHosts() + ", services: " + totals.getNServices());
 				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "OK: " + totals.getNOk() + ", warning: " + totals.getNWarning() + ", critical: " + totals.getNCritical());
 				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "UP: " + totals.getNUp() + ", down: " + totals.getNDown() + ", unr.: " + totals.getNUnreachable() + ", pending: " + totals.getNPending());
-				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "Average check latency: " + javNag.getAvgCheckLatency());
-				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "Last check age: " + javNag.findMostRecentCheckAge() + "s");
+				String latency = "" + javNag.getAvgCheckLatency();
+				if (latency.length() > 5)
+					latency = latency.substring(0, 5);
+				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "Average check latency: " + latency + ", last check age: " + javNag.findMostRecentCheckAge() + "s");
+				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, "Problems acked: " + totals.getNAcked() + ", flapping: " + totals.getNFlapping());
 			}
 			else
 			{

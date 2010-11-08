@@ -82,7 +82,7 @@ public class JavNag
 				if (elements[2].equals("UP") || elements[2].equals("OK"))
 					current_state = 0;
 				else
-					current_state = 2;
+					current_state = 1;
 				addHostParameterEntry(host, "current_state", "" + current_state);
 				addHostParameterEntry(host, "host_name", "" + hostName);
 				addHostParameterEntry(host, "last_check", elements[3]);
@@ -178,7 +178,9 @@ public class JavNag
 
 		for(String currentLine : fileDump)
 		{
-			if (currentLine.indexOf("{") != -1)
+			int isIndex = currentLine.indexOf("=");
+
+			if (currentLine.indexOf("{") != -1 && isIndex == -1)
 			{
 				String type = null;
 				int space = currentLine.indexOf(" ");
@@ -204,11 +206,10 @@ public class JavNag
 			else if (lineType != LineType.ignore)
 			{
 				String parameter = null, value = null;
-				int isIndex = currentLine.indexOf("=");
 
 				if (isIndex == -1)
 				{
-					if (currentLine.indexOf("}") != -1) {
+					if (currentLine.indexOf("}") != -1 && isIndex == -1) {
 						lineType = LineType.ignore;
 						host_name = null;
 					}
@@ -233,7 +234,10 @@ public class JavNag
 					else if (lineType == LineType.host && host != null)
 						addHostParameterEntry(host, parameter, value);
 					else if (lineType == LineType.service && host != null && service != null)
+					{
+						System.out.println(parameter + " / " + value);
 						addServiceEntry(service, parameter, value);
+					}
 					else if (lineType == LineType.host_comment && host != null) {
 						if (parameter.equals("comment_data") || parameter.equals("entry_time"))
 							addHostParameterEntry(host, parameter, value);
@@ -288,6 +292,7 @@ public class JavNag
 		int nUp = 0, nDown = 0, nUnreachable = 0, nPending = 0;
 		int nHosts = 0, nServices = 0;
 		int nStateUnknownHost = 0, nStateUnknownService = 0;
+		int nAcked = 0, nFlapping = 0;
 
 		for(Host currentHost : hosts)
 		{
@@ -307,6 +312,12 @@ public class JavNag
 			else if (current_state.equals("3"))
 				nPending++;
 
+			if (currentHost.getParameter("problem_has_been_acknowledged").equals("1"))
+				nAcked++;
+
+			if (currentHost.getParameter("is_flapping").equals("1"))
+				nFlapping++;
+
 			nHosts++;
 
 			for(Service currentService : currentHost.getServices())
@@ -325,11 +336,17 @@ public class JavNag
 				else if (current_state.equals("2"))
 					nCritical++;
 
+				if (currentService.getParameter("problem_has_been_acknowledged").equals("1"))
+					nAcked++;
+
+				if (currentService.getParameter("is_flapping").equals("1"))
+					nFlapping++;
+
 				nServices++;
 			}
 		}
 
-		return new Totals(nCritical, nWarning, nOk, nUp, nDown, nUnreachable, nPending, nHosts, nServices, nStateUnknownHost, nStateUnknownService);
+		return new Totals(nCritical, nWarning, nOk, nUp, nDown, nUnreachable, nPending, nHosts, nServices, nStateUnknownHost, nStateUnknownService, nAcked, nFlapping);
 	}
 
 	/**
@@ -367,9 +384,15 @@ public class JavNag
 	 * @param also_acknowledged	Also return true when the problem has been acknowledged in Nagios.
 	 * @return 			true/false
 	 */
-	public boolean shouldIShowHost(Host host, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping)
+	public boolean shouldIShowHost(Host host, boolean always_notify, boolean also_acknowledged, boolean also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping, boolean display_unknown, boolean display_down)
 	{
 		if (host.getParameters().size() == 0)
+			return false;
+
+		if (!display_unknown && host.getParameter("current_state").equals("3") == true)
+			return false;
+
+		if (!display_down && (host.getParameter("current_state").equals("1") == true || host.getParameter("current_state").equals("2") == true))
 			return false;
 
 		if (!show_flapping && host.getParameter("is_flapping").equals("1") == true)
@@ -412,13 +435,16 @@ public class JavNag
 	 * @param also_acknowledged	Also return true when the problem has been acknowledged in Nagios.
 	 * @return 			true/false
 	 */
-	public boolean shouldIShowService(Service service, boolean always_notify, boolean service_also_acknowledged, boolean service_also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping)
+	public boolean shouldIShowService(Service service, boolean always_notify, boolean service_also_acknowledged, boolean service_also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping, boolean display_unknown)
 	{
-		System.out.print(service.getServiceName() + " ");
+		System.out.print("--- " + service.getServiceName() + " ");
 		if (!also_soft_state && service.getParameter("state_type").equals("1") == false) {
 			System.out.println("state_type != 1");
 			return false;
 		}
+
+		if (!display_unknown && service.getParameter("current_state").equals("3") == true)
+			return false;
 
 		if (service.getParameter("current_state").equals("0") == true) {
 			System.out.println("current_state == 0");
@@ -430,6 +456,8 @@ public class JavNag
 			return false;
 		}
 
+System.out.println("p active_checks_enabled: " + service.getParameter("active_checks_enabled"));
+System.out.println("p passive_checks_enabled: " + service.getParameter("passive_checks_enabled"));
 		if (!also_disabled_active_checks && service.getParameter("active_checks_enabled").equals("0") == true && service.getParameter("passive_checks_enabled").equals("0") == true) {
 			System.out.println("checks enabled = false");
 			return false;
@@ -540,7 +568,7 @@ public class JavNag
 		}
 	}
 
-	// via livestatus
+	// via LiveStatus
 	public void loadNagiosDataLiveStatus(String host, int port) throws Exception {
 		loadNagiosDataLiveStatus_hosts(host, port);
 
@@ -600,7 +628,7 @@ public class JavNag
 			index++;
 		}
 		if (nameIndex == -1)
-			throw new Exception("Cannot parse livestatus stream: 'name' missing");
+			throw new Exception("Cannot parse LiveStatus stream: 'name' missing");
 		request += "\n";
 		out.write(request, 0, request.length());
 		out.flush();
@@ -612,7 +640,9 @@ public class JavNag
 				break;
 
 			String [] fieldsCur = line.split("\\|");
-System.out.println("hostline: " + line);
+			System.out.println("hostline: " + line);
+			if (nameIndex >= fieldsCur.length)
+				throw new Exception("LiveStatus data mallformed?");
 			System.out.println("Adding host: " + fieldsCur[nameIndex]);
 			Host hostObj = addAndOrFindHost(fieldsCur[nameIndex]);
 
@@ -699,7 +729,7 @@ System.out.println("hostline: " + line);
 System.out.println(line);
 			String [] fieldsCur = line.split("\\|");
 			if (fieldsCur.length != nFieldsRequested)
-				throw new Exception("Cannot parse livestatus stream: number of elements mismatch (requested: " + nFieldsRequested + ", got: " + fieldsCur.length + ")");
+				throw new Exception("Cannot parse LiveStatus stream: number of elements mismatch (requested: " + nFieldsRequested + ", got: " + fieldsCur.length + ")");
 			System.out.println("Finding host: " + fieldsCur[hostNameIndex]);
 			Host hostObj = addAndOrFindHost(fieldsCur[hostNameIndex]);
 			System.out.println("Adding service: " + fieldsCur[serviceNameIndex]);
