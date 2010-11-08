@@ -15,7 +15,7 @@ import javax.swing.JFrame;
 
 public class Applet extends JApplet implements Runnable
 {
-	final static String rcsId = "$Id: Applet.java,v 1.3 2010-07-21 12:43:00 folkert Exp $";
+	final static String rcsId = "$Id: Applet.java,v 1.4 2010-11-08 11:56:55 folkert Exp $";
 	Thread mainLoop;
 	JFrame	frame;
 	Gui gui;
@@ -45,13 +45,23 @@ public class Applet extends JApplet implements Runnable
 			getContentPane().setLayout(new BorderLayout());
 
 			config = new Config();
-			config.loadAppletParameters(this);
+			final Applet a = this;
+
+			AccessController.doPrivileged(new PrivilegedAction<Object>() {
+				public Object run() {
+					try {
+						config.loadAppletParameters(a);
+					}
+					catch(Exception e) {
+						CoffeeSaint.showException(e);
+					}
+					return null;
+				}});
 
 			CoffeeSaint.config = config;
 			CoffeeSaint cs = new CoffeeSaint();
 
 			gui = new Gui(config, cs, cs.statistics);
-
 			getContentPane().add(gui, BorderLayout.CENTER);
 
 			if (mainLoop == null)
