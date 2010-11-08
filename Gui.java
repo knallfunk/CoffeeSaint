@@ -319,7 +319,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		g2.setFont(f);
 		fm = g2.getFontMetrics();
 
-		int textWidth = fm.stringWidth(text + " ");
+		int textWidth = fm.stringWidth(text);
 
 		return new RowParameters(textWidth, shrunkMore, newAsc, f, heightDiff);
 	}
@@ -327,6 +327,8 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 	public void drawCounter(Graphics g, Position counterPosition, int windowWidth, int windowHeight, int rowHeight, int counter)
 	{
 		int xOffset = 0, yOffset = 0;
+
+		BufferedImage dummy = createRowImage(config.getFontName(), "" + config.getSleepTime(), "255", true, config.getBackgroundColor(), rowHeight, null, false);
 
 		BufferedImage img = createRowImage(config.getFontName(), "" + counter, "255", true, config.getBackgroundColor(), rowHeight, null, false);
 
@@ -337,7 +339,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		}
 		else if (counterPosition == Position.UPPER_RIGHT)
 		{
-			xOffset = windowWidth - img.getWidth();
+			xOffset = windowWidth - dummy.getWidth();
 			yOffset = 0;
 		}
 		else if (counterPosition == Position.LOWER_LEFT)
@@ -347,15 +349,17 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		}
 		else if (counterPosition == Position.LOWER_RIGHT)
 		{
-			xOffset = windowWidth - img.getWidth();
+			xOffset = windowWidth - dummy.getWidth();
 			yOffset = rowHeight * (config.getNRows() - 1) + (config.getShowHeader() ? config.getUpperRowBorderHeight(): 0);
 		}
 		else if (counterPosition == Position.CENTER)
 		{
-			xOffset = (windowWidth / 2) - (img.getWidth() / 2);
-			yOffset = (windowHeight / 2) - (img.getHeight() / 2);
+			xOffset = (windowWidth / 2) - (dummy.getWidth() / 2);
+			yOffset = (windowHeight / 2) - (dummy.getHeight() / 2);
 		}
 
+		g.setColor(config.getBackgroundColor());
+		g.fillRect(xOffset, yOffset, dummy.getWidth(), dummy.getHeight());
 		g.drawImage(img, xOffset, yOffset, img.getWidth(), img.getHeight(), this);
 	}
 
@@ -380,8 +384,8 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 		if (adaptImgSize)
 		{
-			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset + nProblems));
-			offsetY = (headerOffset + footerOffset + nProblems) * rowHeight;
+			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset + nProblems)) - config.getUpperRowBorderHeight();
+			offsetY = (headerOffset + footerOffset + nProblems) * rowHeight + config.getUpperRowBorderHeight();
 		}
 		else if (config.getHeaderTransparency() != 1.0f)
 		{
@@ -390,8 +394,8 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		}
 		else
 		{
-			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset));
-			offsetY = rowHeight * headerOffset;
+			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset)) - config.getUpperRowBorderHeight();
+			offsetY = rowHeight * headerOffset + config.getUpperRowBorderHeight();
 		}
 
 		if (curWindowHeight > 0)
@@ -461,7 +465,9 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 	{
 		configureRendered(g, false);
 
-		int verticalNRows = Math.min(config.getNRows(), bordersParameters.getNProblems() + (config.getShowHeader() ? 1 : 0));
+		int verticalNRows = Math.min(config.getNRows() - ((config.getShowHeader() ? 1 : 0) + (config.getFooter() != null ? 1 : 0)), bordersParameters.getNProblems());
+		int offset = config.getShowHeader() ? (bordersParameters.getRowHeight() + config.getUpperRowBorderHeight()): 0;
+		int maxY = bordersParameters.getRowHeight() * verticalNRows + offset;
 
 		g.setColor(config.getRowBorderColor());
 		if (bordersParameters.getNColumns() > 1)
@@ -469,8 +475,8 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			for(int rowColumns=0; rowColumns < bordersParameters.getNColumns(); rowColumns++)
 			{
 				int x = (bordersParameters.getWindowWidth() * rowColumns) / bordersParameters.getNColumns();
-				int y =  config.getShowHeader() ? (bordersParameters.getRowHeight() + config.getUpperRowBorderHeight()): 0;
-				g.drawLine(x, y, x, bordersParameters.getRowHeight() * verticalNRows);
+				int y = offset;
+				g.drawLine(x, y, x, maxY);
 			}
 		}
 
@@ -488,7 +494,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 		if (config.getFooter() != null)
 		{
-			int y =  config.getShowHeader() ? config.getUpperRowBorderHeight(): 0;
+			int y = config.getShowHeader() ? config.getUpperRowBorderHeight(): 0;
 			y += (config.getNRows() - 1) * bordersParameters.getRowHeight();
 			g.drawLine(0, y, bordersParameters.getWindowWidth(), y);
 		}
@@ -499,25 +505,13 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			g.fillRect(0, drawY, bordersParameters.getWindowWidth(), config.getUpperRowBorderHeight());
 		}
 
-		configureRendered((Graphics2D)g, true);
-	}
-
-	public void drawProblemServiceSplitLine(Graphics g, int rowHeight, int windowHeight, int nProblems)
-	{
-		if (config.getPutSplitAtOffset() != null)
+		if (config.getDrawProblemServiceSplitLine() && config.getPutSplitAtOffset() != null)
 		{
 			int x = config.getPutSplitAtOffset();
-			int maxY = nProblems * bordersParameters.getRowHeight(), minY = 0;
-			if (config.getShowHeader() == true)
-			{
-				minY = config.getUpperRowBorderHeight() + rowHeight;
-				maxY += minY;
-			}
-			maxY = Math.min(maxY, windowHeight - (config.getFooter() != null ? rowHeight : 0));
-
-			g.setColor(config.getRowBorderColor());
-			g.drawLine(x, minY, x, maxY);
+			g.drawLine(x, offset, x, maxY);
 		}
+
+		configureRendered((Graphics2D)g, true);
 	}
 
 	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
@@ -706,6 +700,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			/* problems */
 			int colNr = 0;
 			final int rowColWidth = windowWidth / curNColumns;
+			int curMaxNRows = 0;
 			for(Problem currentProblem : problems)
 			{
 				boolean isFlapping = false;
@@ -766,12 +761,16 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 				if (curNRows == (config.getNRows() - (config.getFooter() != null ? 1 : 0)))
 				{
+					if (curNRows > curMaxNRows)
+						curMaxNRows = curNRows;
 					curNRows = config.getShowHeader() ? 1 : 0;
 					colNr++;
 					if (colNr == curNColumns)
 						break;
 				}
 			}
+			if (curMaxNRows == 0)
+				curMaxNRows = curNRows;
 
 			/* footer */
 			if (config.getFooter() != null)
@@ -885,9 +884,6 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 					drawBorders((Graphics2D)g, bordersParameters);
 				movingPartsSemaphore.release();
 			}
-
-			if (config.getDrawProblemServiceSplitLine())
-				drawProblemServiceSplitLine(g, rowHeight, windowHeight, problems.size());
 
 			boolean toOld = false;
 			long maxAge = config.getMaxCheckAge();
@@ -1173,7 +1169,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		{
 			long now = System.currentTimeMillis();
 			long left = (long)config.getSleepTime() - ((now - lastRefresh) / 1000);
-			int rowHeight = getHeight() / config.getNRows();
+			final int rowHeight = (getHeight() - (config.getShowHeader() ? config.getUpperRowBorderHeight() : 0)) / config.getNRows();
 			int characterSize = rowHeight - 1;
 
 			configureRendered(g2d, true);
@@ -1195,8 +1191,6 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			if (bordersParameters != null && windowMovingParts.size() > 0)
 			{
 				drawBorders((Graphics2D)g, bordersParameters);
-				if (config.getDrawProblemServiceSplitLine())
-					drawProblemServiceSplitLine(g, rowHeight, getHeight(), bordersParameters.getNProblems());
 			}
 			// FIXME bottomLine
 			movingPartsSemaphore.release();
