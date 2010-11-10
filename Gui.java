@@ -367,6 +367,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 	{
 		int headerOffset = config.getShowHeader() ? 1 : 0;
 		int footerOffset = config.getFooter() != null ? 1 : 0;
+		int urbHeight = config.getShowHeader() ? config.getUpperRowBorderHeight() : 0;
 		int curWindowHeight, offsetY;
 		int maxW = -1, maxH = -1, nr;
 
@@ -384,18 +385,18 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 		if (adaptImgSize)
 		{
-			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset + nProblems)) - config.getUpperRowBorderHeight();
-			offsetY = (headerOffset + footerOffset + nProblems) * rowHeight + config.getUpperRowBorderHeight();
+			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset + nProblems));
+			offsetY = (headerOffset + footerOffset + nProblems) * rowHeight + urbHeight;
 		}
 		else if (config.getHeaderTransparency() != 1.0f)
 		{
-			curWindowHeight = rowHeight * config.getNRows();
+			curWindowHeight = windowHeight;
 			offsetY = 0;
 		}
 		else
 		{
-			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset)) - config.getUpperRowBorderHeight();
-			offsetY = rowHeight * headerOffset + config.getUpperRowBorderHeight();
+			offsetY = rowHeight * headerOffset + urbHeight;
+			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset));
 		}
 
 		if (curWindowHeight > 0)
@@ -984,7 +985,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 	public void initPopup(Graphics g, int useWidth, int useHeight) {
 		g.setColor(Color.WHITE);
-		g.fillRect(51, 51, useWidth - 2, useHeight - 2);
+		g.fillRect(50, 50, useWidth, useHeight);
 
 		g.setColor(Color.BLACK);
 		g.drawRect(50, 50, useWidth, useHeight);
@@ -1184,23 +1185,23 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			}
 
 			movingPartsSemaphore.acquireUninterruptibly();
-			for(ScrollableContent currentMovingPart : windowMovingParts)
-			{
-				currentMovingPart.scrollView(g2d, config.getScrollingPixelsPerSecond());
-			}
-			if (bordersParameters != null && windowMovingParts.size() > 0)
-			{
-				drawBorders((Graphics2D)g, bordersParameters);
-			}
-			// FIXME bottomLine
-			movingPartsSemaphore.release();
+			if (currentRow == null) {
+				for(ScrollableContent currentMovingPart : windowMovingParts) {
+					currentMovingPart.scrollView(g2d, config.getScrollingPixelsPerSecond());
+				}
 
-			Position counterPosition = config.getCounterPosition();
-			if (config.getCounter() && lastLeft != left && counterPosition != null)
-			{
-				drawCounter(g, counterPosition, getWidth(), getHeight(), rowHeight, (int)left);
-				lastLeft = left;
+				boolean drawnCounter = false;
+				Position counterPosition = config.getCounterPosition();
+				if (config.getCounter() && lastLeft != left && counterPosition != null) {
+					drawCounter(g, counterPosition, getWidth(), getHeight(), rowHeight, (int)left);
+					lastLeft = left;
+					drawnCounter = true;
+				}
+
+				if (bordersParameters != null && (windowMovingParts.size() > 0 || drawnCounter))
+					drawBorders((Graphics2D)g, bordersParameters);
 			}
+			movingPartsSemaphore.release();
 
 			if (windowMovingParts.size() > 0)
 				Thread.sleep(5);
