@@ -1,3 +1,5 @@
+- @FIELD^field|service|host|nagiosserver@
+
 - dynamic interval: 
 	Math.max(interval, Max[Math.ceil(next_check + check_execution_time + check_latency + 1)]);
                            ^^^

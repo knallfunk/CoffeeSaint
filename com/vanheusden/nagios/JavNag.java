@@ -235,7 +235,7 @@ public class JavNag
 						addHostParameterEntry(host, parameter, value);
 					else if (lineType == LineType.service && host != null && service != null)
 					{
-						System.out.println(parameter + " / " + value);
+						// System.out.println(parameter + " / " + value);
 						addServiceEntry(service, parameter, value);
 					}
 					else if (lineType == LineType.host_comment && host != null) {
@@ -398,6 +398,7 @@ public class JavNag
 		if (!show_flapping && host.getParameter("is_flapping").equals("1") == true)
 			return false;
 
+//System.out.println(host.getHostName() + " " + host.getParameter("state_type"));
 		if (!also_soft_state && host.getParameter("state_type").equals("0") == true) // if SOFT, do not show
 			return false;
 
@@ -437,7 +438,7 @@ public class JavNag
 	 */
 	public boolean shouldIShowService(Service service, boolean always_notify, boolean service_also_acknowledged, boolean service_also_scheduled_downtime, boolean also_soft_state, boolean also_disabled_active_checks, boolean show_flapping, boolean display_unknown)
 	{
-		System.out.print("--- " + service.getServiceName() + " ");
+		// System.out.print("--- " + service.getServiceName() + " ");
 		if (!also_soft_state && service.getParameter("state_type").equals("1") == false) {
 			System.out.println("state_type != 1");
 			return false;
@@ -447,7 +448,7 @@ public class JavNag
 			return false;
 
 		if (service.getParameter("current_state").equals("0") == true) {
-			System.out.println("current_state == 0");
+			// System.out.println("current_state == 0");
 			return false;
 		}
 
@@ -726,13 +727,13 @@ System.out.println("p passive_checks_enabled: " + service.getParameter("passive_
 			if (line == null)
 				break;
 
-System.out.println(line);
+//System.out.println(line);
 			String [] fieldsCur = line.split("\\|");
 			if (fieldsCur.length != nFieldsRequested)
 				throw new Exception("Cannot parse LiveStatus stream: number of elements mismatch (requested: " + nFieldsRequested + ", got: " + fieldsCur.length + ")");
-			System.out.println("Finding host: " + fieldsCur[hostNameIndex]);
+			//System.out.println("Finding host: " + fieldsCur[hostNameIndex]);
 			Host hostObj = addAndOrFindHost(fieldsCur[hostNameIndex]);
-			System.out.println("Adding service: " + fieldsCur[serviceNameIndex]);
+			//System.out.println("Adding service: " + fieldsCur[serviceNameIndex]);
 			Service service = hostObj.addAndOrFindService(fieldsCur[serviceNameIndex]);
 			int fieldIndex = 0;
 			for(String [] mapEntry : map) {

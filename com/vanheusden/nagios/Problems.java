@@ -148,7 +148,7 @@ public class Problems implements Comparator<Problem>
 				showHost = true;
 			}
 
-System.out.println(hostName + " hoststate " + hostState + " bla");
+// System.out.println(hostName + " hoststate " + hostState + " bla");
 			boolean host_scheduled_downtime = Double.valueOf(currentHost.getParameter("scheduled_downtime_depth")) != 0.0;
 			boolean host_has_acked = currentHost.getParameter("problem_has_been_acknowledged").equals("1") == true;
 			if (hostState.equals("0") == false) {
@@ -159,7 +159,7 @@ System.out.println(hostName + " hoststate " + hostState + " bla");
 					showServices = false;
 			}
 
-			System.out.println("flags: " + host_scheduled_downtime_or_ack_show_services + " " + host_scheduled_downtime + " " + host_has_acked + " showservices: "+ showServices);
+			// System.out.println("flags: " + host_scheduled_downtime_or_ack_show_services + " " + host_scheduled_downtime + " " + host_has_acked + " showservices: "+ showServices);
 			if (host_scheduled_downtime_or_ack_show_services == false && (host_scheduled_downtime || host_has_acked))
 				showServices = false;
 
@@ -170,7 +170,7 @@ System.out.println(hostName + " hoststate " + hostState + " bla");
 //System.out.println("check services");
 				for(Service currentService : currentHost.getServices())
 				{
-System.out.println("service: " + currentService.getServiceName());
+// System.out.println("service: " + currentService.getServiceName());
 					assert currentService != null;
 					if (javNag.shouldIShowService(currentService, always_notify, also_acknowledged, also_scheduled_downtime, also_soft_state, also_disabled_active_checks, display_flapping, display_unknown))
 					{
