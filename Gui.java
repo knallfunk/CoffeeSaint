@@ -459,7 +459,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		g.setColor(Color.RED);
 		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 		String error = e.toString().replaceAll("java.[a-z]*.", "");
-		prepareRow(g, windowWidth, 0, "Error: " + error, config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, false, false);
+		prepareRow(g, windowWidth, 0, "Error: " + error, config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, true, false);
 	}
 
 	public void drawBorders(Graphics2D g, BordersParameters bordersParameters)
@@ -927,13 +927,14 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		{
 			g.setColor(Color.RED);
 			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
-			prepareRow(g, windowWidth, 0, "Audio sample unsupported format (" + uafe + ")", config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, false, false);
+			windowMovingParts = new ArrayList<ScrollableContent>();
+			prepareRow(g, windowWidth, 0, "Audio sample unsupported format (" + uafe + ")", config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, true, false);
 		}
 		catch(Exception e)
 		{
 			statistics.incExceptions();
-
 			CoffeeSaint.showException(e);
+			windowMovingParts = new ArrayList<ScrollableContent>();
 
 			if (g != null)
 				showCoffeeSaintProblem(e, g, windowWidth, rowHeight);
