@@ -122,6 +122,7 @@ public class Config
 	private boolean doubleBuffering;
 	private boolean displayUnknown;
 	private boolean displayDown;
+	private int webcamTimeout;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -246,6 +247,7 @@ public class Config
 		doubleBuffering = false;
 		displayUnknown = true;
 		displayDown = true;
+		webcamTimeout = -1;
 		unlock();
 	}
 
@@ -540,6 +542,11 @@ public class Config
 		data = a.getParameter("interval");
 		if (data != null)
 			setSleepTime(Integer.valueOf(data));
+
+		data = a.getParameter("webcam-timeout");
+		if (data != null)
+			setWebcamTimeout(Integer.valueOf(data));
+
 		data = a.getParameter("scrolling-header");
 		if (data != null)
 			setScrollingHeader(isIsTrue(data));
@@ -894,6 +901,8 @@ public class Config
 						setNRows(Integer.valueOf(data));
 					else if (name.equals("interval"))
 						setSleepTime(Integer.valueOf(data));
+					else if (name.equals("webcam-timeout"))
+						setWebcamTimeout(Integer.valueOf(data));
 					else if (name.equals("scrolling-header"))
 						setScrollingHeader(isTrue);
 					else if (name.equals("scrolling-footer"))
@@ -1033,6 +1042,7 @@ public class Config
 		output.add(new String [] { "host-acknowledged-show-services", (getHostAcknowledgedShowServices() ? "true" : "false")});
 		output.add(new String [] { "host-scheduled-downtime-or-ack-show-services", (getHostSDOrAckShowServices() ? " true" : "false")});
 		output.add(new String [] { "interval", "" + getSleepTime()});
+		output.add(new String [] { "webcam-timeout", "" + getWebcamTimeout()});
 		List<String> iu = getImageUrls();
 		List<ImageUrlType> iut = getImageUrlTypes();
 		for(int index=0; index<iu.size(); index++)
@@ -3496,6 +3506,20 @@ public class Config
 		boolean copy;
 		lock();
 		copy = displayDown;
+		unlock();
+		return copy;
+	}
+
+	public void setWebcamTimeout(int to) {
+		lock();
+		webcamTimeout = to;
+		unlock();
+	}
+
+	public int getWebcamTimeout() {
+		int copy;
+		lock();
+		copy = webcamTimeout;
 		unlock();
 		return copy;
 	}

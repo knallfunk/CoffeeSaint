@@ -881,6 +881,12 @@ class HTTPServer implements Runnable
 		for(String image : config.getImageUrls())
 			reply.add("<TR><TD>Remove webcam:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"webcam_" + image.hashCode() + "\" VALUE=\"on\"><A HREF=\"" + image + "\" TARGET=\"_new\">" + image + "</A></TD></TR>\n");
 		reply.add("<TR><TD>Add webcam:</TD><TD><SELECT NAME=\"newWebcamType\"><OPTION VALUE=\"MJPEG\">MJPEG</OPTION><OPTION VALUE=\"HTTP\">HTTP</OPTION><OPTION VALUE=\"HTTPS\">HTTPS</OPTION><OPTION VALUE=\"FILE\">FILE</OPTION></SELECT> <INPUT TYPE=\"TEXT\" NAME=\"newWebcam\"></TD></TR>\n");
+		String to;
+		if (config.getWebcamTimeout() == -1)
+			to = "";
+		else
+			to = "" + config.getWebcamTimeout();
+		reply.add("<TR><TD>Loading timeout:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"webcam-timeout\" VALUE=\"" + to + "\"></TD><TD>In seconds, &gt; 1, leave empty to disable</TD></TR>\n");
 		reply.add("<TR><TD>Adapt image size:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"adapt-img\" VALUE=\"on\" " + isChecked(config.getAdaptImageSize()) + "> (fit below list of problems)</TD></TR>\n");
 		reply.add("<TR><TD>Randomize order of images:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"random-img\" VALUE=\"on\" " + isChecked(config.getRandomWebcam()) + "></TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"cam-cols\" VALUE=\"" + config.getCamCols() + "\"></TD></TR>\n");
@@ -1058,6 +1064,16 @@ class HTTPServer implements Runnable
 				config.setSleepTime(newSleepTime);
 			}
 		}
+
+		String wcTo = getField(socket, requestData, "webcam-timeout");
+		int wcToVal = -1;
+		if (wcTo == null || wcTo.trim().equals("") == true)
+			wcToVal = -1;
+		else
+			wcToVal = Integer.valueOf(wcTo);
+		if (wcToVal <= 0 || wcToVal > config.getSleepTime())
+			wcToVal = -1;
+		config.setWebcamTimeout(wcToVal);
 
 		String webExpireTime = getField(socket, requestData, "web-expire-time");
 		if (webExpireTime != null && webExpireTime.equals("") == false)

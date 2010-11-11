@@ -1,2 +1,3 @@
-- counter
-- webcam(s) placement
+- scroll error messages so that they're not cut off
+- set timeout on remote retrieval of nagios status
+- webcam loading timeout

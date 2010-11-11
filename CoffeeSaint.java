@@ -869,6 +869,12 @@ public class CoffeeSaint
 			gui.prepareRow(g, windowWidth, 0, message, 0, "0", true, config.getBackgroundColor(), 1.0f, null, false, false);
 	}
 
+	static public Image getImageFromUrlWithTimeout(String url, int timeout) throws Exception {
+		ImageLoader i = new ImageLoader(url, timeout);
+
+		return i.getImage();
+	}
+
 	Image getMJPEGFrame(String urlStr) throws Exception {
 		URL url = new URL(urlStr);
 		HttpURLConnection connection = (HttpURLConnection)url.openConnection();
@@ -993,7 +999,10 @@ public class CoffeeSaint
 		}
 		imageSemaphore.release();
 
-		Image [] img = new Image[loadNImages];
+		int to = config.getWebcamTimeout() * 1000;
+		if (to < 1)
+			to = config.getSleepTime() * 1000;
+		ImageLoader [] il = new ImageLoader[loadNImages];
 		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
 		{
 			String loadImage = imageUrls.get(indexes[nr]);
@@ -1001,30 +1010,32 @@ public class CoffeeSaint
 			drawLoadStatus(gui, windowWidth, g, "Start load img " + loadImage);
 
 			if (imageUrlTypes.get(indexes[nr]) == ImageUrlType.HTTP)
-				img[nr] = Toolkit.getDefaultToolkit().createImage(new URL(loadImage));
+				il[nr] = new ImageLoader(loadImage, to);
 			else if (imageUrlTypes.get(indexes[nr]) == ImageUrlType.HTTP_MJPEG)
 			{ /* loading is done below */ }
 			else
-				img[nr] = Toolkit.getDefaultToolkit().createImage(loadImage);
+				il[nr] = new ImageLoader(loadImage, to);
 		}
 
 		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
 		{
 			String loadImage = imageUrls.get(indexes[nr]);
+			Image image = null;
 			drawLoadStatus(gui, windowWidth, g, "Load image " + loadImage);
 
 			if (imageUrlTypes.get(indexes[nr]) != ImageUrlType.HTTP_MJPEG) {
-				new ImageIcon(img[nr]); //loads the image
-				Toolkit.getDefaultToolkit().sync();
+				image = il[nr].getImage();
 			}
 			else {
-				img[nr] = getMJPEGFrame(loadImage);
+				image = getMJPEGFrame(loadImage);
 			}
 
-			int imgWidth = img[nr].getWidth(null);
-			int imgHeight = img[nr].getHeight(null);
+			if (image != null) {
+				int imgWidth = image.getWidth(null);
+				int imgHeight = image.getHeight(null);
 
-			result[nr] = new ImageParameters(img[nr], loadImage, imgWidth, imgHeight);
+				result[nr] = new ImageParameters(image, loadImage, imgWidth, imgHeight);
+			}
 		}
 
 		return result;
@@ -1433,6 +1444,7 @@ public class CoffeeSaint
 		System.out.println("--proxy-port  Proxy to use for outbound http requests.");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
+		System.out.println("--webcam-timeout x   Maximum time for loading 1 webcam. If not set, the Nagios status loading interval is used.");
 		System.out.println("--use-host-alias Show host-alias instead of hostname");
 		System.out.println("--fullscreen x Run in a fullscreen mode, e.g. without any borders (undecorated), no menu bars (fullscreen), spread over all monitors (allmonitors) or none (none)");
 		System.out.println("--list-screens  To see a list of screens connected to the system on which CoffeeSaint is running");
@@ -1778,6 +1790,8 @@ public class CoffeeSaint
 						config.setNRows(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--interval"))
 						config.setSleepTime(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--webcam-timeout"))
+						config.setWebcamTimeout(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--image"))
 					{
 						String type = arg[++loop];
