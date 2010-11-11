@@ -1013,6 +1013,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, (String)r.getObject1());
 
 				JavNag javNag = new JavNag();
+				javNag.setSocketTimeout(config.getSleepTime() * 1000);
 				int prevNHosts = 0, prevNServices = 0;;
 				for(NagiosDataSource dataSource : config.getNagiosDataSources())
 				{

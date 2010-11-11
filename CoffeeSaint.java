@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.2-beta1";
+	static String versionNr = "v4.3-beta1";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -1101,6 +1101,7 @@ public class CoffeeSaint
 	public static JavNag loadNagiosData(Gui gui, int windowWidth, Graphics g) throws Exception
 	{
 		JavNag javNag = new JavNag();
+		javNag.setSocketTimeout(config.getSleepTime() * 1000);
 
 		long startLoadTs = System.currentTimeMillis();
 
