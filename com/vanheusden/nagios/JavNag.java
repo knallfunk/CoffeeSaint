@@ -11,6 +11,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.FileReader;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
@@ -27,6 +28,25 @@ import java.util.zip.InflaterInputStream;
 public class JavNag
 {
 	List<Host> hosts = new ArrayList<Host>();
+	int socketTimeout = -1;
+
+	public void setSocketTimeout(int st) {
+		System.out.println("Setting socket timeout to: " + st);
+		socketTimeout = st;
+	}
+
+	public Socket connectToSocket(String host, int port) throws Exception {
+		Socket socket = new Socket();
+
+		if (socketTimeout != -1) {
+			socket.connect(new InetSocketAddress(host, port), socketTimeout);
+			socket.setSoTimeout(socketTimeout);
+		}
+		else
+			socket.connect(new InetSocketAddress(host, port));
+
+		return socket;
+	}
 
 	private Host addAndOrFindHost(String hostName)
 	{
@@ -539,7 +559,7 @@ System.out.println("p passive_checks_enabled: " + service.getParameter("passive_
 	public void loadNagiosData(String host, int port, NagiosVersion nagiosVersion, boolean compressed) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();
-		Socket socket = new Socket(host, port);
+		Socket socket = connectToSocket(host, port);
 		BufferedReader in;
 		String line;
 
@@ -577,7 +597,7 @@ System.out.println("p passive_checks_enabled: " + service.getParameter("passive_
 	}
 
 	private void loadNagiosDataLiveStatus_hosts(String host, int port) throws Exception {
-		Socket socket = new Socket(host, port);
+		Socket socket = connectToSocket(host, port);
 		BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
@@ -656,7 +676,7 @@ System.out.println("p passive_checks_enabled: " + service.getParameter("passive_
 	}
 
 	private void loadNagiosDataLiveStatus_services(String host, int port) throws Exception {
-		Socket socket = new Socket(host, port);
+		Socket socket = connectToSocket(host, port);
 		BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
