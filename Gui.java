@@ -678,9 +678,10 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				// if (config.getHeaderTransparency() != 1.0f)
 				//	stateForColor = "254";
 				int xStart = 0, ww = windowWidth;;
-				if (logo != null && config.getLogoPosition() == Position.UPPER_LEFT || config.getLogoPosition() == Position.UPPER_RIGHT)
+				Position lp = config.getLogoPosition();
+				if (logo != null && (lp == Position.UPPER_LEFT || lp == Position.UPPER_RIGHT || lp == Position.LEFT || lp == Position.RIGHT))
 				{
-					if (config.getLogoPosition() == Position.UPPER_LEFT)
+					if (lp == Position.UPPER_LEFT || lp == Position.LEFT)
 						xStart = newLogoWidth;
 
 					ww -= newLogoWidth;

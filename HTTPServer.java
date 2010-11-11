@@ -848,8 +848,15 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Problem message bg color:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"no-problems-text-with-bg-color\" VALUE=\"on\" " + isChecked(config.getNoProblemsTextBg()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Logo:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"logo-url\" VALUE=\"" + (config.getLogo() != null ? config.getLogo() : "") + "\"></TD><TD>Either a pathname or an URL.</TD></TR>\n");
 		reply.add("<TR><TD>Logo position:</TD><TD><SELECT NAME=\"logo-position\">\n");
-		reply.add(selectField(config.getLogoPositionName(), "left"));
-		reply.add(selectField(config.getLogoPositionName(), "right"));
+		Position lp = config.getLogoPosition();
+		reply.add("<OPTION VALUE=\"left\"");
+		if (lp == Position.LEFT || lp == Position.UPPER_LEFT)
+			reply.add(" SELECTED");
+		reply.add(">left</OPTION>");
+		reply.add("<OPTION VALUE=\"right\"");
+		if (lp == Position.RIGHT || lp == Position.UPPER_RIGHT)
+			reply.add(" SELECTED");
+		reply.add(">right</OPTION>");
 		reply.add("</SELECT></TD><TD></TD></TR>\n");
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
