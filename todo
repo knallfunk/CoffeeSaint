@@ -1,4 +1,8 @@
-- @FIELD^field|service|host|nagiosserver@
+- regexps
+- uitlijnen tekst en ... er in enzo
+- font naam in config scherm
+
+------------------------
 
 - dynamic interval: 
 	Math.max(interval, Max[Math.ceil(next_check + check_execution_time + check_latency + 1)]);

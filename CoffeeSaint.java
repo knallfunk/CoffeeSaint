@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.3-beta1";
+	static String versionNr = "v4.3-beta2";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -144,7 +144,7 @@ public class CoffeeSaint
 		String entity = host;
 		if (service != null)
 			entity += " | " + service;
-		System.out.println("sparkline entity: " + entity);
+		// System.out.println("sparkline entity: " + entity);
 
 		PerformanceDataPerElement element = performanceData.get(entity);
 		if (element != null)
@@ -637,6 +637,25 @@ public class CoffeeSaint
 		if (cmd.equals("AT"))
 			return "@";
 
+		if (cmd.equals("FIELD") && pars != null) {
+			String [] fields = pars.split("|");
+			// field|service|host
+			// field|host
+			// field
+			if (fields.length == 1) { // field
+				if (problem.getService() != null)
+					return problem.getService().getParameter(fields[0]);
+				else if (problem.getHost() != null)
+					return problem.getHost().getParameter(fields[0]);
+			}
+			else if (fields.length == 2) { // field|host
+				javNag.getField(fields[1], fields[0]);
+			}
+			else if (fields.length == 3) { // field|service|host
+				javNag.getField(fields[2], fields[1], fields[0]);
+			}
+		}
+
 		if (cmd.equals("FIELDHOST") && pars != null && pars.length() > 0)
 		{
 			String data = problem.getHost().getParameter(pars);
@@ -781,6 +800,9 @@ public class CoffeeSaint
 		boolean loadingCmd = false, atTerminator = false, hadSplitter = false;
 		String cmd = "", output = "";
 
+		if (in == null)
+			return "";
+
 		for(int index=0; index<in.length(); index++) {
 			if (loadingCmd) {
 				char currentChar = in.charAt(index);
@@ -869,116 +891,35 @@ public class CoffeeSaint
 			gui.prepareRow(g, windowWidth, 0, message, 0, "0", true, config.getBackgroundColor(), 1.0f, null, false, false);
 	}
 
-	static public Image getImageFromUrlWithTimeout(String url, int timeout) throws Exception {
-		ImageLoader i = new ImageLoader(url, timeout);
+	public ImageLoadingParameters startLoadingImages(Gui gui, int windowWidth, Graphics g) throws Exception {
+		ImageLoadingParameters ilp = new ImageLoadingParameters();
+		ilp.imageUrls = config.getImageUrls();
 
-		return i.getImage();
-	}
-
-	Image getMJPEGFrame(String urlStr) throws Exception {
-		URL url = new URL(urlStr);
-		HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-		String cType = connection.getContentType();
-		int bOffset = cType.indexOf("boundary=");
-		if (bOffset == -1)
-			throw new Exception("Don't know how to handle " + urlStr + ", stream not understood");
-		String boundary = cType.substring(bOffset + 9);
-		int bEnd = boundary.indexOf(" ");
-		if (bEnd == -1)
-			bEnd = boundary.indexOf(";");
-		if (bEnd != -1)
-			boundary = boundary.substring(0, bEnd);
-		int bLen = boundary.length();
-
-		int maxSize = 1024 * 1024;
-		byte [] imageData = new byte[maxSize]; // really frames should not be that large
-		int idLen = 0;
-
-		InputStream input = connection.getInputStream();
-
-		byte [] crlf = new byte[4];
-		do
-		{
-			crlf[0] = crlf[1];
-			crlf[1] = crlf[2];
-			crlf[2] = crlf[3];
-			int c = input.read();
-			if (c == -1)
-				break;
-			crlf[3] = (byte)c;
-		}
-		while(crlf[0] != '\r' || crlf[1] != '\n' || crlf[2] != '\r' || crlf[3] != '\n');
-
-		boolean found = false;
-		while(idLen < maxSize) {
-			int c = input.read();
-			if (c == -1)
-				break;
-			imageData[idLen++] = (byte)c;
-			if (idLen >= bLen) {
-				int index = -1;
-				found = false;
-				for(index=bLen; index<(idLen - bLen); index++) {
-					found = true;
-					for(int checkLoop=0; checkLoop<bLen; checkLoop++) {
-						if (imageData[index + checkLoop] != (byte)boundary.charAt(checkLoop)) {
-							found = false;
-							break;
-						}
-					}
-					if (found)
-						break;
-				}
-
-				if (found) {
-					idLen = index;
-					break;
-				}
-			}
-		}
-
-		input.close();
-		connection.disconnect();
-
-		if (found) {
-			byte [] result = new byte[idLen];
-			System.arraycopy(imageData, 0, result, 0, idLen);
-
-			MyInputStream misr = new MyInputStream(result);
-
-			return ImageIO.read((InputStream)misr);
-		}
-
-		return null;
-	}
-
-	public ImageParameters [] loadImage(Gui gui, int windowWidth, Graphics g) throws Exception
-	{
-		int nr;
-		java.util.List<String> imageUrls = config.getImageUrls();
-		java.util.List<ImageUrlType> imageUrlTypes = config.getImageUrlTypes();
-		int nImages = imageUrls.size();
+		int nImages = ilp.imageUrls.size();
 		if (nImages == 0)
 			return null;
 
 		int loadNImages = config.getCamRows() * config.getCamCols();
 
-		ImageParameters [] result = new ImageParameters[loadNImages];
-		int [] indexes = new int[loadNImages];
+		ilp.il = null;
+		ilp.imageUrlTypes = config.getImageUrlTypes();
+		ilp.indexes = new int[Math.min(nImages, loadNImages)];
+
+		System.out.println("LOADIMGS " + nImages + " " + loadNImages);
 
 		imageSemaphore.acquireUninterruptibly(); // lock around 'currentImageFile'
 		if (config.getRandomWebcam())
 		{
-			for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
+			for(int nr=0; nr<ilp.indexes.length; nr++)
 			{
 				boolean found;
 				do
 				{
 					found = false;
-					indexes[nr] = random.nextInt(nImages);
+					ilp.indexes[nr] = random.nextInt(nImages);
 					for(int searchIndex=0; searchIndex<nr; searchIndex++)
 					{
-						if (indexes[searchIndex] == indexes[nr])
+						if (ilp.indexes[searchIndex] == ilp.indexes[nr])
 						{
 							found = true;
 							break;
@@ -990,9 +931,9 @@ public class CoffeeSaint
 		}
 		else
 		{
-			for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
+			for(int nr=0; nr<ilp.indexes.length; nr++)
 			{
-				indexes[nr] = currentImageFile++;
+				ilp.indexes[nr] = currentImageFile++;
 				if (currentImageFile == nImages)
 					currentImageFile = 0;
 			}
@@ -1002,33 +943,34 @@ public class CoffeeSaint
 		int to = config.getWebcamTimeout() * 1000;
 		if (to < 1)
 			to = config.getSleepTime() * 1000;
-		ImageLoader [] il = new ImageLoader[loadNImages];
-		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
+		ilp.il = new ImageLoader[ilp.indexes.length];
+		for(int nr=0; nr<ilp.indexes.length; nr++)
 		{
-			String loadImage = imageUrls.get(indexes[nr]);
+			String loadImage = ilp.imageUrls.get(ilp.indexes[nr]);
 			log.add("Load image(1) " + loadImage);
 			drawLoadStatus(gui, windowWidth, g, "Start load img " + loadImage);
 
-			if (imageUrlTypes.get(indexes[nr]) == ImageUrlType.HTTP)
-				il[nr] = new ImageLoader(loadImage, to);
-			else if (imageUrlTypes.get(indexes[nr]) == ImageUrlType.HTTP_MJPEG)
-			{ /* loading is done below */ }
+			if (ilp.imageUrlTypes.get(ilp.indexes[nr]) == ImageUrlType.HTTP_MJPEG)
+				ilp.il[nr] = new MJPEGLoader(loadImage, to);
 			else
-				il[nr] = new ImageLoader(loadImage, to);
+				ilp.il[nr] = new ImageLoader(loadImage, to);
 		}
 
-		for(nr=0; nr<Math.min(nImages, loadNImages); nr++)
+		return ilp;
+	}
+
+	public ImageParameters [] loadImage(ImageLoadingParameters ilp, Gui gui, int windowWidth, Graphics g) throws Exception
+	{
+		int loadNImages = ilp.il.length;
+		ImageParameters [] result = new ImageParameters[ilp.indexes.length];
+
+		for(int nr=0; nr<loadNImages; nr++)
 		{
-			String loadImage = imageUrls.get(indexes[nr]);
+			String loadImage = ilp.imageUrls.get(ilp.indexes[nr]);
 			Image image = null;
 			drawLoadStatus(gui, windowWidth, g, "Load image " + loadImage);
 
-			if (imageUrlTypes.get(indexes[nr]) != ImageUrlType.HTTP_MJPEG) {
-				image = il[nr].getImage();
-			}
-			else {
-				image = getMJPEGFrame(loadImage);
-			}
+			image = ilp.il[nr].getImage();
 
 			if (image != null) {
 				int imgWidth = image.getWidth(null);
@@ -1112,6 +1054,7 @@ public class CoffeeSaint
 	public static JavNag loadNagiosData(Gui gui, int windowWidth, Graphics g) throws Exception
 	{
 		JavNag javNag = new JavNag();
+		javNag.setUserAgent(version);
 		javNag.setSocketTimeout(config.getSleepTime() * 1000);
 
 		long startLoadTs = System.currentTimeMillis();
@@ -1549,6 +1492,7 @@ public class CoffeeSaint
 		System.out.println("  @FIELDBOOLEANSERVICE^field@  Take 'field' from the service-fields (see 'Sort-fields' below) and interprete as yes/no");
 		System.out.println("  @FIELDHOST^field@         Take 'field' from the host-fields (see 'Sort-fields' below) and display its contents");
 		System.out.println("  @FIELDSERVICE^field@      Take 'field' from the service-fields (see 'Sort-fields' below) and display its contents");
+		System.out.println("  @FIELD^x@                 x can be 'field|service|host' or 'field|host' or 'field'");
 		System.out.println("  @EXEC^script@             Invoke script 'script' with as parameters: hostname, servicename (or empty string in case of a host failure), current state, plugin-output");
 		System.out.println("                            Unix example: @EXEC^/usr/local/bin/my_script@");
 		System.out.println("                            Windows example: @EXEC^c:\\programs\\myprogram.exec@");

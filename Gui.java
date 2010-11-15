@@ -418,7 +418,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 					int plotX = putX + (int)(x * spacingX);
 					int plotY = putY + (int)(y * spacingY);
 
-					if (imageParameters[nr] != null)
+					if (nr < imageParameters.length && imageParameters[nr] != null)
 					{
 						int curImgWidth = imageParameters[nr].getWidth();
 						int curImgHeight = imageParameters[nr].getHeight();
@@ -580,16 +580,11 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			final Font f = new Font(fontName, Font.PLAIN, rowHeight);
 			g.setFont(f);
 
-			/* get webcam images */
-			if (config.getVerbose())
-				prepareRow(g, windowWidth, 0, "Loading image(s)", 0, "0", true, bgColor, 1.0f, null, false, false);
+			/* start loading webcam images */
 			startLoadTs = System.currentTimeMillis();
-			ImageParameters [] imageParameters = coffeeSaint.loadImage(this, windowWidth, g);
+			ImageLoadingParameters ilp = coffeeSaint.startLoadingImages(this, windowWidth, g);
 			endLoadTs = System.currentTimeMillis();
-
-			took = (double)(endLoadTs - startLoadTs) / 1000.0;
-
-			statistics.addToTotalImageLoadTime(took);
+			double imgLoadTook = (double)(endLoadTs - startLoadTs) / 1000.0;
 
 			/* load & process nagios data */
 			if (config.getVerbose())
@@ -599,6 +594,15 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			coffeeSaint.collectLatencyData(javNag);
 			java.util.List<Problem> problems = CoffeeSaint.findProblems(javNag);
 			coffeeSaint.learnProblemCount(problems.size());
+
+			/* finish loading images */
+			startLoadTs = System.currentTimeMillis();
+			if (config.getVerbose())
+				prepareRow(g, windowWidth, 0, "Loading image(s)", 0, "0", true, bgColor, 1.0f, null, false, false);
+			ImageParameters [] imageParameters = coffeeSaint.loadImage(ilp, this, windowWidth, g);
+			endLoadTs = System.currentTimeMillis();
+			imgLoadTook += (double)(endLoadTs - startLoadTs) / 1000.0;
+			statistics.addToTotalImageLoadTime(imgLoadTook);
 
 			movingPartsSemaphore.acquireUninterruptibly();
 			windowMovingParts = new ArrayList<ScrollableContent>();
@@ -1014,6 +1018,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				putLine(g, font, 51, 51 + curRowHeight * (rowOffset++), useWidth, curRowHeight, (String)r.getObject1());
 
 				JavNag javNag = new JavNag();
+				javNag.setUserAgent(CoffeeSaint.version);
 				javNag.setSocketTimeout(config.getSleepTime() * 1000);
 				int prevNHosts = 0, prevNServices = 0;;
 				for(NagiosDataSource dataSource : config.getNagiosDataSources())

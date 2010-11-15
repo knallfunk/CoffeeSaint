@@ -29,6 +29,11 @@ public class JavNag
 {
 	List<Host> hosts = new ArrayList<Host>();
 	int socketTimeout = -1;
+	String userAgent = "JavNag";
+
+	public void setUserAgent(String agent) {
+		userAgent = agent;
+	}
 
 	public void setSocketTimeout(int st) {
 		System.out.println("Setting socket timeout to: " + st);
@@ -46,6 +51,31 @@ public class JavNag
 			socket.connect(new InetSocketAddress(host, port));
 
 		return socket;
+	}
+
+	public String getField(String host, String field) {
+		for(Host h : hosts) {
+			if (h.getHostName().equals(host)) {
+				return h.getParameter(field);
+			}
+		}
+
+		return null;
+	}
+
+	public String getField(String host, String service, String field) {
+		for(Host h : hosts) {
+			if (h.getHostName().equals(host)) {
+				for(Service s : h.getServices()) {
+					if (s.getServiceName().equals(service)) {
+						return s.getParameter(field);
+					}
+				}
+				break;
+			}
+		}
+
+		return null;
 	}
 
 	private Host addAndOrFindHost(String hostName)
@@ -770,6 +800,9 @@ public class JavNag
 		List<String> fileDump = new ArrayList<String>();
 
 		HttpURLConnection HTTPConnection = (HttpURLConnection)url.openConnection();
+		HTTPConnection.setDefaultUseCaches(false);
+		HTTPConnection.setUseCaches(false);
+		HTTPConnection.setRequestProperty("User-Agent", userAgent);
 		HTTPConnection.setFollowRedirects(true);
 		if (allowCompression)
 			HTTPConnection.setRequestProperty("Accept-Encoding", "gzip, deflate");

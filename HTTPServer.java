@@ -14,6 +14,7 @@ import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.io.IOException;
 import java.lang.Class;
+import java.lang.management.*;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -141,6 +142,7 @@ class HTTPServer implements Runnable
 		whereTo.add("				<a href=\"/cgi-bin/statistics.cgi\">CoffeeSaint statistics</a><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/log.cgi\">List of connecting hosts</a><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/list-log.cgi\">Show log</a><br />\n");
+		whereTo.add("                           <a href=\"/cgi-bin/jvm_stats.cgi\">JVM statistics</a><br />\n");
 		whereTo.add("				<br /><strong>Configuration</strong><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/config-menu.cgi\">Configure CoffeeSaint</a><br />\n");
 		whereTo.add("				<a href=\"/cgi-bin/reload-config.cgi\">Reload configuration</a><br />\n");
@@ -332,7 +334,8 @@ class HTTPServer implements Runnable
 		try
 		{
 			socket.getOutputStream().write(header.getBytes());
-			Image img = coffeeSaint.loadImage(null, -1, null)[0].getImage();
+			ImageLoadingParameters ilp = coffeeSaint.startLoadingImages(null, -1, null);
+			Image img = coffeeSaint.loadImage(ilp, null, -1, null)[0].getImage();
 			ImageIO.write(CoffeeSaint.createBufferedImage(img), "jpg", socket.getOutputStream());
 			socket.close();
 		}
@@ -567,6 +570,52 @@ class HTTPServer implements Runnable
 		socket.sendReply(reply);
 	}
 
+
+	public void sendReply_cgibin_system_info(MyHTTPServer socket, String cookie) throws Exception
+	{
+		List<String> reply = new ArrayList<String>();
+
+		addHTTP200(reply, cookie);
+		addPageHeader(reply, "");
+
+                Runtime runtime = Runtime.getRuntime();
+                OperatingSystemMXBean osmxb = ManagementFactory.getOperatingSystemMXBean();
+                assert osmxb != null;
+                RuntimeMXBean rmxb = ManagementFactory.getRuntimeMXBean();
+                assert rmxb != null;
+                ThreadMXBean tmxb = ManagementFactory.getThreadMXBean();
+                assert tmxb != null;
+
+		Runtime rt = Runtime.getRuntime();
+		rt.gc();
+
+		reply.add("<TABLE>");
+		reply.add("<TR><TD WIDTH=150>processors:</TD><TD>" + runtime.availableProcessors() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>system architecture:</TD><TD>" + osmxb.getArch() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>OS version:</TD><TD>" + osmxb.getVersion() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>system load:</TD><TD>" + osmxb.getSystemLoadAverage() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>JVM name:</TD><TD>" + rmxb.getName() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>JVM impl.name:</TD><TD>" + rmxb.getVmName() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>JVM vendor:</TD><TD>" + rmxb.getVmVendor() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>JVM version:</TD><TD>" + rmxb.getVmVersion() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>JVM uptime:</TD><TD>" + (rmxb.getUptime() / 1000) + "s</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>Boot classpath:</TD><TD>" + rmxb.getBootClassPath() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>Classpath:</TD><TD>" + rmxb.getClassPath() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>deadlocked threads:</TD><TD>" + (tmxb.findDeadlockedThreads() != null ? tmxb.findDeadlockedThreads().length : 0 ) + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>number of threads:</TD><TD>" + tmxb.getThreadCount() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>total threads created:</TD><TD>" + tmxb.getTotalStartedThreadCount() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>thread peak count:</TD><TD>" + tmxb.getPeakThreadCount() + "</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>total CPU time:</TD><TD>" + (tmxb.getCurrentThreadCpuTime() / 1000000000) + "s</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>maximum memory:</TD><TD>" + ((rt.maxMemory() + 1048575) / 1048576) + "MB</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>total memory:</TD><TD>" +  ((rt.totalMemory() + 1048575) / 1048576) + "MB</TD></TR>");
+		reply.add("<TR><TD WIDTH=150>free memory:</TD><TD>" + ((rt.freeMemory() + 1048575) / 1048576) + "MB</TD></TR>");
+		// reply.add("<TR><TD WIDTH=150></TD><TD>" +  + "</TD></TR>");
+
+		addPageTail(reply, true);
+
+		socket.sendReply(reply);
+	}
+
 	public void sendReply_cgibin_select_configfile_do_cgi(MyHTTPServer socket, List<HTTPRequestData> requestData, String cookie) throws Exception
 	{
 		List<String> reply = new ArrayList<String>();
@@ -719,7 +768,7 @@ class HTTPServer implements Runnable
 		reply.add("<H1>Look and feel parameters</H1>\n");
 		reply.add("<TABLE>\n");
 		reply.add("<TR><TD>Refresh interval:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"sleepTime\" VALUE=\"" + config.getSleepTime() + "\"></TD><TD>&gt; 1</TD></TR>\n");
-		reply.add("<TR><TD>Double buffering:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"double-buffering\" VALUE=\"" + config.getDoubleBuffering() + "\"></TD><TD>Might speed-up/slow-down screen refreshes</TD></TR>\n");
+		reply.add("<TR><TD>Double buffering:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"double-buffering\" VALUE=\"on\" " + isChecked(config.getDoubleBuffering()) + "></TD><TD>Might speed-up/slow-down screen refreshes</TD></TR>\n");
 		reply.add("<TR><TD>Fullscreen mode:</TD><TD><SELECT NAME=\"fullscreen\">\n");
 		reply.add(selectField(config.getFullscreenName(), "none"));
 		reply.add(selectField(config.getFullscreenName(), "undecorated"));
@@ -763,7 +812,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"transparency\" VALUE=\"" + config.getTransparency() + "\"></TD><TD>0.0...1.0 only usefull with background image/webcam, 1.0 = not transparent</TD></TR>\n");
 		reply.add("<TR><TD>Header transparency:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header-transparency\" VALUE=\"" + config.getHeaderTransparency() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Row border:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"row-border\" VALUE=\"on\" " + isChecked(config.getRowBorder()) + "></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Row border height:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"upper-row-border-height\" VALUE=\"" + config.getUpperRowBorderHeight() + "\"></TD><TD>In case you want a thicker bar between the header and the problem list.</TD></TR>\n");
+		reply.add("<TR><TD>Header border height:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"upper-row-border-height\" VALUE=\"" + config.getUpperRowBorderHeight() + "\"></TD><TD>In case you want a thicker bar between the header and the problem list.</TD></TR>\n");
 		reply.add("<TR><TD>Row border color:</TD><TD>\n");
 		colorSelectorHTML(reply, "row-border-color", config.getRowBorderColorName(), false);
 		reply.add("</TD><TD></TD></TR>");
@@ -1203,7 +1252,7 @@ class HTTPServer implements Runnable
 				config.setLogo(newLogo);
 		}
 		String logoPosition = getField(socket, requestData, "logo-position");
-		if (logoPosition != null)
+		if (logoPosition != null && logoPosition.equals("") == false)
 			config.setLogoPosition(logoPosition);
 
 		if (config.getDisableHTTPFileselect() == false)
@@ -2290,6 +2339,8 @@ class HTTPServer implements Runnable
 						sendReply_cgibin_configmenu_cgi(socket, authCookie);
 					else if (url.equals("/cgi-bin/select_configfile.cgi"))
 						sendReply_cgibin_select_configfile_cgi(socket, authCookie);
+					else if (url.equals("/cgi-bin/jvm_stats.cgi"))
+						sendReply_cgibin_system_info(socket, authCookie);
 					else if (url.equals("/cgi-bin/select_configfile-do.cgi"))
 					{
 						List<HTTPRequestData> requestData = socket.getRequestData(request);

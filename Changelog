@@ -2,3 +2,4 @@
 - set timeout on remote retrieval of nagios status
 - webcam loading timeout
 - logo position fixes
+- made webcam image loading parallel with nagios status data loading
