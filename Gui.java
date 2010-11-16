@@ -749,10 +749,13 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 						int beforeWidth = prepareRow(g, rowColWidth, xStart, before, curNRows, currentProblem.getCurrent_state(), currentProblem.getHard(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit(), isFlapping);
 
-						int newX = xStart + beforeWidth;
-						if (config.getPutSplitAtOffset() != null)
-							newX = xStart + config.getPutSplitAtOffset();
-						prepareRow(g, Math.max(0, rowColWidth - newX), newX, after, curNRows, currentProblem.getCurrent_state(), currentProblem.getHard(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit(), isFlapping);
+
+                                                int newX = xStart + beforeWidth;
+                                                if (config.getPutSplitAtOffset() != null)
+                                                        newX = xStart + config.getPutSplitAtOffset();
+                                                int w = Math.max(0, rowColWidth - config.getPutSplitAtOffset());
+						if (w > 0)
+							prepareRow(g, w, newX, after, curNRows, currentProblem.getCurrent_state(), currentProblem.getHard(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit(), isFlapping);
 					}
 				}
 				else
