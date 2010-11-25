@@ -11,6 +11,7 @@ class ImageLoader implements Runnable {
 	int to;
 	Semaphore lock = new Semaphore(1);
 	Thread t;
+	String exception = null;
 
 	ImageLoader(String addr, int timeout) {
 		to = timeout;
@@ -22,6 +23,9 @@ class ImageLoader implements Runnable {
 	}
 
 	Image getImage() throws Exception {
+		if (exception != null)
+			throw new Exception(exception);
+
 		if (lock.tryAcquire(to, TimeUnit.MILLISECONDS))
 			return result;
 
@@ -39,21 +43,12 @@ class ImageLoader implements Runnable {
 			System.out.println("ImageLoader: " + url + " succesfully retrieved");
 		}
 		catch(Exception e) {
-			System.err.println("ImageLoader(" + url + ", " + to + "): " + e);
+			exception = "Failed loading image " + url + ": " + e;
+			CoffeeSaint.log.add(exception);
+			
 		}
 		finally {
 			lock.release();
-		}
-	}
-
-	public static void main(String [] args) {
-		ImageLoader i = new ImageLoader("http://keetweej.vanheusden.com/linux-logo.gif", 100);
-
-		try {
-			System.out.println("" + i.getImage());
-		}
-		catch(Exception e) {
-			System.err.println("Exception: " + e);
 		}
 	}
 }

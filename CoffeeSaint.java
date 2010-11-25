@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.3-beta2";
+	static String versionNr = "v4.4";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -398,9 +398,16 @@ public class CoffeeSaint
 		{
 			System.out.println("Dumping performance data to " + config.getLatencyFile());
 			latencyDataSemaphore.acquireUninterruptibly();
+			try {
 			latencyData.dump(config.getLatencyFile());
+			}
+			catch(Exception e) {
+				throw e;
+			}
+			finally {
 			latencyDataSemaphore.release();
 		}
+	}
 	}
 
 	public void collectLatencyData(JavNag javNag) throws Exception
@@ -431,16 +438,13 @@ public class CoffeeSaint
 	{
 		performanceDataSemaphore.acquireUninterruptibly();
 
-		try
-		{
-			if (config.getPerformanceDataFileName() != null)
-			{
+		try {
+			if (config.getPerformanceDataFileName() != null) {
 				System.out.println("Dumping performance data to " + config.getPerformanceDataFileName());
 				performanceData.dump(config.getPerformanceDataFileName());
 			}
 		}
-		finally
-		{
+		finally {
 			performanceDataSemaphore.release();
 		}
 	}
@@ -908,6 +912,8 @@ public class CoffeeSaint
 		System.out.println("LOADIMGS " + nImages + " " + loadNImages);
 
 		imageSemaphore.acquireUninterruptibly(); // lock around 'currentImageFile'
+		String workingOn = null;
+		try {
 		if (config.getRandomWebcam())
 		{
 			for(int nr=0; nr<ilp.indexes.length; nr++)
@@ -938,22 +944,33 @@ public class CoffeeSaint
 					currentImageFile = 0;
 			}
 		}
+		}
+		catch(Exception e) {
+			throw e;
+		}
+		finally {
 		imageSemaphore.release();
+		}
 
 		int to = config.getWebcamTimeout() * 1000;
 		if (to < 1)
 			to = config.getSleepTime() * 1000;
 		ilp.il = new ImageLoader[ilp.indexes.length];
+		try {
 		for(int nr=0; nr<ilp.indexes.length; nr++)
 		{
-			String loadImage = ilp.imageUrls.get(ilp.indexes[nr]);
-			log.add("Load image(1) " + loadImage);
-			drawLoadStatus(gui, windowWidth, g, "Start load img " + loadImage);
+				workingOn = ilp.imageUrls.get(ilp.indexes[nr]);
+				log.add("Load image(1) " + workingOn);
+				drawLoadStatus(gui, windowWidth, g, "Start load img " + workingOn);
 
 			if (ilp.imageUrlTypes.get(ilp.indexes[nr]) == ImageUrlType.HTTP_MJPEG)
-				ilp.il[nr] = new MJPEGLoader(loadImage, to);
+					ilp.il[nr] = new MJPEGLoader(workingOn, to);
 			else
-				ilp.il[nr] = new ImageLoader(loadImage, to);
+					ilp.il[nr] = new ImageLoader(workingOn, to);
+			}
+		}
+		catch(Exception e) {
+			throw new Exception("" + e + ": " + workingOn);
 		}
 
 		return ilp;
@@ -961,6 +978,9 @@ public class CoffeeSaint
 
 	public ImageParameters [] loadImage(ImageLoadingParameters ilp, Gui gui, int windowWidth, Graphics g) throws Exception
 	{
+		if (ilp == null)
+			return null;
+
 		int loadNImages = ilp.il.length;
 		ImageParameters [] result = new ImageParameters[ilp.indexes.length];
 
@@ -1062,7 +1082,8 @@ public class CoffeeSaint
 		int prevNHosts = -1;
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
 		{
-			String logStr = "Loading data from: ", source;
+			String logStr = "Loading data from: ", source = null;
+			try {
 			if (dataSource.getType() == NagiosDataSourceType.TCP)
 			{
 				source = dataSource.getHost() + " " + dataSource.getPort();
@@ -1101,6 +1122,10 @@ public class CoffeeSaint
 			}
 			else
 				throw new Exception("Unknown data-source type: " + dataSource.getType());
+			}
+			catch(Exception e) {
+				throw new Exception("Error loading Nagios data from " + source + ": " + e);
+			}
 
 			if (javNag.getNumberOfHosts() == prevNHosts) {
 				System.err.println(source + " did not return any hosts!");
@@ -1148,9 +1173,16 @@ public class CoffeeSaint
 		{
 			Calendar rightNow = Calendar.getInstance();
 			predictorSemaphore.acquireUninterruptibly();
+			try {
 			learnProblems(rightNow, nProblems);
+			}
+			catch(Exception e) {
+				throw e;
+			}
+			finally {
 			predictorSemaphore.release();
 		}
+	}
 	}
 
 	public static void errorExit(String error)

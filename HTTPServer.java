@@ -4,18 +4,13 @@ import com.vanheusden.sockets.MyHTTPServer;
 import com.vanheusden.nagios.*;
 
 import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.InputStream;
-import java.io.IOException;
-import java.lang.Class;
 import java.lang.management.*;
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -25,7 +20,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.security.ProtectionDomain;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,7 +29,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Random;
 import javax.imageio.ImageIO;
-import javax.swing.JFrame;
 
 class HTTPServer implements Runnable
 {
@@ -629,9 +622,9 @@ class HTTPServer implements Runnable
 		}
 		else
 		{
-			String newFileName = getField(socket, requestData, "config-file");
+			String newFileName = getField(requestData, "config-file");
 			if (newFileName == null || newFileName.equals(""))
-				newFileName = getField(socket, requestData, "config-file-list");
+				newFileName = getField(requestData, "config-file-list");
 			if (newFileName != null && newFileName.equals("") == false)
 			{
 				config.setConfigFilename(newFileName);
@@ -931,7 +924,12 @@ class HTTPServer implements Runnable
 		reply.add("</TABLE>\n");
 		reply.add("<BR>\n");
 
-		reply.add("<H1>Webcams</H1>\n");
+		reply.add("<H1>Multimedia</H1>\n");
+		reply.add("<H2>Warning sound</H2>\n");
+		reply.add("<TABLE>\n");
+		reply.add("<TR><TD>Warning sound:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"warning-sound\" VALUE=\"" + config.getProblemSound() + "\"></TD><TD>File path</TD></TR>\n");
+		reply.add("</TABLE>\n");
+		reply.add("<H2>Webcams</H2>\n");
 		reply.add("Please note: regular JPEG camera's require type \"HTTP\" or \"HTTPS\". Streaming webcams require \"MJPEG\".<BR>\n");
 		reply.add("<TABLE>\n");
 		for(String image : config.getImageUrls())
@@ -973,7 +971,7 @@ class HTTPServer implements Runnable
 		System.out.println("sendReply_cgibin_configmenu_cgi END");
 	}
 
-	public boolean getCheckBox(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName)
+	public boolean getCheckBox(List<HTTPRequestData> requestData, String fieldName)
 	{
 		HTTPRequestData field = MyHTTPServer.findRecord(requestData, fieldName);
 		if (field != null && field.getData() != null)
@@ -982,7 +980,7 @@ class HTTPServer implements Runnable
 		return false;
 	}
 
-	public String getField(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName)
+	public String getField(List<HTTPRequestData> requestData, String fieldName)
 	{
 		HTTPRequestData field = MyHTTPServer.findRecord(requestData, fieldName);
 		if (field != null && field.getData() != null)
@@ -991,9 +989,9 @@ class HTTPServer implements Runnable
 		return "";
 	}
 
-	public String getFieldDecoded(MyHTTPServer socket, List<HTTPRequestData> requestData, String fieldName) throws Exception
+	public String getFieldDecoded(List<HTTPRequestData> requestData, String fieldName) throws Exception
 	{
-		String fieldData = getField(socket, requestData, fieldName);
+		String fieldData = getField(requestData, fieldName);
 		if (fieldData == null)
 			return null;
 
@@ -1059,56 +1057,56 @@ class HTTPServer implements Runnable
 				config.setSparkLineWidth(newSparklineSize);
 		}
 
-		String maxAge = getField(socket, requestData, "max-check-age");
+		String maxAge = getField(requestData, "max-check-age");
 		config.setMaxCheckAge(maxAge.equals("") ? -1 : Long.valueOf(maxAge));
 
-		config.setFlexibleNColumns(getCheckBox(socket, requestData, "flexible-n-columns"));
+		config.setFlexibleNColumns(getCheckBox(requestData, "flexible-n-columns"));
 
-		config.setMaxQualityGraphics(getCheckBox(socket, requestData, "max-quality-graphics"));
+		config.setMaxQualityGraphics(getCheckBox(requestData, "max-quality-graphics"));
 
-		config.setFontName(getFieldDecoded(socket, requestData, "font"));
+		config.setFontName(getFieldDecoded(requestData, "font"));
 
-		config.setProxyHost(getFieldDecoded(socket, requestData, "proxy-host"));
-		config.setProxyPort(Integer.valueOf(getFieldDecoded(socket, requestData, "proxy-port")));
+		config.setProxyHost(getFieldDecoded(requestData, "proxy-host"));
+		config.setProxyPort(Integer.valueOf(getFieldDecoded(requestData, "proxy-port")));
 
 		if (!config.getNoNetworkChange())
 		{
-			config.setHTTPServerListenAdapter(getFieldDecoded(socket, requestData, "network-interface"));
-			System.out.println("PORT: " + getFieldDecoded(socket, requestData, "network-port") + "|");
-			config.setHTTPServerListenPort(Integer.valueOf(getFieldDecoded(socket, requestData, "network-port")));
+			config.setHTTPServerListenAdapter(getFieldDecoded(requestData, "network-interface"));
+			System.out.println("PORT: " + getFieldDecoded(requestData, "network-port") + "|");
+			config.setHTTPServerListenPort(Integer.valueOf(getFieldDecoded(requestData, "network-port")));
 		}
 
-		config.setWarningFontName(getFieldDecoded(socket, requestData, "warning-font"));
+		config.setWarningFontName(getFieldDecoded(requestData, "warning-font"));
 
-		config.setCriticalFontName(getFieldDecoded(socket, requestData, "critical-font"));
+		config.setCriticalFontName(getFieldDecoded(requestData, "critical-font"));
 
-		config.setTextColor(getField(socket, requestData, "textColor"));
-		config.setWarningTextColor(getField(socket, requestData, "warningTextColor"));
-		config.setCriticalTextColor(getField(socket, requestData, "criticalTextColor"));
-		// config.setHeaderColorName(getField(socket, requestData, "header-color"));
+		config.setTextColor(getField(requestData, "textColor"));
+		config.setWarningTextColor(getField(requestData, "warningTextColor"));
+		config.setCriticalTextColor(getField(requestData, "criticalTextColor"));
+		// config.setHeaderColorName(getField(requestData, "header-color"));
 
-		config.setBackgroundColor(getField(socket, requestData, "backgroundColor"));
-		String fadeTo = getField(socket, requestData, "bgcolor-fade-to");
+		config.setBackgroundColor(getField(requestData, "backgroundColor"));
+		String fadeTo = getField(requestData, "bgcolor-fade-to");
 		if (fadeTo == null || fadeTo.equals("NULL") == true)
 			config.setBackgroundColorFadeTo(null);
 		else
 			config.setBackgroundColorFadeTo(fadeTo);
 
-		String problemBarFadeTo = getField(socket, requestData, "problem-row-gradient");
+		String problemBarFadeTo = getField(requestData, "problem-row-gradient");
 		if (problemBarFadeTo == null || problemBarFadeTo.equals("NULL") == true)
 			config.setProblemRowGradient(null);
 		else
 			config.setProblemRowGradient(problemBarFadeTo);
 
-		config.setBackgroundColorOkStatus(getField(socket, requestData, "bgColorOk"));
-		config.setWarningBgColor(getField(socket, requestData, "warning-bg-color"));
-		config.setWarningBgColorSoft(getField(socket, requestData, "warning-bg-color-soft"));
-		config.setCriticalBgColor(getField(socket, requestData, "critical-bg-color"));
-		config.setCriticalBgColorSoft(getField(socket, requestData, "critical-bg-color-soft"));
-		config.setNagiosUnknownBgColor(getField(socket, requestData, "unknown-bg-color"));
-		config.setSetBgColorToState(getCheckBox(socket, requestData, "color-bg-to-state"));
+		config.setBackgroundColorOkStatus(getField(requestData, "bgColorOk"));
+		config.setWarningBgColor(getField(requestData, "warning-bg-color"));
+		config.setWarningBgColorSoft(getField(requestData, "warning-bg-color-soft"));
+		config.setCriticalBgColor(getField(requestData, "critical-bg-color"));
+		config.setCriticalBgColorSoft(getField(requestData, "critical-bg-color-soft"));
+		config.setNagiosUnknownBgColor(getField(requestData, "unknown-bg-color"));
+		config.setSetBgColorToState(getCheckBox(requestData, "color-bg-to-state"));
 
-		String sleepTime = getField(socket, requestData, "sleepTime");
+		String sleepTime = getField(requestData, "sleepTime");
 		if (sleepTime != null && sleepTime.equals("") == false)
 		{
 			int newSleepTime = Integer.valueOf(sleepTime);
@@ -1121,7 +1119,7 @@ class HTTPServer implements Runnable
 			}
 		}
 
-		String wcTo = getField(socket, requestData, "webcam-timeout");
+		String wcTo = getField(requestData, "webcam-timeout");
 		int wcToVal = -1;
 		if (wcTo == null || wcTo.trim().equals("") == true)
 			wcToVal = -1;
@@ -1131,7 +1129,7 @@ class HTTPServer implements Runnable
 			wcToVal = -1;
 		config.setWebcamTimeout(wcToVal);
 
-		String webExpireTime = getField(socket, requestData, "web-expire-time");
+		String webExpireTime = getField(requestData, "web-expire-time");
 		if (webExpireTime != null && webExpireTime.equals("") == false)
 		{
 			int newWebExpireTime = Integer.valueOf(webExpireTime);
@@ -1141,7 +1139,7 @@ class HTTPServer implements Runnable
 				config.setWebSessionExpire(newWebExpireTime);
 		}
 
-		String sparkline_mode = getField(socket, requestData, "sparkline-mode");
+		String sparkline_mode = getField(requestData, "sparkline-mode");
 		if (sparkline_mode != null)
 		{
 			if (sparkline_mode.equals("avg-sd"))
@@ -1150,7 +1148,7 @@ class HTTPServer implements Runnable
 				config.setSparklineGraphMode(SparklineGraphMode.MIN_MAX);
 		}
 
-		String noProblemsText = getFieldDecoded(socket, requestData, "no-problems-text");
+		String noProblemsText = getFieldDecoded(requestData, "no-problems-text");
 		if (noProblemsText != null)
 		{
 			if (noProblemsText.trim().equals(""))
@@ -1158,11 +1156,11 @@ class HTTPServer implements Runnable
 			else
 				config.setNoProblemsText(noProblemsText);
 		}
-		String noProblemsTextPosition = getField(socket, requestData, "no-problems-text-position");
+		String noProblemsTextPosition = getField(requestData, "no-problems-text-position");
 		if (noProblemsTextPosition != null && noProblemsTextPosition.equals("") == false)
 			config.setNoProblemsTextPosition(noProblemsTextPosition);
 
-		String stateProblemsText = getFieldDecoded(socket, requestData, "state-problems-text");
+		String stateProblemsText = getFieldDecoded(requestData, "state-problems-text");
 		if (stateProblemsText != null)
 		{
 			if (stateProblemsText.trim().equals(""))
@@ -1171,9 +1169,9 @@ class HTTPServer implements Runnable
 				config.setStateProblemsText(stateProblemsText);
 		}
 
-		String usernameField = getFieldDecoded(socket, requestData, "web-username");
-		String passwordField1 = getFieldDecoded(socket, requestData, "web-password1");
-		String passwordField2 = getFieldDecoded(socket, requestData, "web-password2");
+		String usernameField = getFieldDecoded(requestData, "web-username");
+		String passwordField1 = getFieldDecoded(requestData, "web-password1");
+		String passwordField2 = getFieldDecoded(requestData, "web-password2");
 		if (usernameField != null && passwordField1 != null && passwordField2 != null)
 		{
 			if (passwordField1.equals(passwordField2))
@@ -1195,32 +1193,32 @@ class HTTPServer implements Runnable
 			}
 		}
 
-		config.setAlwaysNotify(getCheckBox(socket, requestData, "always_notify"));
+		config.setAlwaysNotify(getCheckBox(requestData, "always_notify"));
 
-		config.setHeaderAlwaysBGColor(getCheckBox(socket, requestData, "header-always-bgcolor"));
+		config.setHeaderAlwaysBGColor(getCheckBox(requestData, "header-always-bgcolor"));
 
-		config.setAlsoAcknowledged(getCheckBox(socket, requestData, "also_acknowledged"));
+		config.setAlsoAcknowledged(getCheckBox(requestData, "also_acknowledged"));
 
-		config.setAlsoScheduledDowntime(getCheckBox(socket, requestData, "also_scheduled_downtime"));
+		config.setAlsoScheduledDowntime(getCheckBox(requestData, "also_scheduled_downtime"));
 
-		config.setAlsoSoftState(getCheckBox(socket, requestData, "also_soft_State"));
+		config.setAlsoSoftState(getCheckBox(requestData, "also_soft_State"));
 
-		config.setAlsoDisabledActiveChecks(getCheckBox(socket, requestData, "also_disabled_active_checks"));
+		config.setAlsoDisabledActiveChecks(getCheckBox(requestData, "also_disabled_active_checks"));
 
-		config.setShowServicesForHostWithProblems(getCheckBox(socket, requestData, "show_services_for_host_with_problems"));
+		config.setShowServicesForHostWithProblems(getCheckBox(requestData, "show_services_for_host_with_problems"));
 
-		config.setHostSDOrAckShowServices(getCheckBox(socket, requestData, "host_scheduled_downtime_or_ack_show_services"));
+		config.setHostSDOrAckShowServices(getCheckBox(requestData, "host_scheduled_downtime_or_ack_show_services"));
 
-		config.setShowFlapping(getCheckBox(socket, requestData, "show-flapping"));
+		config.setShowFlapping(getCheckBox(requestData, "show-flapping"));
 
-		config.setShowFlappingIcon(getCheckBox(socket, requestData, "show-flapping-icon"));
+		config.setShowFlappingIcon(getCheckBox(requestData, "show-flapping-icon"));
 
-		config.setHostAcknowledgedShowServices(getCheckBox(socket, requestData, "host_also_acknowledged"));
-		config.setHostScheduledDowntimeShowServices(getCheckBox(socket, requestData, "host_also_scheduled_downtime"));
+		config.setHostAcknowledgedShowServices(getCheckBox(requestData, "host_also_acknowledged"));
+		config.setHostScheduledDowntimeShowServices(getCheckBox(requestData, "host_also_scheduled_downtime"));
 
-		config.setCounter(getCheckBox(socket, requestData, "counter"));
+		config.setCounter(getCheckBox(requestData, "counter"));
 
-		String newFSMode = getField(socket, requestData, "fullscreen");
+		String newFSMode = getField(requestData, "fullscreen");
 		if (newFSMode != null)
 		{
 			if (newFSMode.equalsIgnoreCase("none"))
@@ -1233,17 +1231,17 @@ class HTTPServer implements Runnable
 				config.setFullscreen(FullScreenMode.ALLMONITORS);
 		}
 
-		String useScreen = getFieldDecoded(socket, requestData, "use-screen");
+		String useScreen = getFieldDecoded(requestData, "use-screen");
 		if (useScreen == null || useScreen.equals("ALL"))
 			config.setUseScreen(null);
 		else
 			config.setUseScreen(useScreen);
 
-		String counterPosition = getField(socket, requestData, "counter-position");
+		String counterPosition = getField(requestData, "counter-position");
 		if (counterPosition != null)
 			config.setCounterPosition(counterPosition);
 
-		String newLogo = getFieldDecoded(socket, requestData, "logo-url");
+		String newLogo = getFieldDecoded(requestData, "logo-url");
 		if (newLogo != null)
 		{
 			if (newLogo.trim().equals(""))
@@ -1251,24 +1249,24 @@ class HTTPServer implements Runnable
 			else
 				config.setLogo(newLogo);
 		}
-		String logoPosition = getField(socket, requestData, "logo-position");
+		String logoPosition = getField(requestData, "logo-position");
 		if (logoPosition != null && logoPosition.equals("") == false)
 			config.setLogoPosition(logoPosition);
 
 		if (config.getDisableHTTPFileselect() == false)
 		{
-			String brainFile = getField(socket, requestData, "brain-file").trim();
+			String brainFile = getField(requestData, "brain-file").trim();
 			config.setBrainFileName(brainFile.equals("") ? null : brainFile);
 
-			String performanceFile = getField(socket, requestData, "performance-data").trim();
+			String performanceFile = getField(requestData, "performance-data").trim();
 			config.setPerformanceDataFileName(performanceFile.equals("") ? null : performanceFile);
 
-			String latencyFile = getField(socket, requestData, "latency-file").trim();
+			String latencyFile = getField(requestData, "latency-file").trim();
 			config.setLatencyFile(latencyFile.equals("") ? null : latencyFile);
 		}
 
-		String newWebcam = getFieldDecoded(socket, requestData, "newWebcam");
-		String newWebcamType = getFieldDecoded(socket, requestData, "newWebcamType");
+		String newWebcam = getFieldDecoded(requestData, "newWebcam");
+		String newWebcamType = getFieldDecoded(requestData, "newWebcamType");
 		if (newWebcam != null && newWebcam.equals("") == false && newWebcamType != null && newWebcamType.equals("") == false)
 			config.addImageUrl(newWebcamType + " " + newWebcam);
 
@@ -1289,35 +1287,37 @@ class HTTPServer implements Runnable
 			}
 		}
 
-		config.setAdaptImageSize(getCheckBox(socket, requestData, "adapt-img"));
+		config.setProblemSound(getFieldDecoded(requestData, "warning-sound"));
 
-		config.setAllowHTTPCompression(getCheckBox(socket, requestData, "disable-http-compression"));
+		config.setAdaptImageSize(getCheckBox(requestData, "adapt-img"));
 
-		config.setAntiAlias(getCheckBox(socket, requestData, "anti-alias"));
+		config.setAllowHTTPCompression(getCheckBox(requestData, "disable-http-compression"));
 
-		config.setRandomWebcam(getCheckBox(socket, requestData, "random-img"));
+		config.setAntiAlias(getCheckBox(requestData, "anti-alias"));
 
-		config.setReduceTextWidth(getCheckBox(socket, requestData, "reduce-textwidth"));
+		config.setRandomWebcam(getCheckBox(requestData, "random-img"));
 
-		config.setHeader(getFieldDecoded(socket, requestData, "header"));
+		config.setReduceTextWidth(getCheckBox(requestData, "reduce-textwidth"));
 
-		String newFooter = getFieldDecoded(socket, requestData, "footer");
+		config.setHeader(getFieldDecoded(requestData, "header"));
+
+		String newFooter = getFieldDecoded(requestData, "footer");
 		if (newFooter.trim().equals(""))
 			config.setFooter(null);
 		else
 			config.setFooter(newFooter);
 
-		config.setPrefers(getFieldDecoded(socket, requestData, "prefer"));
-		config.setHostsFilterExclude(getFieldDecoded(socket, requestData, "hosts-filter-exclude-list"));
-		config.setHostsFilterInclude(getFieldDecoded(socket, requestData, "hosts-filter-include-list"));
-		config.setServicesFilterExclude(getFieldDecoded(socket, requestData, "services-filter-exclude-list"));
-		config.setServicesFilterInclude(getFieldDecoded(socket, requestData, "services-filter-include-list"));
+		config.setPrefers(getFieldDecoded(requestData, "prefer"));
+		config.setHostsFilterExclude(getFieldDecoded(requestData, "hosts-filter-exclude-list"));
+		config.setHostsFilterInclude(getFieldDecoded(requestData, "hosts-filter-include-list"));
+		config.setServicesFilterExclude(getFieldDecoded(requestData, "services-filter-exclude-list"));
+		config.setServicesFilterInclude(getFieldDecoded(requestData, "services-filter-include-list"));
 
-		config.setScrollingHeader(getCheckBox(socket, requestData, "scrolling-header"));
-		config.setScrollingFooter(getCheckBox(socket, requestData, "scrolling-footer"));
-		config.setScrollIfNotFit(getCheckBox(socket, requestData, "scroll-if-not-fitting"));
+		config.setScrollingHeader(getCheckBox(requestData, "scrolling-header"));
+		config.setScrollingFooter(getCheckBox(requestData, "scrolling-footer"));
+		config.setScrollIfNotFit(getCheckBox(requestData, "scroll-if-not-fitting"));
 
-		String splitter = getFieldDecoded(socket, requestData, "scroll-splitter");
+		String splitter = getFieldDecoded(requestData, "scroll-splitter");
 		if (splitter != null)
 		{
 			splitter = splitter.trim();
@@ -1328,11 +1328,11 @@ class HTTPServer implements Runnable
 				config.setLineScrollSplitter(splitter.charAt(0));
 		}
 
-		config.setDrawProblemServiceSplitLine(getCheckBox(socket, requestData, "draw-problems-service-split-line"));
+		config.setDrawProblemServiceSplitLine(getCheckBox(requestData, "draw-problems-service-split-line"));
 
-		config.setNoProblemsTextBg(getCheckBox(socket, requestData, "no-problems-text-with-bg-color"));
+		config.setNoProblemsTextBg(getCheckBox(requestData, "no-problems-text-with-bg-color"));
 
-		String drawSplitAtOffset = getField(socket, requestData, "split-text-put-at-offset");
+		String drawSplitAtOffset = getField(requestData, "split-text-put-at-offset");
 		if (drawSplitAtOffset != null && drawSplitAtOffset.trim().equals("") == false)
 		{
 			int newOffset = Integer.valueOf(drawSplitAtOffset);
@@ -1344,7 +1344,7 @@ class HTTPServer implements Runnable
 				config.setPutSplitAtOffset(newOffset);
 		}
 
-		String scrollSpeed = getField(socket, requestData, "scroll-pixels-per-sec");
+		String scrollSpeed = getField(requestData, "scroll-pixels-per-sec");
 		if (scrollSpeed != null && scrollSpeed.trim().equals("") == false)
 		{
 			int newScrollSpeed = Integer.valueOf(scrollSpeed);
@@ -1354,25 +1354,25 @@ class HTTPServer implements Runnable
 				config.setScrollingPixelsPerSecond(newScrollSpeed);
 		}
 
-		config.setHostIssue(getFieldDecoded(socket, requestData, "host-issue"));
+		config.setHostIssue(getFieldDecoded(requestData, "host-issue"));
 
-		config.setServiceIssue(getFieldDecoded(socket, requestData, "service-issue"));
+		config.setServiceIssue(getFieldDecoded(requestData, "service-issue"));
 
-		config.setShowHeader(getCheckBox(socket, requestData, "show-header"));
+		config.setShowHeader(getCheckBox(requestData, "show-header"));
 
-		boolean son = getCheckBox(socket, requestData, "sort-order-numeric");
-		boolean sor = getCheckBox(socket, requestData, "sort-order-reverse");
-		config.setSortOrder(getFieldDecoded(socket, requestData, "sort-order"), son, sor);
+		boolean son = getCheckBox(requestData, "sort-order-numeric");
+		boolean sor = getCheckBox(requestData, "sort-order-reverse");
+		config.setSortOrder(getFieldDecoded(requestData, "sort-order"), son, sor);
 
-		config.setVerbose(getCheckBox(socket, requestData, "verbose"));
+		config.setVerbose(getCheckBox(requestData, "verbose"));
 
-		config.setDisplayUnknown(getCheckBox(socket, requestData, "display-unknown"));
+		config.setDisplayUnknown(getCheckBox(requestData, "display-unknown"));
 
-		config.setDoubleBuffering(getCheckBox(socket, requestData, "double-buffering"));
+		config.setDoubleBuffering(getCheckBox(requestData, "double-buffering"));
 
-		config.setRowBorder(getCheckBox(socket, requestData, "row-border"));
+		config.setRowBorder(getCheckBox(requestData, "row-border"));
 
-		String rowBorderHeight = getField(socket, requestData, "upper-row-border-height");
+		String rowBorderHeight = getField(requestData, "upper-row-border-height");
 		if (rowBorderHeight != null && rowBorderHeight.trim().equals("") == false)
 		{
 			int newRowBorderHeight = Integer.valueOf(rowBorderHeight);
@@ -1382,17 +1382,17 @@ class HTTPServer implements Runnable
 				config.setUpperRowBorderHeight(newRowBorderHeight);
 		}
 
-		config.setRowBorderColor(getField(socket, requestData, "row-border-color"));
-		config.setGraphColor(getField(socket, requestData, "graph-color"));
+		config.setRowBorderColor(getField(requestData, "row-border-color"));
+		config.setGraphColor(getField(requestData, "graph-color"));
 
 		// add server
-		String server_add_parameters = getFieldDecoded(socket, requestData, "server-add-parameters");
+		String server_add_parameters = getFieldDecoded(requestData, "server-add-parameters");
 		if (server_add_parameters.equals("") == false)
 		{
 			NagiosDataSourceType ndst = null;
 			NagiosVersion nv = null;
 
-			String type = getField(socket, requestData, "server-add-type");
+			String type = getField(requestData, "server-add-type");
 			if (type.equals("tcp"))
 				ndst = NagiosDataSourceType.TCP;
 			else if (type.equals("ztcp"))
@@ -1404,7 +1404,7 @@ class HTTPServer implements Runnable
 			else if (type.equals("file"))
 				ndst = NagiosDataSourceType.FILE;
 
-			String version = getField(socket, requestData, "server-add-version");
+			String version = getField(requestData, "server-add-version");
 			if (version.equals("1"))
 				nv = NagiosVersion.V1;
 			else if (version.equals("2"))
@@ -1455,8 +1455,8 @@ class HTTPServer implements Runnable
 					try
 					{
 						URL url = new URL(URLDecoder.decode(server_add_parameters, "US-ASCII"));
-						String username = getFieldDecoded(socket, requestData, "nagios-http-username");
-						String password = getFieldDecoded(socket, requestData, "nagios-http-password");
+						String username = getFieldDecoded(requestData, "nagios-http-username");
+						String password = getFieldDecoded(requestData, "nagios-http-password");
 						boolean withAuth = username != null && password != null && username.equals("") == false && password.equals("") == false;
 						if (withAuth)
 							config.addNagiosDataSource(new NagiosDataSource(url, username, password, nv));
@@ -1494,7 +1494,7 @@ class HTTPServer implements Runnable
 			}
 		}
 
-		String cam_rows = getField(socket, requestData, "cam-rows");
+		String cam_rows = getField(requestData, "cam-rows");
 		if (cam_rows.equals("") == false)
 		{
 			int camRows = Integer.valueOf(cam_rows);
@@ -1507,7 +1507,7 @@ class HTTPServer implements Runnable
 			config.setCamRows(camRows);
 		}
 
-		String cam_cols = getField(socket, requestData, "cam-cols");
+		String cam_cols = getField(requestData, "cam-cols");
 		if (cam_cols.equals("") == false)
 		{
 			int camCols = Integer.valueOf(cam_cols);
@@ -1520,7 +1520,7 @@ class HTTPServer implements Runnable
 			config.setCamCols(camCols);
 		}
 
-		config.setKeepAspectRatio(getCheckBox(socket, requestData, "keep-aspect-ratio"));
+		config.setKeepAspectRatio(getCheckBox(requestData, "keep-aspect-ratio"));
 
 		reply.add("<BR>\n");
 		reply.add("Form processed.<BR>\n");
@@ -1772,10 +1772,10 @@ class HTTPServer implements Runnable
 		int nRefreshes = statistics.getNRefreshes();
 		reply.add("<TR><TD>Total number of refreshes:</TD><TD>" + nRefreshes + "</TD></TR>\n");
 		reply.add("<TR><TD>Total refresh time:</TD><TD>" + statistics.getTotalRefreshTime() + "</TD></TR>\n");
-		reply.add("<TR><TD>Average refresh time:</TD><TD>" + String.format("%.4f", statistics.getTotalRefreshTime() / (double)nRefreshes) + "</TD></TR>\n");
+		reply.add("<TR><TD>Average refresh time:</TD><TD>" + String.format("%.4f", statistics.getTotalRefreshTime() / nRefreshes) + "</TD></TR>\n");
 		reply.add("<TR><TD>Total image refresh time:</TD><TD>" + statistics.getTotalImageLoadTime() + "</TD></TR>\n");
-		reply.add("<TR><TD>Average image refresh time:</TD><TD>" + String.format("%.4f", statistics.getTotalImageLoadTime() / (double)nRefreshes) + "</TD></TR>\n");
-		reply.add("<TR><TD>Total running time:</TD><TD>" + ((double)(System.currentTimeMillis() - statistics.getRunningSince()) / 1000.0) + "s</TD></TR>\n");
+		reply.add("<TR><TD>Average image refresh time:</TD><TD>" + String.format("%.4f", statistics.getTotalImageLoadTime() / nRefreshes) + "</TD></TR>\n");
+		reply.add("<TR><TD>Total running time:</TD><TD>" + ((System.currentTimeMillis() - statistics.getRunningSince()) / 1000.0) + "s</TD></TR>\n");
 		reply.add("<TR><TD>Number of webserver hits:</TD><TD>" + webServerHits + "</TD></TR>\n");
 		reply.add("<TR><TD>Number of 404 pages serverd:</TD><TD>" + webServer404 + "</TD></TR>\n");
 		reply.add("<TR><TD>Number of Java exceptions:</TD><TD>" + statistics.getNExceptions() + "</TD></TR>\n");
@@ -2174,10 +2174,10 @@ class HTTPServer implements Runnable
 		addPageHeader(reply, "");
 
 		boolean valid = true;
-		String username = getField(socket, requestData, "username");
+		String username = getField(requestData, "username");
 		if (username == null || username.equals(config.getWebUsername()) == false)
 			valid = false;
-		String password = getField(socket, requestData, "password");
+		String password = getField(requestData, "password");
 		if (password == null || password.equals(config.getWebPassword()) == false)
 			valid = false;
 

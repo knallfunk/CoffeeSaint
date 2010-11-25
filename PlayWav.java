@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2010 by folkert@vanheusden.com */
 import java.io.File;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;

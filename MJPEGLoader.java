@@ -94,7 +94,8 @@ class MJPEGLoader extends ImageLoader implements Runnable {
 			System.out.println("MJPEGLoader: " + url + " succesfully retrieved");
 		}
 		catch(Exception e) {
-			System.err.println("MJPEGLoader(" + url + ", " + to + "): " + e);
+			exception = "MJPEGLoader failed to load " + url + ": " + e;
+			CoffeeSaint.log.add(exception);
 		}
 		finally {
 			lock.release();

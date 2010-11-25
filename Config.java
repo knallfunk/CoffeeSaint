@@ -1911,8 +1911,9 @@ public class Config
 
 	public void setServicesFilterExclude(String services) throws Exception
 	{
+		java.util.List<Pattern> dummy = setFilter(services);
 		lock();
-		servicesFilterExclude = setFilter(services);
+		servicesFilterExclude = dummy;
 		servicesFilterExcludeList = services;
 		unlock();
 	}
@@ -1937,8 +1938,9 @@ public class Config
 
 	public void setServicesFilterInclude(String services) throws Exception
 	{
+		java.util.List<Pattern> dummy = setFilter(services);
 		lock();
-		servicesFilterInclude = setFilter(services);
+		servicesFilterInclude = dummy;
 		servicesFilterIncludeList = services;
 		unlock();
 	}
@@ -1977,8 +1979,9 @@ public class Config
 
 	public void setHostsFilterExclude(String hosts) throws Exception
 	{
+		java.util.List<Pattern> dummy = setFilter(hosts);
 		lock();
-		hostsFilterExclude = setFilter(hosts);
+		hostsFilterExclude = dummy;
 		hostsFilterExcludeList = hosts;
 		unlock();
 	}
@@ -2003,8 +2006,9 @@ public class Config
 
 	public void setHostsFilterInclude(String hosts) throws Exception
 	{
+		java.util.List<Pattern> dummy = setFilter(hosts);
 		lock();
-		hostsFilterInclude = setFilter(hosts);
+		hostsFilterInclude = dummy;
 		hostsFilterIncludeList = hosts;
 		unlock();
 	}
