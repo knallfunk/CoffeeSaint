@@ -75,8 +75,7 @@ public class MyHTTPServer
 		return socket.getOutputStream();
 	}
 
-	public void close() throws Exception
-	{
+	public void close() throws Exception {
 		outputStream.flush();
 
 		if (socket != null)

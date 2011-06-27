@@ -13,6 +13,7 @@ import java.util.*;
 public class Host
 {
 	String hostName;
+	String nagiosSource;
 
 	List<ParameterEntry> hostEntries = new ArrayList<ParameterEntry>();
 
@@ -21,9 +22,14 @@ public class Host
 	/**
 	 * @param hostName	Name of the host this object describes.
 	 */
-	public Host(String hostName)
+	public Host(String nagiosSource, String hostName)
 	{
+		this.nagiosSource = nagiosSource;
 		this.hostName = hostName;
+	}
+
+	public String getNagiosSource() {
+		return nagiosSource;
 	}
 
 	/**

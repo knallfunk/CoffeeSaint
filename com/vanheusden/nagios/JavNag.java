@@ -78,7 +78,7 @@ public class JavNag
 		return null;
 	}
 
-	private Host addAndOrFindHost(String hostName)
+	private Host addAndOrFindHost(String nagiosSource, String hostName)
 	{
 		for(Host currentHost : hosts)
 		{
@@ -86,7 +86,7 @@ public class JavNag
 				return currentHost;
 		}
 
-		Host newHost = new Host(hostName);
+		Host newHost = new Host(nagiosSource, hostName);
 
 		hosts.add(newHost);
 
@@ -103,7 +103,7 @@ public class JavNag
 		service.addParameter(new ParameterEntry(serviceParameterName, serviceParameterValue));
 	}
 
-	private void addFromNagios1(List<String> fileDump) throws Exception
+	private void addFromNagios1(String nagiosSource, List<String> fileDump) throws Exception
 	{
 		for(String currentLine : fileDump)
 		{
@@ -127,7 +127,7 @@ public class JavNag
 				if (elements.length != 21)
 					throw new Exception("Expecting 21 for a HOST-line, got " + elements.length + ": " + currentLine);
 
-				Host host = addAndOrFindHost(hostName);
+				Host host = addAndOrFindHost(nagiosSource, hostName);
 				int current_state = 255;
 				if (elements[2].equals("UP") || elements[2].equals("OK"))
 					current_state = 0;
@@ -162,7 +162,7 @@ public class JavNag
 				if (elements.length != 31 && elements.length != 32)
 					throw new Exception("Expecting 21 for a SERVICE-line, got " + elements.length + ": " + currentLine);
 
-				Host host = addAndOrFindHost(hostName);
+				Host host = addAndOrFindHost(nagiosSource, hostName);
 				Service service = host.addAndOrFindService(elements[2]);
 				int current_state = 255;
 				if (elements[3].equals("OK"))
@@ -219,7 +219,7 @@ public class JavNag
 		}
 	}
 
-	private void addFromNagios2And3(List<String> fileDump) throws Exception
+	private void addFromNagios2And3(String nagiosSource, List<String> fileDump) throws Exception
 	{
 		String host_name = null;
 		Host host = null;
@@ -273,7 +273,7 @@ public class JavNag
 				if (parameter != null && value != null)
 				{
 					if (parameter.equals("host_name")) {
-						host = addAndOrFindHost(value);
+						host = addAndOrFindHost(nagiosSource, value);
 						host_name = value;
 						addHostParameterEntry(host, parameter, value);
 					}
@@ -578,11 +578,11 @@ public class JavNag
 
 		if (nagiosVersion == NagiosVersion.V1)
 		{
-			addFromNagios1(fileDump);
+			addFromNagios1(fileName, fileDump);
 		}
 		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
 		{
-			addFromNagios2And3(fileDump);
+			addFromNagios2And3(fileName, fileDump);
 		}
 	}
 
@@ -611,11 +611,11 @@ public class JavNag
 
 		if (nagiosVersion == NagiosVersion.V1)
 		{
-			addFromNagios1(fileDump);
+			addFromNagios1(host, fileDump);
 		}
 		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
 		{
-			addFromNagios2And3(fileDump);
+			addFromNagios2And3(host, fileDump);
 		}
 	}
 
@@ -695,7 +695,7 @@ public class JavNag
 			if (nameIndex >= fieldsCur.length)
 				throw new Exception("LiveStatus data mallformed?");
 			System.out.println("Adding host: " + fieldsCur[nameIndex]);
-			Host hostObj = addAndOrFindHost(fieldsCur[nameIndex]);
+			Host hostObj = addAndOrFindHost(host, fieldsCur[nameIndex]);
 
 			int fieldIndex = 0;
 			for(String [] mapEntry : map) {
@@ -782,7 +782,7 @@ public class JavNag
 			if (fieldsCur.length != nFieldsRequested)
 				throw new Exception("Cannot parse LiveStatus stream: number of elements mismatch (requested: " + nFieldsRequested + ", got: " + fieldsCur.length + ")");
 			//System.out.println("Finding host: " + fieldsCur[hostNameIndex]);
-			Host hostObj = addAndOrFindHost(fieldsCur[hostNameIndex]);
+			Host hostObj = addAndOrFindHost(host, fieldsCur[hostNameIndex]);
 			//System.out.println("Adding service: " + fieldsCur[serviceNameIndex]);
 			Service service = hostObj.addAndOrFindService(fieldsCur[serviceNameIndex]);
 			int fieldIndex = 0;
@@ -840,11 +840,11 @@ public class JavNag
 
 		if (nagiosVersion == NagiosVersion.V1)
 		{
-			addFromNagios1(fileDump);
+			addFromNagios1(url.toString(), fileDump);
 		}
 		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
 		{
-			addFromNagios2And3(fileDump);
+			addFromNagios2And3(url.toString(), fileDump);
 		}
 	}
 

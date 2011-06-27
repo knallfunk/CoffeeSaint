@@ -49,8 +49,8 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.4";
-	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2010 by folkert@vanheusden.com";
+	static String versionNr = "v4.5";
+	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2011 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
 
@@ -758,6 +758,9 @@ public class CoffeeSaint
 
 		if (cmd.equals("SERVICENAME") && problem != null && problem.getService() != null)
 			return problem.getService().getServiceName();
+
+		if (cmd.equals("SERVERNAME"))
+			return problem.getHost().getNagiosSource();
 
 		if (cmd.equals("HOSTSTATE") && problem != null && problem.getHost() != null)
 			return hostState(problem.getHost().getParameter("current_state"));
@@ -1512,6 +1515,7 @@ public class CoffeeSaint
 		System.out.println("  %STATE                    Either '--no-problems-text' or --state-problems-text'");
 		System.out.println("  %H:%M       Current hour/minute");
 		System.out.println("  %HOSTNAME/%SERVICENAME    host/service with problem");
+		System.out.println("  %SERVERNAME               host/service with problem");
 		System.out.println("  %HOSTSTATE/%SERVICESTATE  host/service state");
 		System.out.println("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem");
 		System.out.println("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping");
