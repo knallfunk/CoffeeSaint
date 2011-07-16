@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2011 by folkert@vanheusden.com */
 import com.vanheusden.sockets.HTTPRequestData;
 import com.vanheusden.sockets.MyHTTPServer;
 import com.vanheusden.nagios.*;
@@ -222,7 +222,7 @@ class HTTPServer implements Runnable
 		String reply = "HTTP/1.0 200 OK\r\n";
 		reply += "Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n";
 		reply += "Server: " + CoffeeSaint.getVersion() + "\r\n";
-		reply += "Last-Modified: Tue, 20 Jul 2010 07:56:40 GMT\r\n";
+		reply += "Last-Modified: Tue, 20 Jul 2011 07:56:40 GMT\r\n";
 		reply += "Connection: close\r\n";
 		reply += "Content-Type: application/java-archive\r\n";
 		reply += "\r\n";
@@ -702,7 +702,7 @@ class HTTPServer implements Runnable
 		reply.add("Please note that 'username' and 'password' are only for 'http-auth'.<BR>\n");
 		reply.add("Also please note that http/https are NOT the urls of the Nagios web-interface but URLs of the status.dat-file. See <A HREF=\"http://vanheusden.com/java/CoffeeSaint/#url\">this page</A> for more info.<BR>\n");
 		reply.add("<TABLE>\n");
-		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD><TD><B>username</B></TD><TD><B>password</B></TD></TR>\n");
+		reply.add("<TR><TD><B>type</B></TD><TD><B>Nagios version</B></TD><TD><B>data source</B></TD><TD><B>remove?</B></TD><TD><B>username</B></TD><TD><B>password</B></TD><TD><B>pretty name</B></TD></TR>\n");
 		for(NagiosDataSource dataSource : config.getNagiosDataSources())
 		{
 			String type = "?", username = "", password = "";
@@ -742,8 +742,12 @@ class HTTPServer implements Runnable
 			else if (dataSource.getType() == NagiosDataSourceType.FILE)
 				parameters = dataSource.getFile();
 
+			String pn = dataSource.getPrettyName();
+			if (pn == null)
+				pn = "";
+
 			String serverString = parameters;
-			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD><TD>" + username + "</TD><TD>" + password +"</TD></TR>\n");
+			reply.add("<TR><TD>" + type + "</TD><TD>" + version + "</TD><TD>" + parameters + "</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"serverid_" + serverString.hashCode() + "\" VALUE=\"on\"></TD><TD>" + username + "</TD><TD>" + password +"</TD><TD>" + pn + "</TD></TR>\n");
 		}
 		reply.add("<TR>\n");
 		reply.add("<TD><SELECT NAME=\"server-add-type\"><OPTION VALUE=\"tcp\">TCP</OPTION><OPTION VALUE=\"ztcp\">GZIP compressed TCP</OPTION><OPTION VALUE=\"ls\">LiveStatus TCP socket</OPTION><OPTION VALUE=\"http\">HTTP</OPTION><OPTION VALUE=\"file\">FILE</OPTION></SELECT></TD>\n");
@@ -752,6 +756,7 @@ class HTTPServer implements Runnable
 		reply.add("<TD></TD>\n");
 		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"nagios-http-username\"></TD>\n");
 		reply.add("<TD><INPUT TYPE=\"PASSWORD\" NAME=\"nagios-http-password\"></TD>\n");
+		reply.add("<TD><INPUT TYPE=\"TEXT\" NAME=\"nagios-pretty-name\"></TD>\n");
 		reply.add("</TR>\n");
 		reply.add("<TR><TD>Use HTTP compression:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"disable-http-compression\" VALUE=\"on\" " + isChecked(config.getAllowHTTPCompression()) + "></TD></TR>\n");
 		reply.add("</TABLE>\n");
@@ -857,6 +862,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Header:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"header\" VALUE=\"" + config.getHeader() + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Footer:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"footer\" VALUE=\"" + (config.getFooter() != null ? config.getFooter() : "") + "\"></TD><TD><A HREF=\"/help-escapes.html\" TARGET=\"_new\">List of escapes</A></TD></TR>\n");
 		reply.add("<TR><TD>Show header:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-header\" VALUE=\"on\" " + isChecked(config.getShowHeader()) + "></TD><TD></TD></TR>\n");
+		reply.add("<TR><TD>Flash (blink) problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"flash\" VALUE=\"on\" " + isChecked(config.getFlash()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Show unknown:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"display-unknown\" VALUE=\"on\" " + isChecked(config.getDisplayUnknown()) + "></TD><TD>Display with unknown/pending state</TD></TR>\n");
 		reply.add("<TR><TD>Show flapping icon:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"show-flapping-icon\" VALUE=\"on\" " + isChecked(config.getShowFlappingIcon()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Header always bg color:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"header-always-bgcolor\" VALUE=\"on\" " + isChecked(config.getHeaderAlwaysBGColor()) + "></TD><TD></TD></TR>\n");
@@ -865,7 +871,6 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Scroll problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scroll-if-not-fitting\" VALUE=\"on\" " + isChecked(config.getScrollIfNotFit()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Text splitter:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-splitter\" VALUE=\"" + (config.getLineScrollSplitter() == null ? "" : "" + config.getLineScrollSplitter()) + "\"></TD><TD>This is used for both scrolling-splitted-text<BR>and the 'draw at offset' functionality.</TD></TR>\n");
-		reply.add("<TR><TD>Draw at what offset splitted part:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"split-text-put-at-offset\" VALUE=\"" + (config.getPutSplitAtOffset() != null ? config.getPutSplitAtOffset() : 0) + "\"></TD><TD>0 = disabled</TD></TR>\n");
 		reply.add("<TR><TD>Draw split-line:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"draw-problems-service-split-line\" VALUE=\"on\" " + isChecked(config.getDrawProblemServiceSplitLine()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD>\n");
 		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder(), false);
@@ -1325,24 +1330,12 @@ class HTTPServer implements Runnable
 			if (splitter.equals(""))
 				config.setLineScrollSplitter(null);
 			else
-				config.setLineScrollSplitter(splitter.charAt(0));
+				config.setLineScrollSplitter(splitter);
 		}
 
 		config.setDrawProblemServiceSplitLine(getCheckBox(requestData, "draw-problems-service-split-line"));
 
 		config.setNoProblemsTextBg(getCheckBox(requestData, "no-problems-text-with-bg-color"));
-
-		String drawSplitAtOffset = getField(requestData, "split-text-put-at-offset");
-		if (drawSplitAtOffset != null && drawSplitAtOffset.trim().equals("") == false)
-		{
-			int newOffset = Integer.valueOf(drawSplitAtOffset);
-			if (newOffset < 0)
-				reply.add("Offset must be >= 0");
-			else if (newOffset == 0)
-				config.setPutSplitAtOffset(null);
-			else
-				config.setPutSplitAtOffset(newOffset);
-		}
 
 		String scrollSpeed = getField(requestData, "scroll-pixels-per-sec");
 		if (scrollSpeed != null && scrollSpeed.trim().equals("") == false)
@@ -1359,6 +1352,8 @@ class HTTPServer implements Runnable
 		config.setServiceIssue(getFieldDecoded(requestData, "service-issue"));
 
 		config.setShowHeader(getCheckBox(requestData, "show-header"));
+
+		config.setFlash(getCheckBox(requestData, "flash"));
 
 		boolean son = getCheckBox(requestData, "sort-order-numeric");
 		boolean sor = getCheckBox(requestData, "sort-order-reverse");
@@ -1404,6 +1399,10 @@ class HTTPServer implements Runnable
 			else if (type.equals("file"))
 				ndst = NagiosDataSourceType.FILE;
 
+			String pn = getField(requestData, "nagios-pretty-name");
+			if (pn.equals(""))
+				pn = null;
+
 			String version = getField(requestData, "server-add-version");
 			if (version.equals("1"))
 				nv = NagiosVersion.V1;
@@ -1432,7 +1431,7 @@ class HTTPServer implements Runnable
 					if (result != null)
 						reply.add("Error: address " + server_add_parameters + ":" + port + " has an issue (" + result + "). Nagios server was <I>not</I> added.<BR>\n");
 					else
-						config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, nv, ndst == NagiosDataSourceType.ZTCP));
+						config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, nv, ndst == NagiosDataSourceType.ZTCP, pn));
 				}
 				else if (ndst == NagiosDataSourceType.LS)
 				{
@@ -1448,7 +1447,7 @@ class HTTPServer implements Runnable
 					if (result != null)
 						reply.add("Error: address " + server_add_parameters + ":" + port + " has an issue (" + result + "). Nagios server was <I>not</I> added.<BR>\n");
 					else
-						config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port));
+						config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, port, pn));
 				}
 				else if (ndst == NagiosDataSourceType.HTTP)
 				{
@@ -1459,9 +1458,9 @@ class HTTPServer implements Runnable
 						String password = getFieldDecoded(requestData, "nagios-http-password");
 						boolean withAuth = username != null && password != null && username.equals("") == false && password.equals("") == false;
 						if (withAuth)
-							config.addNagiosDataSource(new NagiosDataSource(url, username, password, nv));
+							config.addNagiosDataSource(new NagiosDataSource(url, username, password, nv, pn));
 						else
-							config.addNagiosDataSource(new NagiosDataSource(url, nv));
+							config.addNagiosDataSource(new NagiosDataSource(url, nv, pn));
 
 						String result = CoffeeSaint.testUrl(url, withAuth);
 						if (result != null)
@@ -1473,7 +1472,7 @@ class HTTPServer implements Runnable
 					}
 				}
 				else if (ndst == NagiosDataSourceType.FILE)
-					config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, nv));
+					config.addNagiosDataSource(new NagiosDataSource(server_add_parameters, nv, pn));
 			}
 		}
 
@@ -1590,14 +1589,17 @@ class HTTPServer implements Runnable
 		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
-		reply.add("<TABLE>\n");
-		reply.add("<TR><TD><B>Host</B></TD><TD><B>host status</B></TD><TD><B>Service</B></TD><TD><B>service status</B></TD></TR>\n");
-
-		JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
+		Object [] result = CoffeeSaint.loadNagiosData(null, -1, null);
+		JavNag javNag = (JavNag)result[0];
+		if (result[1] != null)
+			reply.add("<B>Problem load: " + (String)result[1] + "</B><BR>");
                 List<Problem> problems = CoffeeSaint.findProblems(javNag);
                 coffeeSaint.learnProblemCount(problems.size());
 		coffeeSaint.collectPerformanceData(javNag);
 		coffeeSaint.collectLatencyData(javNag);
+
+		reply.add("<TABLE>\n");
+		reply.add("<TR><TD><B>Host</B></TD><TD><B>host status</B></TD><TD><B>Service</B></TD><TD><B>service status</B></TD></TR>\n");
 
 		List<Host> hosts = javNag.getListOfHosts();
 		int nPages = (hosts.size() + maxNHostsPerPage - 1) / maxNHostsPerPage;
@@ -1801,7 +1803,10 @@ class HTTPServer implements Runnable
 
 		Calendar rightNow = Calendar.getInstance();
 
-		JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
+		Object [] result = CoffeeSaint.loadNagiosData(null, -1, null);
+		JavNag javNag = (JavNag)result[0];
+		if (result[1] != null)
+			reply.add("<B>Problem load: " + (String)result[1] + "</B><BR>");
 		List<Problem> problems = CoffeeSaint.findProblems(javNag);
 		coffeeSaint.learnProblemCount(problems.size());
 		coffeeSaint.collectPerformanceData(javNag);
@@ -1837,7 +1842,8 @@ class HTTPServer implements Runnable
 				escapeString = config.getHostIssue();
 			else
 				escapeString = config.getServiceIssue();
-			String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem, true, true);
+			Object [] dummy = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem, true, true);
+			String output = (String)dummy[0];
 
 			reply.add("<TR><TD BGCOLOR=\"#" + stateColor + "\" TEXT=\"#" + htmlColorString(config.getTextColor()) + "\">" + output + "</TD></TR>\n");
 		}
@@ -2007,7 +2013,10 @@ class HTTPServer implements Runnable
 		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
-		JavNag javNag = CoffeeSaint.loadNagiosData(null, -1, null);
+		Object [] result = CoffeeSaint.loadNagiosData(null, -1, null);
+		JavNag javNag = (JavNag)result[0];
+		if (result[1] != null)
+			reply.add("<B>Problem load: " + (String)result[1] + "</B><BR>");
 		List<Problem> problems = CoffeeSaint.findProblems(javNag);
 		coffeeSaint.learnProblemCount(problems.size());
 		coffeeSaint.collectPerformanceData(javNag);
