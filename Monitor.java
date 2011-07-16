@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009-2010 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2011 by folkert@vanheusden.com */
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.Rectangle;
