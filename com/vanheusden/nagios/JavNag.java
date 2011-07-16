@@ -17,6 +17,9 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
+import java.text.SimpleDateFormat;
+import java.io.FileWriter;
+
 /**
  * Class JavNag is the main class for obtaining and processing Nagios statusses.
  * It can retrieve the status from a Nagios status-file or from a (TCP-)socket.
@@ -565,7 +568,7 @@ public class JavNag
 		return tot / (double)n;
 	}
 
-	public void loadNagiosData(String fileName, NagiosVersion nagiosVersion) throws Exception
+	public void loadNagiosData(String fileName, NagiosVersion nagiosVersion, String prettyName) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();
 		BufferedReader in = new BufferedReader(new FileReader(fileName));
@@ -576,17 +579,20 @@ public class JavNag
 
 		in.close();
 
+		if (prettyName == null)
+			prettyName = fileName;
+
 		if (nagiosVersion == NagiosVersion.V1)
 		{
-			addFromNagios1(fileName, fileDump);
+			addFromNagios1(prettyName, fileDump);
 		}
 		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
 		{
-			addFromNagios2And3(fileName, fileDump);
+			addFromNagios2And3(prettyName, fileDump);
 		}
 	}
 
-	public void loadNagiosData(String host, int port, NagiosVersion nagiosVersion, boolean compressed) throws Exception
+	public void loadNagiosData(String host, int port, NagiosVersion nagiosVersion, boolean compressed, String prettyName) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();
 		Socket socket = connectToSocket(host, port);
@@ -609,24 +615,27 @@ public class JavNag
 
 		socket.close();
 
+		if (prettyName == null)
+			prettyName = host;
+
 		if (nagiosVersion == NagiosVersion.V1)
 		{
-			addFromNagios1(host, fileDump);
+			addFromNagios1(prettyName, fileDump);
 		}
 		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
 		{
-			addFromNagios2And3(host, fileDump);
+			addFromNagios2And3(prettyName, fileDump);
 		}
 	}
 
 	// via LiveStatus
-	public void loadNagiosDataLiveStatus(String host, int port) throws Exception {
-		loadNagiosDataLiveStatus_hosts(host, port);
+	public void loadNagiosDataLiveStatus(String host, int port, String prettyName) throws Exception {
+		loadNagiosDataLiveStatus_hosts(host, port, prettyName);
 
-		loadNagiosDataLiveStatus_services(host, port);
+		loadNagiosDataLiveStatus_services(host, port, prettyName);
 	}
 
-	private void loadNagiosDataLiveStatus_hosts(String host, int port) throws Exception {
+	private void loadNagiosDataLiveStatus_hosts(String host, int port, String prettyName) throws Exception {
 		Socket socket = connectToSocket(host, port);
 		BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -685,6 +694,9 @@ public class JavNag
 		out.flush();
 		socket.shutdownOutput();
 
+		if (prettyName == null)
+			prettyName = host;
+
 		for(;;) {
 			String line = in.readLine();
 			if (line == null)
@@ -695,7 +707,7 @@ public class JavNag
 			if (nameIndex >= fieldsCur.length)
 				throw new Exception("LiveStatus data mallformed?");
 			System.out.println("Adding host: " + fieldsCur[nameIndex]);
-			Host hostObj = addAndOrFindHost(host, fieldsCur[nameIndex]);
+			Host hostObj = addAndOrFindHost(prettyName, fieldsCur[nameIndex]);
 
 			int fieldIndex = 0;
 			for(String [] mapEntry : map) {
@@ -705,7 +717,7 @@ public class JavNag
 		}
 	}
 
-	private void loadNagiosDataLiveStatus_services(String host, int port) throws Exception {
+	private void loadNagiosDataLiveStatus_services(String host, int port, String prettyName) throws Exception {
 		Socket socket = connectToSocket(host, port);
 		BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -772,6 +784,9 @@ public class JavNag
 		out.flush();
 		socket.shutdownOutput();
 
+		if (prettyName == null)
+			prettyName = host;
+
 		for(;;) {
 			String line = in.readLine();
 			if (line == null)
@@ -782,7 +797,7 @@ public class JavNag
 			if (fieldsCur.length != nFieldsRequested)
 				throw new Exception("Cannot parse LiveStatus stream: number of elements mismatch (requested: " + nFieldsRequested + ", got: " + fieldsCur.length + ")");
 			//System.out.println("Finding host: " + fieldsCur[hostNameIndex]);
-			Host hostObj = addAndOrFindHost(host, fieldsCur[hostNameIndex]);
+			Host hostObj = addAndOrFindHost(prettyName, fieldsCur[hostNameIndex]);
 			//System.out.println("Adding service: " + fieldsCur[serviceNameIndex]);
 			Service service = hostObj.addAndOrFindService(fieldsCur[serviceNameIndex]);
 			int fieldIndex = 0;
@@ -795,7 +810,7 @@ public class JavNag
 		socket.close();
 	}
 
-	public void loadNagiosData(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression) throws Exception
+	public void loadNagiosData(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression, String prettyName) throws Exception
 	{
 		List<String> fileDump = new ArrayList<String>();
 
@@ -838,13 +853,16 @@ public class JavNag
 
 		in.close();
 
+		if (prettyName == null)
+			prettyName = url.toString();
+
 		if (nagiosVersion == NagiosVersion.V1)
 		{
-			addFromNagios1(url.toString(), fileDump);
+			addFromNagios1(prettyName, fileDump);
 		}
 		else if (nagiosVersion == NagiosVersion.V2 || nagiosVersion == NagiosVersion.V3)
 		{
-			addFromNagios2And3(url.toString(), fileDump);
+			addFromNagios2And3(prettyName, fileDump);
 		}
 	}
 
@@ -889,6 +907,62 @@ public class JavNag
 		return output;
 	}
 
+	public String findHostDown(long maxAge) throws Exception {
+		HashMap<String, Long> map = new HashMap<String, Long>();
+
+		for(Host currentHost : hosts)
+		{
+			String current_state = currentHost.getParameter("current_state");
+			if (current_state == null)
+				continue;
+
+			long mostRecent = 0;
+			Long dummy = map.get(currentHost.getNagiosSource());
+			if (dummy != null)
+				mostRecent = dummy;
+
+			String last_check = currentHost.getParameter("last_check");
+			mostRecent = Math.max(mostRecent, last_check != null ? Long.valueOf(last_check) : 0);
+
+			String last_update = currentHost.getParameter("last_update");
+			mostRecent = Math.max(mostRecent, last_update != null ? Long.valueOf(last_update) : 0);
+
+			for(Service currentService : currentHost.getServices())
+			{
+				last_check = currentService.getParameter("last_check");
+				mostRecent = Math.max(mostRecent, last_check != null ? Long.valueOf(last_check) : 0);
+
+				last_update = currentService.getParameter("last_update");
+				mostRecent = Math.max(mostRecent, last_update != null ? Long.valueOf(last_update) : 0);
+			}
+
+			map.put(currentHost.getNagiosSource(), new Long(mostRecent));
+		}
+
+		Set<String> set = map.keySet();
+		Iterator<String> it = set.iterator();
+		while(it.hasNext()) {
+			String hostName = it.next();
+			long age = (System.currentTimeMillis() / 1000) - map.get(hostName);
+			if (age > maxAge) {
+				System.out.println("check-max-age: " + hostName + "/" + map.get(hostName) + "/" + age + "/" + maxAge);
+
+				BufferedWriter out = new BufferedWriter(new FileWriter("max-check-age.log", true));
+				String ts = new SimpleDateFormat("E yyyy.MM.dd  hh:mm:ss a zzz").format(Calendar.getInstance().getTime());
+				out.write(ts, 0, ts.length());
+				out.newLine();
+				String s = "check-max-age: " + hostName + "/" + map.get(hostName) + "/" + age + "/" + maxAge;
+				out.write(s, 0, s.length());
+				out.newLine();
+				out.close();
+
+				return hostName;
+			}
+		}
+
+		return null;
+	}
+
 	public long findMostRecentCheckAge()
 	{
 		long mostRecent = 0;
@@ -929,9 +1003,9 @@ public class JavNag
 	 * @param nagiosVersion	Nagios-version this file is from.
 	 * @see NagiosVersion
 	 */
-	public JavNag(String fileName, NagiosVersion nagiosVersion) throws Exception
+	public JavNag(String fileName, NagiosVersion nagiosVersion, String prettyName) throws Exception
 	{
-		loadNagiosData(fileName, nagiosVersion);
+		loadNagiosData(fileName, nagiosVersion, prettyName);
 	}
 
 	/**
@@ -942,9 +1016,9 @@ public class JavNag
 	 * @param nagiosVersion	Nagios-version this file is from.
 	 * @see NagiosVersion
 	 */
-	public JavNag(String host, int port, NagiosVersion nagiosVersion, boolean compressed) throws Exception
+	public JavNag(String host, int port, NagiosVersion nagiosVersion, boolean compressed, String prettyName) throws Exception
 	{
-		loadNagiosData(host, port, nagiosVersion, compressed);
+		loadNagiosData(host, port, nagiosVersion, compressed, prettyName);
 	}
 
 	/**
@@ -954,9 +1028,9 @@ public class JavNag
 	 * @param nagiosVersion	Nagios-version this file is from.
 	 * @see NagiosVersion
 	 */
-	public JavNag(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression) throws Exception
+	public JavNag(URL url, NagiosVersion nagiosVersion, String username, String password, boolean allowCompression, String prettyName) throws Exception
 	{
-		loadNagiosData(url, nagiosVersion, username, password, allowCompression);
+		loadNagiosData(url, nagiosVersion, username, password, allowCompression, prettyName);
 	}
 
 	/**
@@ -965,8 +1039,8 @@ public class JavNag
 	 * @param host		host
 	 * @param port		port
 	 */
-	public JavNag(String host, int port) throws Exception
+	public JavNag(String host, int port, String prettyName) throws Exception
 	{
-		loadNagiosDataLiveStatus(host, port);
+		loadNagiosDataLiveStatus(host, port, prettyName);
 	}
 }

@@ -19,18 +19,18 @@ public class Problems implements Comparator<Problem>
 		this.sortReverse = reverse;
 	}
 
-	public int compare(Problem a, Problem b)
-	{
+	public int compare(Problem a, Problem b) {
 		int result = 0;
 		Problem pa = (Problem)a;
 		Problem pb = (Problem)b;
 
-		if (sortField.equals("host_name"))
-		{
+		if (sortField.equals("host_name")) {
 			result = pa.getHost().getHostName().compareTo(pb.getHost().getHostName());
 		}
-		else
-		{
+		else if (sortField.equals("pretty_name") || sortField.equals("server_name")) {
+			result = pa.getHost().getNagiosSource().compareTo(pb.getHost().getNagiosSource());
+		}
+		else {
 			Service pas = pa.getService();
 			Service pbs = pb.getService();
 
