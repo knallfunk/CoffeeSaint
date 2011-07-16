@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2010 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2011 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
 
 import javax.swing.JApplet;
@@ -15,7 +15,7 @@ import javax.swing.JFrame;
 
 public class Applet extends JApplet implements Runnable
 {
-	final static String rcsId = "$Id: Applet.java,v 1.4 2010-11-08 11:56:55 folkert Exp $";
+	final static String rcsId = "$Id: Applet.java,v 1.5 2011-07-16 11:47:36 folkert Exp $";
 	Thread mainLoop;
 	JFrame	frame;
 	Gui gui;
