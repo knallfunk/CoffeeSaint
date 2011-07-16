@@ -31,7 +31,7 @@ class ImageLoader implements Runnable {
 
 		t.interrupt();
 
-		System.out.println("ImageLoader: could not retrieve in time (" + to + ")");
+		CoffeeSaint.log.add("ImageLoader: could not retrieve in time (" + to + ")");
 		return null;
 	}
 
