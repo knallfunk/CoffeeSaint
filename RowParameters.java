@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2011 by folkert@vanheusden.com */
 import java.awt.Font;
 
 public class RowParameters
@@ -9,6 +9,10 @@ public class RowParameters
 	private Font f;
 	private double heightDiff;
 
+	public String toString() {
+		return "tw: " + textWidth + ", sm: " + shrunkMore + ", na: " + newAsc + ", f: " + f + ", hd: " + heightDiff;
+	}
+
 	public RowParameters(int textWidth, boolean shrunkMore, double newAsc, Font f, double heightDiff)
 	{
 		this.textWidth = textWidth;
@@ -16,6 +20,10 @@ public class RowParameters
 		this.newAsc = newAsc;
 		this.f = f;
 		this.heightDiff = heightDiff;
+	}
+
+	public void setTextWidth(int w) {
+		textWidth = w;
 	}
 
 	public int getTextWidth()
