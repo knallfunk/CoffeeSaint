@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009-2010 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2011 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
 
 import java.awt.Color;
@@ -93,7 +93,8 @@ public class Config
 	private String graphColorName;
 	private boolean scrollIfNotFit;
 	private Position counterPosition;
-	private Character lineScrollSplitter;
+	private List<Integer> lineScrollSplitter;
+	private String lineScrollSplitterString;
 	private String noProblemsText;
 	private Position noProblemsTextPosition;
 	private boolean authenticate;
@@ -123,6 +124,7 @@ public class Config
 	private boolean displayUnknown;
 	private boolean displayDown;
 	private int webcamTimeout;
+	private boolean flash;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -216,7 +218,7 @@ public class Config
 		graphColorName = "CoffeeSaint";
 		scrollIfNotFit = false;
 		counterPosition = Position.LOWER_RIGHT;
-		lineScrollSplitter = null;
+		lineScrollSplitter = new ArrayList<Integer>();
 		noProblemsText = null;
 		noProblemsTextPosition = Position.CENTER;
 		authenticate = true;
@@ -248,6 +250,7 @@ public class Config
 		displayUnknown = true;
 		displayDown = true;
 		webcamTimeout = -1;
+		flash = false;
 		unlock();
 	}
 
@@ -305,6 +308,13 @@ public class Config
 		return str.equalsIgnoreCase("true") ? true : false;
 	}
 
+	private String getFromArray(String [] array, int nr) {
+		if (array.length <= nr)
+			return null;
+
+		return array[nr];
+	}
+
 	public void loadAppletParameters(Applet a) throws Exception {
 		String data = null;
 
@@ -327,16 +337,16 @@ public class Config
 				throw new Exception("Nagios version '" + versionStr + "' not known.");
 
 			if (type.equalsIgnoreCase("http"))
-				nds = new NagiosDataSource(new URL(parameters[2]), nv);
+				nds = new NagiosDataSource(new URL(parameters[2]), nv, getFromArray(parameters, 3));
 			else if (type.equalsIgnoreCase("http-auth"))
-				nds = new NagiosDataSource(new URL(parameters[2]), parameters[3], parameters[4], nv);
+				nds = new NagiosDataSource(new URL(parameters[2]), parameters[3], parameters[4], nv, getFromArray(parameters, 5));
 			else if (type.equalsIgnoreCase("file"))
-				nds = new NagiosDataSource(parameters[2], nv);
+				nds = new NagiosDataSource(parameters[2], nv, getFromArray(parameters, 3));
 			else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
 			{
 				String host = parameters[2];
 				int port = Integer.valueOf(parameters[3]);
-				nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
+				nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"), getFromArray(parameters, 4));
 			}
 			else
 				throw new Exception("Data source-type '" + type + "' not understood.");
@@ -345,12 +355,11 @@ public class Config
 		}
 
 		data = a.getParameter("splitter");
-		if (data != null)
-		{
+		if (data != null) {
 			if (data.equalsIgnoreCase("none") || data.length() < 1)
 				setLineScrollSplitter(null);
 			else
-				setLineScrollSplitter(data.charAt(0));
+				setLineScrollSplitter(data);
 		}
 
 		data = a.getParameter("counter-position");
@@ -373,6 +382,9 @@ public class Config
 		data = a.getParameter("adapt-img");
 		if (data != null)
 			setAdaptImageSize(isIsTrue(data));
+		data = a.getParameter("flash");
+		if (data != null)
+			setFlash(isIsTrue(data));
 		data = a.getParameter("header");
 		if (data != null)
 			setHeader(data);
@@ -442,9 +454,6 @@ public class Config
 		data = a.getParameter("upper-row-border-height");
 		if (data != null)
 			setUpperRowBorderHeight(Integer.valueOf(data));
-		data = a.getParameter("split-text-put-at-offset");
-		if (data != null)
-			setPutSplitAtOffset(Integer.valueOf(data));
 		data = a.getParameter("listen-adapter");
 		if (data != null)
 			setHTTPServerListenAdapter(data);
@@ -710,22 +719,22 @@ public class Config
 							throw new Exception("Nagios version '" + versionStr + "' not known.");
 
 						if (type.equalsIgnoreCase("http"))
-							nds = new NagiosDataSource(new URL(parameters[2]), nv);
+							nds = new NagiosDataSource(new URL(parameters[2]), nv, getFromArray(parameters, 3));
 						else if (type.equalsIgnoreCase("http-auth"))
-							nds = new NagiosDataSource(new URL(parameters[2]), parameters[3], parameters[4], nv);
+							nds = new NagiosDataSource(new URL(parameters[2]), parameters[3], parameters[4], nv, getFromArray(parameters, 5));
 						else if (type.equalsIgnoreCase("file"))
-							nds = new NagiosDataSource(parameters[2], nv);
+							nds = new NagiosDataSource(parameters[2], nv, getFromArray(parameters, 3));
 						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp"))
 						{
 							String host = parameters[2];
 							int port = Integer.valueOf(parameters[3]);
-							nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
+							nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"), getFromArray(parameters, 4));
 						}
 						else if (type.equalsIgnoreCase("ls"))
 						{
 							String host = parameters[2];
 							int port = Integer.valueOf(parameters[3]);
-							nds = new NagiosDataSource(host, port);
+							nds = new NagiosDataSource(host, port, getFromArray(parameters, 4));
 							if (nv != NagiosVersion.V3)
 								throw new Exception("LiveStatus source only accepts version 3");
 						}
@@ -741,7 +750,7 @@ public class Config
 						if (data.equalsIgnoreCase("none") || data.length() < 1)
 							setLineScrollSplitter(null);
 						else
-							setLineScrollSplitter(data.charAt(0));
+							setLineScrollSplitter(data);
 					}
 					else if (name.equals("counter-position"))
 						setCounterPosition(data);
@@ -803,6 +812,8 @@ public class Config
 						setCounter(isTrue);
 					else if (name.equals("flexible-n-columns"))
 						setFlexibleNColumns(isTrue);
+					else if (name.equals("flash"))
+						setFlash(isTrue);
 					else if (name.equals("verbose"))
 						setVerbose(isTrue);
 					else if (name.equals("row-border"))
@@ -833,8 +844,6 @@ public class Config
 						setHTTPServerListenPort(Integer.valueOf(data));
 					else if (name.equals("upper-row-border-height"))
 						setUpperRowBorderHeight(Integer.valueOf(data));
-					else if (name.equals("split-text-put-at-offset"))
-						setPutSplitAtOffset(Integer.valueOf(data));
 					else if (name.equals("listen-adapter"))
 						setHTTPServerListenAdapter(data);
 					else if (name.equals("latency-file"))
@@ -1087,12 +1096,10 @@ public class Config
 		output.add(new String [] { "services-filter-exclude", getServicesFilterExcludeList()});
 		output.add(new String [] { "services-filter-include", getServicesFilterIncludeList()});
 		output.add(new String [] { "scroll-if-not-fitting", (getScrollIfNotFit() ? "true" : "false")});
-		output.add(new String [] { "splitter", ((getLineScrollSplitter() == null) ? "none" : "" + getLineScrollSplitter())});
+		output.add(new String [] { "splitter", getLineScrollSplitterString()});
 		output.add(new String [] { "counter-position", getCounterPositionName()});
 		output.add(new String [] { "sparkline-width", "" + getSparkLineWidth()});
 		output.add(new String [] { "header-always-bgcolor", (getHeaderAlwaysBGColor() ? "true" : "false")});
-		if (getPutSplitAtOffset() != null)
-			output.add(new String [] { "split-text-put-at-offset", "" + getPutSplitAtOffset()});
 		if (getLogo() != null)
 			output.add(new String [] { "logo", getLogo()});
 		if (getLogoPosition() != null)
@@ -1124,6 +1131,7 @@ public class Config
 		output.add(new String [] { "show-services-for-host-with-problems", (getShowServicesForHostWithProblems() ? "true" : "false")});
 		output.add(new String [] { "show-flapping", (getShowFlapping() ? "true" : "false")});
 		output.add(new String [] { "show-flapping-icon", (getShowFlappingIcon() ? "true" : "false")});
+		output.add(new String [] { "flash", "" + getFlash()});
 		output.add(new String [] { "problem-columns", "" + getNProblemCols()});
 		if (getWebUsername() != null)
 			output.add(new String [] { "web-username", getWebUsername()});
@@ -2917,24 +2925,36 @@ public class Config
 		return copy.toString();
 	}
 
-	public Character getLineScrollSplitter()
-	{
-		Character copy;
+	public String getLineScrollSplitterString() {
+		String copy;
 		lock();
-		copy = lineScrollSplitter;
+		copy = lineScrollSplitterString;
 		unlock();
 		return copy;
 	}
 
-	public void setLineScrollSplitter(Character which)
-	{
+	public List<Integer> getLineScrollSplitter() {
+		List<Integer> copy;
 		lock();
-		lineScrollSplitter = which;
+		copy = lineScrollSplitter;
+		unlock();
+		assert copy != null;
+		return copy;
+	}
+
+	public void setLineScrollSplitter(String what) {
+		lock();
+		lineScrollSplitterString = what;
+		lineScrollSplitter = new ArrayList<Integer>();
+		if (what != null) {
+			String [] parts = what.split(" ");
+			for(String cur : parts)
+				lineScrollSplitter.add(Integer.valueOf(cur));
+		}
 		unlock();
 	}
 
-	public void setNoProblemsTextPosition(String where) throws Exception
-	{
+	public void setNoProblemsTextPosition(String where) throws Exception {
 		Position newPosition = null;
 		if (where.equalsIgnoreCase("upper-left"))
 			newPosition = Position.UPPER_LEFT;
@@ -3067,25 +3087,6 @@ public class Config
 		copy = logo;
 		unlock();
 		return copy;
-	}
-
-	public Integer getPutSplitAtOffset()
-	{
-		Integer copy;
-		lock();
-		copy = putSplitAtOffset;
-		unlock();
-		return copy;
-	}
-
-	public void setPutSplitAtOffset(Integer newValue)
-	{
-		lock();
-		if (newValue == null || newValue == 0)
-			putSplitAtOffset = null;
-		else
-			putSplitAtOffset = newValue;
-		unlock();
 	}
 
 	public void setStateProblemsText(String string)
@@ -3524,6 +3525,20 @@ public class Config
 		int copy;
 		lock();
 		copy = webcamTimeout;
+		unlock();
+		return copy;
+	}
+
+	public void setFlash(boolean f) {
+		lock();
+		flash = f;
+		unlock();
+	}
+
+	public boolean getFlash() {
+		boolean copy;
+		lock();
+		copy = flash;
 		unlock();
 		return copy;
 	}

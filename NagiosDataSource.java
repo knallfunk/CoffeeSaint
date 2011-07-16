@@ -12,45 +12,51 @@ public class NagiosDataSource
 	private URL url = null;
 	private String file = null;
 	private String username = null, password = null;
+	private String pn;
 
-	public NagiosDataSource(String host, int port, NagiosVersion version, boolean compressed)
+	public NagiosDataSource(String host, int port, NagiosVersion version, boolean compressed, String pn)
 	{
 		this.type = compressed ? NagiosDataSourceType.ZTCP : NagiosDataSourceType.TCP;
 		this.host = host;
 		this.port = port;
 		this.version = version;
+		this.pn = pn;
 	}
 
-	public NagiosDataSource(URL url, NagiosVersion version)
+	public NagiosDataSource(URL url, NagiosVersion version, String pn)
 	{
 		this.type = NagiosDataSourceType.HTTP;
 		this.url = url;
 		this.version = version;
+		this.pn = pn;
 	}
 
-	public NagiosDataSource(URL url, String username, String password, NagiosVersion version)
+	public NagiosDataSource(URL url, String username, String password, NagiosVersion version, String pn)
 	{
 		this.type = NagiosDataSourceType.HTTP;
 		this.url = url;
 		this.version = version;
 		this.username = username;
 		this.password = password;
+		this.pn = pn;
 	}
 
-	public NagiosDataSource(String file, NagiosVersion version)
+	public NagiosDataSource(String file, NagiosVersion version, String pn)
 	{
 		this.type = NagiosDataSourceType.FILE;
 		this.file = file;
 		this.version = version;
+		this.pn = pn;
 	}
 
 	// livestatus
-	public NagiosDataSource(String host, int port)
+	public NagiosDataSource(String host, int port, String pn)
 	{
 		this.type = NagiosDataSourceType.LS;
 		this.host = host;
 		this.port = port;
 		this.version = NagiosVersion.V3;
+		this.pn = pn;
 	}
 
 	public String getUsername()
@@ -95,5 +101,9 @@ public class NagiosDataSource
 	{
 		assert type == NagiosDataSourceType.FILE;
 		return file;
+	}
+
+	public String getPrettyName() {
+		return pn;
 	}
 }
