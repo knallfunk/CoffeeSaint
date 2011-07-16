@@ -1,9 +1,13 @@
-/* Released under GPL2, (C) 2009 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2011 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
+
+// FIXME replace split-text-put-at-offset by vertical-line-at-position = ... ... ...
+// FIXME \B and \I can't be combined now
 
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.font.FontRenderContext;
+import java.awt.font.TextAttribute;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.*;
 import java.io.BufferedReader;
@@ -171,7 +175,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		}
 	}
 
-	int prepareRow(Graphics gTo, int windowWidth, int xStart, String msg, int row, String state, boolean hard, Color bgColor, float seeThrough, BufferedImage sparkLine, boolean addToScrollersIfNotFit, boolean isFlapping)
+	int prepareRow(Graphics gTo, int windowWidth, int xStart, String msg, int row, String state, boolean hard, Color bgColor, float seeThrough, BufferedImage sparkLine, boolean addToScrollersIfNotFit, boolean isFlapping, boolean flash)
 	{
 		final int rowHeight = (getHeight() - (config.getShowHeader() ? config.getUpperRowBorderHeight() : 0))/ config.getNRows();
 
@@ -181,24 +185,61 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		else if (state.equals("2"))
 			font = config.getCriticalFontName();
 
-		Integer reduceWidth = null;
-		if (config.getReduceTextWidth())
-			reduceWidth = Math.max(0, windowWidth - (sparkLine != null ? sparkLine.getWidth() - (isFlapping && config.getShowFlappingIcon() ? rowHeight : 0): 0));
-		RowParameters rowParameters = fitText(font, msg, rowHeight, reduceWidth);
+		Integer reduceToWidth = null;
+		RowParameters rowParameters = null;
+		if (config.getReduceTextWidth()) {
+			reduceToWidth = Math.max(0, windowWidth - (sparkLine != null ? sparkLine.getWidth() - (isFlapping && config.getShowFlappingIcon() ? rowHeight : 0): 0));
+		}
+		rowParameters = calcRowParameters(new Font(font, Font.PLAIN, rowHeight), msg, rowHeight, reduceToWidth);
 
-		if (config.getReduceTextWidth() == false && rowParameters.getTextWidth() > windowWidth && addToScrollersIfNotFit == true)
-		{
+		boolean scrollRequired = (config.getReduceTextWidth() == false && rowParameters.getTextWidth() > windowWidth && addToScrollersIfNotFit == true);
+// System.out.println("----- FLASH " + flash);
+		if (scrollRequired || flash) {
 			int yPos = 0;
 			if (row > 0)
 				yPos = rowHeight * row + (config.getShowHeader() ? config.getUpperRowBorderHeight() : 0);
-			windowMovingParts.add(new ScrollableContent(createRowImage(font, msg + " ", state, hard, bgColor, rowHeight, null, isFlapping), xStart, yPos, windowWidth));
+			BufferedImage img = createRowImage(rowParameters, msg + " ", state, hard, bgColor, rowHeight, null, isFlapping);
+			windowMovingParts.add(new ScrollableContent(img, xStart, yPos, windowWidth, flash, scrollRequired));
 		}
-		else
-		{
+		else {
+			// int w = img.getWidth();
+			// int h = img.getHeight();
+			// gTo.drawImage(img, xStart, yPos, xStart + w, yPos + h, 0, 0, w, h, Color.GRAY, null);
 			drawRow(gTo, windowWidth, xStart, rowParameters, rowHeight, msg, row, state, hard, bgColor, seeThrough, sparkLine, isFlapping);
 		}
 
 		return rowParameters.getTextWidth();
+	}
+
+	static void dump(String in, Object [] result) {
+		System.out.println("INPUT: " + in);
+		System.out.println("OUTPUT:");
+		String [] parts = (String [])result[0];
+		Character [] types = (Character [])result[1];
+		Boolean [] tabstopOut = (Boolean [])result[2];
+		for(int index=0; index<parts.length; index++) {
+			System.out.println("\t" + types[index] + " / |" + parts[index] + "|" + tabstopOut[index]);
+		}
+		System.out.println("");
+	}
+
+	Font setFontStyle(Font in, boolean bold, boolean italic, boolean ss, boolean underline) {
+		if (bold)
+			in = in.deriveFont(in.getStyle() | Font.BOLD);
+		if (italic)
+			in = in.deriveFont(in.getStyle() | Font.ITALIC);
+		if (ss) {
+			Map<TextAttribute, Boolean> fontAttributes = new HashMap<TextAttribute, Boolean>();
+			fontAttributes.put(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON);
+			in = in.deriveFont(fontAttributes);
+		}
+		if (underline) {
+			Map<TextAttribute, Integer> fontAttributes = new HashMap<TextAttribute, Integer>();
+			fontAttributes.put(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON);
+			in = in.deriveFont(fontAttributes);
+		}
+
+		return in;
 	}
 
 	void drawRow(Graphics gTo, int windowWidth, int xStart, RowParameters rowParameters, int rowHeight, String msg, int row, String state, boolean hard, Color bgColor, float seeThrough, BufferedImage sparkLine, boolean isFlapping)
@@ -249,17 +290,55 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 		g.setColor(config.getTextColor());
 
+		// draw text, with escapes
 		g.setFont(rowParameters.getAdjustedFont());
-
-		if (rowParameters.getShrunkMore() == true)
-		{
+		int newY = (int)rowParameters.getAsc();
+		if (rowParameters.getShrunkMore() == true) {
 			double heightDiff = rowParameters.getHeightDiff();
-			int newY = (int)(heightDiff / 2.0 + rowParameters.getAsc());
-
-			g.drawString(msg, flappingStartX + 1, newY);
+			newY = (int)(heightDiff / 2.0 + rowParameters.getAsc());
 		}
-		else
-			g.drawString(msg, flappingStartX + 1, (int)rowParameters.getAsc());
+		int textDrawX = flappingStartX + 1;
+		Object [] parts = CoffeeSaint.splitStringWithFontstyleEscapes(msg);
+		// dump(msg, parts);
+		String [] strings = (String [])parts[0];
+		Boolean [] bold = (Boolean [])parts[1];
+		Boolean [] italic = (Boolean [])parts[2];
+		Boolean [] underline = (Boolean [])parts[3];
+		Boolean [] ss = (Boolean [])parts[4];
+		Boolean [] useTabStop = (Boolean [])parts[5];
+		int tabstop = 0, nTabStops = config.getLineScrollSplitter().size();
+		for(int index=0; index<strings.length; index++) {
+			Font cur = setFontStyle(rowParameters.getAdjustedFont(), bold[index], italic[index], ss[index], underline[index]);
+			// find out where to start drawing
+			if (useTabStop[index] != null && useTabStop[index] == true && tabstop < nTabStops)
+				textDrawX = config.getLineScrollSplitter().get(tabstop++);
+			// calculate available width
+			int curSpace = windowWidth - textDrawX;
+			if (tabstop < nTabStops && index < strings.length - 1 && useTabStop[index + 1] != null && useTabStop[index + 1] == true) {
+				curSpace = config.getLineScrollSplitter().get(tabstop) - textDrawX;
+				// System.out.println("curspace: " + curSpace);
+			}
+			// calculate needed width
+			int curWidth = measureTextWidth(cur, strings[index], rowHeight);
+			if (curSpace <= 0) {
+				// don't do anything: there's no space
+			}
+			else
+			{
+				if (strings[index].length() > 0) {
+					g.setClip(null);
+					g.clip(new Rectangle(textDrawX, 0, curSpace, rowHeight));
+
+					g.setFont(cur);
+					g.drawString(strings[index], textDrawX, newY);
+				}
+
+				if (curWidth > curSpace)
+					curWidth = curSpace;
+			}
+			textDrawX += curWidth;
+		}
+		// --- draw text ^
 
 		if (sparkLine != null)
 			g.drawImage(sparkLine, windowWidth - sparkLine.getWidth(), 0, null);
@@ -282,9 +361,17 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		}
 	}
 
+	public BufferedImage createRowImage(RowParameters rowParameters, String text, String state, boolean hard, Color bgColor, int rowHeight, Integer fitWidth, boolean isFlapping) {
+		BufferedImage output = new BufferedImage(rowParameters.getTextWidth(), rowHeight, BufferedImage.TYPE_INT_RGB);
+
+		drawRow(output.createGraphics(), rowParameters.getTextWidth(), 0, rowParameters, rowHeight, text, 0, state, hard, bgColor, 1.0f, null, isFlapping);
+
+		return output;
+	}
+
 	public BufferedImage createRowImage(String font, String text, String state, boolean hard, Color bgColor, int rowHeight, Integer fitWidth, boolean isFlapping)
 	{
-		RowParameters rowParameters = fitText(font, text, rowHeight, fitWidth);
+		RowParameters rowParameters = calcRowParameters(new Font(font, Font.PLAIN, rowHeight), text, rowHeight, fitWidth);
 
 		BufferedImage output = new BufferedImage(rowParameters.getTextWidth(), rowHeight, BufferedImage.TYPE_INT_RGB);
 
@@ -293,37 +380,79 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		return output;
 	}
 
-	public static RowParameters fitText(String font, String text, int rowHeight, Integer fitWidth)
-	{
+	RowParameters calcRowParameters(Font f, String msg, int rowHeight, Integer fitWidth) {
+		// first determine the maximum height for this font fitting in rowHeight
+		RowParameters rpHeight = calculateOptimalFontHeight(f, rowHeight);
+
+		// measure the width of the text using the previously selected height
+		Object [] parts = CoffeeSaint.splitStringWithFontstyleEscapes(msg);
+		int width = 0;
+		String [] strings = (String [])parts[0];
+		Boolean [] bold = (Boolean [])parts[1];
+		Boolean [] italic = (Boolean [])parts[2];
+		Boolean [] underline = (Boolean [])parts[3];
+		Boolean [] ss = (Boolean [])parts[4];
+		Boolean [] useTabStop = (Boolean [])parts[5];
+		int tabstop = 0;
+		for(int index=0; index<strings.length; index++) {
+			Font cur = setFontStyle(rpHeight.getAdjustedFont(), bold[index], italic[index], ss[index], underline[index]);
+
+			if (useTabStop[index] != null && useTabStop[index] == true && tabstop < config.getLineScrollSplitter().size())
+				width = config.getLineScrollSplitter().get(tabstop++);
+			width += measureTextWidth(cur, strings[index], rowHeight);
+		}
+
+		RowParameters result = rpHeight;
+		result.setTextWidth(width);
+
+		return result;
+	}
+
+	public int measureTextWidth(Font f, String text, int rowHeight) {
 		Graphics g2 = new BufferedImage(10, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
-		Font f = new Font(font, Font.PLAIN, rowHeight);
+		g2.setFont(f);
+		FontMetrics fm = g2.getFontMetrics();
+		return fm.stringWidth(text);
+	}
+
+	public static RowParameters calculateOptimalFontHeight(Font f, int rowHeight) {
+		Graphics g2 = new BufferedImage(10, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
 		g2.setFont(f);
 		FontMetrics fm = g2.getFontMetrics();
 		double shrink = ((double)rowHeight / (double)fm.getHeight());
-		boolean shrunkMore = false;
-		if (fitWidth != null)
-		{
-			Rectangle2D boundingRectangle = f.getStringBounds(text, 0, text.length(), new FontRenderContext(null, false, false));
-
-			double newShrink = (double)Math.max(0, fitWidth) / (double)boundingRectangle.getWidth();
-			if (newShrink < shrink)
-			{
-				shrink = newShrink;
-				shrunkMore = true;
-			}
-		}
-		double newSize = (double)rowHeight * shrink;
-		double newAsc  = (double)fm.getAscent() * shrink;
-		double heightDiff = (double)fm.getAscent() - newAsc;
+		double newSize = rowHeight * shrink;
+		double newAsc  = fm.getAscent() * shrink;
+		double heightDiff = fm.getAscent() - newAsc;
 		f = f.deriveFont((float)newSize);
-		g2.setFont(f);
-		fm = g2.getFontMetrics();
-
-		int textWidth = fm.stringWidth(text);
-
-		return new RowParameters(textWidth, shrunkMore, newAsc, f, heightDiff);
+		return new RowParameters(-1, false, newAsc, f, heightDiff);
 	}
 
+	/*
+	   public static RowParameters fitTextWithFontstyleEscapesWidth_wShrink(Font fIn, String text, int rowHeight, int fitWidth) {
+	   Graphics g2 = new BufferedImage(10, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
+	   g2.setFont(fIn);
+	   FontMetrics fm = g2.getFontMetrics();
+	   int hasWidth = fitTextWithFontstyleEscapesWidth(fIn, text, rowHeight);
+	   boolean shrunk = false;
+	   double shrink = (double)Math.max(0, fitWidth) / (double)hasWidth;
+	   double heightDiff = 0.0;
+	   double newAsc = fm.getAscent();
+	   if (shrink < 1.0) {
+	   double newSize = rowHeight * shrink;
+	   newAsc  = fm.getAscent() * shrink;
+	   heightDiff = fm.getAscent() - newAsc;
+	   fIn = fIn.deriveFont((float)newSize);
+	   shrunk = true;
+	   }
+
+	   g2.setFont(fIn);
+	   fm = g2.getFontMetrics();
+
+	   int textWidth = Math.min(hasWidth, fitWidth);
+
+	   return new RowParameters(textWidth, shrunk, newAsc, fIn, heightDiff);
+	   }
+	   */
 	public void drawCounter(Graphics g, Position counterPosition, int windowWidth, int windowHeight, int rowHeight, int counter)
 	{
 		int xOffset = 0, yOffset = 0;
@@ -459,7 +588,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		g.setColor(Color.RED);
 		g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 		String error = e.toString().replaceAll("java.[a-z]*.", "");
-		prepareRow(g, windowWidth, 0, "Error: " + error, config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, true, false);
+		prepareRow(g, windowWidth, 0, "Error: " + error, config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, true, false, true);
 	}
 
 	public void drawBorders(Graphics2D g, BordersParameters bordersParameters)
@@ -506,18 +635,18 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			g.fillRect(0, drawY, bordersParameters.getWindowWidth(), config.getUpperRowBorderHeight());
 		}
 
-		if (config.getDrawProblemServiceSplitLine() && config.getPutSplitAtOffset() != null)
-		{
-			int x = config.getPutSplitAtOffset();
-			g.drawLine(x, offset, x, maxY);
-		}
+		// if (config.getDrawProblemServiceSplitLine() && config.getPutSplitAtOffset() != null)
+		// {
+			// int x = config.getPutSplitAtOffset();
+			// g.drawLine(x, offset, x, maxY);
+		// }
 
 		configureRendered((Graphics2D)g, true);
 	}
 
-	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight)
-	{
+	synchronized public void drawProblems(Graphics g, int windowWidth, int windowHeight, int rowHeight) {
 		System.out.println(">>> DRAW PROBLEMS START <<<");
+		long now = System.currentTimeMillis() / 1000;
 		try
 		{
 			String loadImage = null;
@@ -534,6 +663,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				// draw
 				g.setColor(Color.WHITE);
 				g.fillRect(0, 0, getWidth(), getHeight());
+				Toolkit.getDefaultToolkit().sync();
 				g.setColor(Color.BLACK);
 				Font f = new Font("Arial", Font.PLAIN, 20);
 				g.setFont(f);
@@ -542,7 +672,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				String msg1 = "CoffeeSaint " + CoffeeSaint.getVersionNr();
 				int w1 = getTextWidth(f, msg1);
 				g.drawString(msg1, Math.max(0, halfX - w1 / 2), halfY - 25);
-				String msg2 = "(C) 2009-2010 by folkert@vanheusden.com";
+				String msg2 = "(C) 2009-2011 by folkert@vanheusden.com";
 				int w2 = getTextWidth(f, msg2);
 				g.drawString(msg2, Math.max(0, halfX - w2 / 2), halfY + 25);
 				f = new Font("Arial", Font.PLAIN, 10);
@@ -552,7 +682,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				g.drawString(msg3, Math.max(0, halfX - w3 / 2), halfY + 50);
 				//
 				new ImageIcon(logo); //loads the image
-                                Toolkit.getDefaultToolkit().sync();
+				Toolkit.getDefaultToolkit().sync();
 				System.out.println("logo: " + logo.getHeight(null) + ", res: " + getHeight());
 				g.drawImage(logo, halfX - logo.getWidth(null) / 2, halfY + 75, this);
 				// annoy user :-D
@@ -588,8 +718,12 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 			/* load & process nagios data */
 			if (config.getVerbose())
-				prepareRow(g, windowWidth, 0, "Loading Nagios data", 0, "0", true, bgColor, 1.0f, null, false, false);
-			JavNag javNag = CoffeeSaint.loadNagiosData(this, windowWidth, g);
+				prepareRow(g, windowWidth, 0, "Loading Nagios data", 0, "0", true, bgColor, 1.0f, null, false, false, false);
+			Object [] result = CoffeeSaint.loadNagiosData(this, windowWidth, g);
+			JavNag javNag = (JavNag)result[0];
+			windowMovingParts = new ArrayList<ScrollableContent>();
+			if (result[1] != null)
+				showCoffeeSaintProblem(new Exception((String)result[1]), g, windowWidth, rowHeight);
 			coffeeSaint.collectPerformanceData(javNag);
 			coffeeSaint.collectLatencyData(javNag);
 			java.util.List<Problem> problems = CoffeeSaint.findProblems(javNag);
@@ -598,14 +732,13 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			/* finish loading images */
 			startLoadTs = System.currentTimeMillis();
 			if (config.getVerbose())
-				prepareRow(g, windowWidth, 0, "Loading image(s)", 0, "0", true, bgColor, 1.0f, null, false, false);
+				prepareRow(g, windowWidth, 0, "Loading image(s)", 0, "0", true, bgColor, 1.0f, null, false, false, false);
 			ImageParameters [] imageParameters = coffeeSaint.loadImage(ilp, this, windowWidth, g);
 			endLoadTs = System.currentTimeMillis();
 			imgLoadTook += (double)(endLoadTs - startLoadTs) / 1000.0;
 			statistics.addToTotalImageLoadTime(imgLoadTook);
 
 			movingPartsSemaphore.acquireUninterruptibly();
-			windowMovingParts = new ArrayList<ScrollableContent>();
 			bordersParameters = null;
 			movingPartsSemaphore.release();
 
@@ -692,9 +825,9 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				}
 
 				if (config.getScrollingHeader())
-					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, header + " ", stateForColor, true, bgColor, rowHeight, null, false), xStart, 0, ww));
+					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, header + " ", stateForColor, true, bgColor, rowHeight, null, false), xStart, 0, ww, false, true));
 				else
-					prepareRow(g, ww, xStart, header, curNRows, stateForColor, true, bgColor, config.getHeaderTransparency(), null, false, false);
+					prepareRow(g, ww, xStart, header, curNRows, stateForColor, true, bgColor, config.getHeaderTransparency(), null, false, false, false);
 
 				curNRows++;
 
@@ -709,6 +842,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			int curMaxNRows = 0;
 			for(Problem currentProblem : problems)
 			{
+				boolean flash = false;
 				boolean isFlapping = false;
 				String escapeString;
 				if (currentProblem.getService() == null) {
@@ -719,9 +853,24 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 					escapeString = config.getServiceIssue();
 					isFlapping = currentProblem.getService().getParameter("is_flapping").equals("0") == false;
 				}
-				String output = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem, problems.size() > 0, true);
+				Object [] processing = coffeeSaint.processStringWithEscapes(escapeString, javNag, rightNow, currentProblem, problems.size() > 0, true);
+				String output = (String)processing[0];
+				flash |= (Boolean)processing[1];
 
 				CoffeeSaint.log.add(output);
+
+				// find out if this problem is new and/or not older than something
+				if (config.getFlash()) {
+					long lsc = Long.valueOf(currentProblem.getHost().getParameter("last_state_change"));
+					if (currentProblem.getService() != null) {
+						lsc = Math.max(lsc, Long.valueOf(currentProblem.getService().getParameter("last_state_change")));
+					}
+					long since = now - lsc;
+					if (since <= config.getSleepTime() * 1.5) {
+						System.out.println("flash since " + since + " " + currentProblem.getHost().getHostName() + " " + now + "/" + lsc);
+						flash = true;
+					}
+				}
 
 				BufferedImage sparkLine = null;
 				int sparkLineWidth = config.getSparkLineWidth();
@@ -734,34 +883,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				int xStart = rowColWidth * colNr;
 
 				movingPartsSemaphore.acquireUninterruptibly();
-				Character splitChar = config.getLineScrollSplitter();
-				if (splitChar != null)
-				{
-					int splitIndex = output.indexOf(splitChar);
-					if (splitIndex == -1)
-					{
-						prepareRow(g, rowColWidth, xStart, output, curNRows, currentProblem.getCurrent_state(), currentProblem.getHard(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit(), isFlapping);
-					}
-					else
-					{
-						String before = output.substring(0, splitIndex);
-						String after = output.substring(splitIndex + 1);
-
-						int beforeWidth = prepareRow(g, rowColWidth, xStart, before, curNRows, currentProblem.getCurrent_state(), currentProblem.getHard(), bgColor, config.getTransparency(), null, config.getScrollIfNotFit(), isFlapping);
-
-
-                                                int newX = xStart + beforeWidth;
-                                                if (config.getPutSplitAtOffset() != null)
-                                                        newX = xStart + config.getPutSplitAtOffset();
-                                                int w = Math.max(0, rowColWidth - config.getPutSplitAtOffset());
-						if (w > 0)
-							prepareRow(g, w, newX, after, curNRows, currentProblem.getCurrent_state(), currentProblem.getHard(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit(), isFlapping);
-					}
-				}
-				else
-				{
-					prepareRow(g, rowColWidth, xStart, output, curNRows, currentProblem.getCurrent_state(), currentProblem.getHard(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit(), isFlapping);
-				}
+				prepareRow(g, rowColWidth, xStart, output, curNRows, currentProblem.getCurrent_state(), currentProblem.getHard(), bgColor, config.getTransparency(), sparkLine, config.getScrollIfNotFit(), isFlapping, flash);
 				movingPartsSemaphore.release();
 
 				rowData[curNRows][colNr] = new RowData(currentProblem.getHost(), currentProblem.getService());
@@ -784,7 +906,9 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			/* footer */
 			if (config.getFooter() != null)
 			{
-				String footer = coffeeSaint.processStringWithEscapes(config.getFooter(), javNag, rightNow, null, problems.size() > 0, true);
+				Object [] processedResult = coffeeSaint.processStringWithEscapes(config.getFooter(), javNag, rightNow, null, problems.size() > 0, true);
+				String footer = (String)processedResult[0];
+				boolean flash = (Boolean)processedResult[1];
 				String stateForColor = problems.size() == 0 ? "0" : "255";
 				int row = config.getNRows() - 1;
 				if (config.getHeaderAlwaysBGColor())
@@ -803,10 +927,10 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				{
 					int y = config.getShowHeader() ? config.getUpperRowBorderHeight(): 0;
 					y += row * rowHeight;
-					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer + " ", stateForColor, true, bgColor, rowHeight, null, false), xStart, y, ww));
+					windowMovingParts.add(new ScrollableContent(createRowImage(fontName, footer + " ", stateForColor, true, bgColor, rowHeight, null, false), xStart, y, ww, flash, true));
 				}
 				else
-					prepareRow(g, ww, xStart, footer, row, stateForColor, true, bgColor, config.getHeaderTransparency(), null, false, false);
+					prepareRow(g, ww, xStart, footer, row, stateForColor, true, bgColor, config.getHeaderTransparency(), null, false, false, flash);
 			}
 
 			/* no problems message */
@@ -820,7 +944,8 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 					if (config.getShowHeader())
 						y = 1;
 
-					okMsg = coffeeSaint.processStringWithEscapes(okMsg, javNag, rightNow, null, false, true);
+					Object [] resultOk = coffeeSaint.processStringWithEscapes(okMsg, javNag, rightNow, null, false, true);
+					okMsg = (String)resultOk[0];
 
 					BufferedImage allFineMsg = createRowImage(config.getFontName(), okMsg + " ", "0", true, config.getBackgroundColor(), rowHeight, null, false);
 					int width = allFineMsg.getWidth();
@@ -852,9 +977,9 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 					}
 
 					if (config.getNoProblemsTextBg())
-						prepareRow(g, width, x, okMsg, y, "0", true, bgColor, 1.0f, null, false, false);
+						prepareRow(g, width, x, okMsg, y, "0", true, bgColor, 1.0f, null, false, false, false);
 					else
-						prepareRow(g, width, x, okMsg, y, "254", true, bgColor, 1.0f, null, false, false);
+						prepareRow(g, width, x, okMsg, y, "254", true, bgColor, 1.0f, null, false, false, false);
 				}
 			}
 
@@ -894,20 +1019,20 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				movingPartsSemaphore.release();
 			}
 
-			boolean toOld = false;
+			boolean tooOld = false;
 			long maxAge = config.getMaxCheckAge();
 			if (maxAge != -1) {
-				long currentAge = javNag.findMostRecentCheckAge();
-				if (currentAge > maxAge) {
-					toOld = true;
-					prepareRow(g, windowWidth, 0, "NAGIOS STOPPED RUNNING!", config.getNRows() / 2, "2", true, Color.RED, 1.0f, null, false, false);
+				String nagiosHostDown = javNag.findHostDown(maxAge);
+				if (nagiosHostDown != null) {
+					tooOld = true;
+					prepareRow(g, windowWidth, 0, "NAGIOS " + nagiosHostDown + " STOPPED RUNNING!", config.getNRows() / 2, "2", true, Color.RED, 1.0f, null, false, false, config.getFlash());
 				}
 			}
 
 			/* play sound */
-			if (problems.size() > 0 || toOld)
+			if (problems.size() > 0 || tooOld)
 			{
-				if (lastState == false || toOld)
+				if (lastState == false || tooOld)
 				{
 					if (config.getProblemSound() != null)
 					{
@@ -936,7 +1061,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			g.setColor(Color.RED);
 			g.fillRect(windowWidth - rowHeight, 0, rowHeight, rowHeight);
 			windowMovingParts = new ArrayList<ScrollableContent>();
-			prepareRow(g, windowWidth, 0, "Audio sample unsupported format (" + uafe + ")", config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, true, false);
+			prepareRow(g, windowWidth, 0, "Audio sample unsupported format (" + uafe + ")", config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, true, false, config.getFlash());
 		}
 		catch(Exception e)
 		{
@@ -950,7 +1075,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		System.out.println(">>> DRAW PROBLEMS END <<<");
 	}
 
-	int getTextWidth(final Font f, final String text) {
+	static int getTextWidth(final Font f, final String text) {
 		Rectangle2D boundingRectangle = f.getStringBounds(text, 0, text.length(), new FontRenderContext(null, false, false));
 		return (int)Math.ceil(boundingRectangle.getWidth());
 	}
@@ -964,7 +1089,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 	}
 
 	public void putLine(Graphics g, String font, int x, int yBase, int width, int rowHeight, String str) {
-		RowParameters rowParameters = fitText(font, str, rowHeight, Integer.valueOf(width));
+		RowParameters rowParameters = calcRowParameters(new Font(font, Font.PLAIN, rowHeight), str, rowHeight, width);
 		g.setFont(rowParameters.getAdjustedFont());
 		g.drawString(shrinkStringToFit(str, width, rowParameters.getAdjustedFont()), x, yBase + (int)rowParameters.getAsc());
 	}
@@ -1032,23 +1157,23 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 					if (dataSource.getType() == NagiosDataSourceType.TCP) {
 						source = dataSource.getHost() + " " + dataSource.getPort();
-						javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), false);
+						javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), false, dataSource.getPrettyName());
 					}
 					else if (dataSource.getType() == NagiosDataSourceType.ZTCP) {
 						source = dataSource.getHost() + " " + dataSource.getPort();
-						javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), true);
+						javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), true, dataSource.getPrettyName());
 					}
 					else if (dataSource.getType() == NagiosDataSourceType.HTTP) {
 						source = "" + dataSource.getURL();
-						javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion(), dataSource.getUsername(), dataSource.getPassword(), config.getAllowHTTPCompression());
+						javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion(), dataSource.getUsername(), dataSource.getPassword(), config.getAllowHTTPCompression(), dataSource.getPrettyName());
 					}
 					else if (dataSource.getType() == NagiosDataSourceType.FILE) {
 						source = dataSource.getFile();
-						javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion());
+						javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion(), dataSource.getPrettyName());
 					}
 					else if (dataSource.getType() == NagiosDataSourceType.LS) {
 						source = dataSource.getHost() + " " + dataSource.getPort();
-						javNag.loadNagiosDataLiveStatus(dataSource.getHost(), dataSource.getPort());
+						javNag.loadNagiosDataLiveStatus(dataSource.getHost(), dataSource.getPort(), dataSource.getPrettyName());
 					}
 
 					Totals totals = javNag.calculateStatistics();
@@ -1215,7 +1340,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			movingPartsSemaphore.release();
 
 			if (windowMovingParts.size() > 0)
-				Thread.sleep(5);
+				Thread.sleep(ScrollableContent.getScrollSleep());
 			else
 				Thread.sleep(1000);
 		}
