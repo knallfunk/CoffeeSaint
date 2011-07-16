@@ -1,4 +1,4 @@
-/* Released under GPL2, (C) 2009-2010 by folkert@vanheusden.com */
+/* Released under GPL2, (C) 2009-2011 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
 
 import javax.net.ssl.X509TrustManager;
@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.5";
+	static String versionNr = "v4.6-b11";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2011 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -91,7 +91,7 @@ public class CoffeeSaint
 			}
 			catch(FileNotFoundException e)
 			{
-				System.err.println("File " + config.getBrainFileName() + " not found, continuing(!) anyway");
+				log.add("File " + config.getBrainFileName() + " not found, continuing(!) anyway");
 			}
 		}
 
@@ -105,7 +105,7 @@ public class CoffeeSaint
 			}
 			catch(FileNotFoundException fnfe)
 			{
-				System.err.println("Performance data file " + config.getPerformanceDataFileName() + " does not exist. Continuing.");
+				log.add("Performance data file " + config.getPerformanceDataFileName() + " does not exist. Continuing.");
 				performanceData = new PerformanceData();
 			}
 		}
@@ -124,7 +124,7 @@ public class CoffeeSaint
 			}
 			catch(FileNotFoundException fnfe)
 			{
-				System.err.println("File " + config.getLatencyFile() + " not found, continuing(!) anyway");
+				log.add("File " + config.getLatencyFile() + " not found, continuing(!) anyway");
 			}
 		}
 	}
@@ -614,14 +614,159 @@ public class CoffeeSaint
 		return line;
 	}
 
-	public String processStringEscapes(JavNag javNag, Totals totals, Calendar rightNow, Problem problem, boolean haveNotifiedProblems, String cmd, boolean recurse)
+	public static Object [] splitStringWithFontstyleEscapes(String s) {
+		int lastIndex = 0;
+		int len = s.length();
+		boolean fBold = false, fItalic = false, fUnderline = false, fStrikethrough = false;
+		boolean stop = false;
+		String [] strs = new String[len];
+		Boolean [] bold = new Boolean[len];
+		Boolean [] italic = new Boolean[len];
+		Boolean [] underline = new Boolean[len];
+		Boolean [] strikethrough = new Boolean[len];
+		Boolean [] stops = new Boolean[len];
+		int count = 0;
+		while(lastIndex < len) {
+			boolean last = false;
+			int index = s.indexOf('\\', lastIndex);
+			if (index == -1) {
+				last = true;
+				index = len;
+			}
+			String before = s.substring(lastIndex, index);
+			if ((index - lastIndex) > 0) {
+				strs[count] = before;
+				bold[count] = fBold;
+				italic[count] = fItalic;
+				underline[count] = fUnderline;
+				strikethrough[count] = fStrikethrough;
+				stops[count] = stop;
+				count++;
+				stop = false;
+			}
+			if (last)
+				break;
+
+			if (index < len - 1) {
+				Character c = s.charAt(index + 1);
+				if (c == 'B')
+					fBold = !fBold;
+				else if (c == 'I')
+					fItalic = !fItalic;
+				else if (c == 'U')
+					fUnderline = !fUnderline;
+				else if (c == 'S')
+					fStrikethrough = !fStrikethrough;
+				else if (c == 'T')
+					stop = true;
+			}
+
+			lastIndex = index + 2;
+		}
+		// FIXME put unterminated last one (from index
+
+		String [] strsOut = new String[count];
+		Boolean [] boldOut = new Boolean[count];
+		Boolean [] italicOut = new Boolean[count];
+		Boolean [] underlineOut = new Boolean[count];
+		Boolean [] ssOut = new Boolean[count];
+		Boolean [] stopsOut = new Boolean[count];
+		System.arraycopy(strs, 0, strsOut, 0, count);
+		System.arraycopy(bold, 0, boldOut, 0, count);
+		System.arraycopy(italic, 0, italicOut, 0, count);
+		System.arraycopy(underline, 0, underlineOut, 0, count);
+		System.arraycopy(strikethrough, 0, ssOut, 0, count);
+		System.arraycopy(stops, 0, stopsOut, 0, count);
+
+		return new Object [] { strsOut, boldOut, italicOut, underlineOut, ssOut, stopsOut };
+	}
+
+	double convertField(String in, JavNag javNag, Totals totals, Calendar rightNow, Problem problem, boolean haveNotifiedProblems, String cmd) {
+		double aValue = 0.0;
+		String [] aParts = in.split(":");
+		if (aParts.length == 2) {
+			if (aParts[0].equals("SERVICEFIELD")) {
+				Service s = problem.getService();
+				if (s != null)
+					aValue = Double.valueOf(s.getParameter(aParts[1]));
+			}
+			else if (aParts[0].equals("HOSTFIELD")) {
+				aValue = Double.valueOf(problem.getHost().getParameter(aParts[1]));
+			}
+		}
+		else {
+			char c = aParts[0].charAt(0);
+			if (Character.isDigit(c))
+				aValue = Double.valueOf(aParts[0]);
+			else if (aParts[0].length() > 1) {
+				Object [] result = processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, aParts[0].substring(1), false);
+				aValue = Double.valueOf((String)result[0]);
+			}
+		}
+
+		return aValue;
+	}
+
+	public Object [] processStringEscapes(JavNag javNag, Totals totals, Calendar rightNow, Problem problem, boolean haveNotifiedProblems, String cmd, boolean recurse)
 	{
+		long now = System.currentTimeMillis() / 1000;
 		String pars = null;
-                int splitter = cmd.indexOf("^");
-                if (splitter != -1)
-                {
-			pars = cmd.substring(splitter + 1);
-			cmd = cmd.substring(0, splitter);
+		String [] parts = cmd.split("\\^");
+		cmd = parts[0];
+		if (parts.length > 1)
+			pars = parts[1];
+
+		if ((cmd.equals("EQUAL") || cmd.equals("LESS") || cmd.equals("LESSOREQUAL") || cmd.equals("BIGGER") || cmd.equals("BIGGEROREQUAL")) && recurse == true) {
+			double aValue = convertField(parts[1], javNag, totals, rightNow, problem, haveNotifiedProblems, cmd);
+			double bValue = convertField(parts[2], javNag, totals, rightNow, problem, haveNotifiedProblems, cmd);
+			boolean result = false;
+			if (cmd.equals("LESS"))
+				result = aValue < bValue;
+			else if (cmd.equals("LESSOREQUAL"))
+				result = aValue <= bValue;
+			else if (cmd.equals("BIGGER"))
+				result = aValue > bValue;
+			else if (cmd.equals("BIGGEROREQUAL"))
+				result = aValue >= bValue;
+			else if (cmd.equals("EQUAL"))
+				result = aValue == bValue;
+			else
+				return new Object [] { cmd + " is not understood", true };
+
+			if (!result)
+				return new Object [] { "", false };
+
+			String out = parts[3];
+			boolean flash = false;
+			for(;;) {
+				int index = out.indexOf('%');
+				if (index == -1)
+					break;
+				String field = null;
+				int endMarker = out.indexOf(' ', index);
+				int percent = -1;
+				if (index < out.length() - 1)
+					percent = out.indexOf('%', index + 1);
+				if (percent != -1 && (percent < endMarker || endMarker == -1))
+					endMarker = percent;
+				if (endMarker != -1)
+					field = out.substring(index + 1, endMarker);
+				else
+					field = out.substring(index + 1);
+
+				String fieldOut = "";
+				if (field.equals("FLASH"))
+					flash = true;
+				else
+					fieldOut = (String)(processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, field, false)[0]);
+
+				if (endMarker == -1)
+					out = out.substring(0, index) + fieldOut;
+				else
+					out = out.substring(0, index) + fieldOut + out.substring(endMarker);
+			}
+
+			return new Object [] { out, flash };
 		}
 
 		if (cmd.equals("STATE") && recurse == true)
@@ -633,13 +778,13 @@ public class CoffeeSaint
 		}
 
 		if (cmd.equals("EXEC") && pars != null)
-			return execWithPars(problem, pars);
+			return new Object [] { execWithPars(problem, pars), false };
 
 		if (cmd.equals("PERCENT"))
-			return "%";
+			return new Object [] { "%", false };
 
 		if (cmd.equals("AT"))
-			return "@";
+			return new Object [] { "@", false };
 
 		if (cmd.equals("FIELD") && pars != null) {
 			String [] fields = pars.split("|");
@@ -648,9 +793,9 @@ public class CoffeeSaint
 			// field
 			if (fields.length == 1) { // field
 				if (problem.getService() != null)
-					return problem.getService().getParameter(fields[0]);
+					return new Object [] { problem.getService().getParameter(fields[0]), false };
 				else if (problem.getHost() != null)
-					return problem.getHost().getParameter(fields[0]);
+					return new Object [] { problem.getHost().getParameter(fields[0]), false };
 			}
 			else if (fields.length == 2) { // field|host
 				javNag.getField(fields[1], fields[0]);
@@ -664,126 +809,132 @@ public class CoffeeSaint
 		{
 			String data = problem.getHost().getParameter(pars);
 			if (data != null)
-				return data;
+				return new Object [] { data, false };
 		}
 
 		if (cmd.equals("FIELDSERVICE") && pars != null && pars.length() > 0)
 		{
 			String data = problem.getService().getParameter(pars);
 			if (data != null)
-				return data;
+				return new Object [] { data, false };
 		}
 
 		if (cmd.equals("FIELDBOOLEANHOST") && pars != null && pars.length() > 0)
 		{
 			String data = problem.getHost().getParameter(pars);
 			if (data != null)
-				return data.equals("1") ? "yes" : "no";
+				return new Object [] { data.equals("1") ? "yes" : "no", false };
 		}
 
 		if (cmd.equals("FIELDBOOLEANSERVICE") && pars != null && pars.length() > 0)
 		{
 			String data = problem.getService().getParameter(pars);
 			if (data != null)
-				return data.equals("1") ? "yes" : "no";
+				return new Object [] { data.equals("1") ? "yes" : "no", false };
 		}
 
 		if (cmd.equals("FIELDDATEHOST") && pars != null && pars.length() > 0)
 		{
 			String data = problem.getHost().getParameter(pars);
 			if (data != null)
-				return stringTsToDate(data);
+				return new Object [] { stringTsToDate(data), false };
 		}
 
 		if (cmd.equals("FIELDDATESERVICE") && pars != null && pars.length() > 0)
 		{
 			String data = problem.getService().getParameter(pars);
 			if (data != null)
-				return stringTsToDate(data);
+				return new Object [] { stringTsToDate(data), false };
 		}
 
 		if (cmd.equals("CRITICAL"))
-			return "" + totals.getNCritical();
+			return new Object [] { "" + totals.getNCritical(), false };
 		if (cmd.equals("WARNING"))
-			return "" + totals.getNWarning();
+			return new Object [] { "" + totals.getNWarning(), false };
 		if (cmd.equals("OK"))
-			return "" + totals.getNOk();
+			return new Object [] { "" + totals.getNOk(), false };
 
 		if (cmd.equals("NACKED"))
-			return "" + totals.getNAcked();
+			return new Object [] { "" + totals.getNAcked(), false };
 		if (cmd.equals("NFLAPPING"))
-			return "" + totals.getNFlapping();
+			return new Object [] { "" + totals.getNFlapping(), false };
 
 		if (cmd.equals("UP"))
-			return "" + totals.getNUp();
+			return new Object [] { "" + totals.getNUp(), false };
 		if (cmd.equals("DOWN"))
-			return "" + totals.getNDown();
+			return new Object [] { "" + totals.getNDown(), false };
 		if (cmd.equals("UNREACHABLE"))
-			return "" + totals.getNUnreachable();
+			return new Object [] { "" + totals.getNUnreachable(), false };
 		if (cmd.equals("PENDING"))
-			return "" + totals.getNPending();
+			return new Object [] { "" + totals.getNPending(), false };
 
 		if (cmd.equals("TOTALISSUES"))
-			return "" + (totals.getNCritical() + totals.getNWarning() + totals.getNDown() + totals.getNUnreachable());
+			return new Object [] { "" + (totals.getNCritical() + totals.getNWarning() + totals.getNDown() + totals.getNUnreachable()), false };
 
 		if (predictor != null && cmd.equals("PREDICT"))
 		{
 			Double count = predictProblemCount(rightNow);
 			if (count == null)
-				return "?";
+				return new Object [] { "?", false };
 			String countStr = "" + count;
 			int dot = countStr.indexOf(".");
 			if (dot != -1)
 				countStr = countStr.substring(0, dot + 2);
-			return countStr;
+			return new Object [] { countStr, false };
 		}
 
 		if (cmd.equals("CHECKLATENCY"))
 		{
 			Double latency = javNag.getAvgCheckLatency();
 			if (latency != null)
-				return "" + String.format("%.3f", latency);
+				return new Object [] { "" + String.format("%.3f", latency), false };
 		}
 
 		if (cmd.equals("HISTORICAL"))
-			return "" + predictor.getHistorical(rightNow);
+			return new Object [] { "" + predictor.getHistorical(rightNow), false };
 
 		if (cmd.equals("H"))
-			return make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY));
+			return new Object [] { make2Digit("" + rightNow.get(Calendar.HOUR_OF_DAY)), false };
 		if (cmd.equals("M"))
-			return make2Digit("" + rightNow.get(Calendar.MINUTE));
+			return new Object [] { make2Digit("" + rightNow.get(Calendar.MINUTE)), false };
 
 		if (cmd.equals("HOSTNAME") && problem != null && problem.getHost() != null)
-			return problem.getHost().getHostName();
+			return new Object [] { problem.getHost().getHostName(), false };
 
 		if (cmd.equals("SERVICENAME") && problem != null && problem.getService() != null)
-			return problem.getService().getServiceName();
+			return new Object [] { problem.getService().getServiceName(), false };
 
 		if (cmd.equals("SERVERNAME"))
-			return problem.getHost().getNagiosSource();
+			return new Object [] { problem.getHost().getNagiosSource(), false };
 
 		if (cmd.equals("HOSTSTATE") && problem != null && problem.getHost() != null)
-			return hostState(problem.getHost().getParameter("current_state"));
+			return new Object [] { hostState(problem.getHost().getParameter("current_state")), false };
 
 		if (cmd.equals("SERVICESTATE") && problem != null && problem.getService() != null)
-			return serviceState(problem.getService().getParameter("current_state"));
+			return new Object [] { serviceState(problem.getService().getParameter("current_state")), false };
 
 		if (cmd.equals("HOSTDURATION"))
-			return "" + durationToString(System.currentTimeMillis() / 1000 - Long.valueOf(problem.getHost().getParameter("last_state_change")));
+			return new Object [] { "" + durationToString(System.currentTimeMillis() / 1000 - Long.valueOf(problem.getHost().getParameter("last_state_change"))), false };
 		if (cmd.equals("SERVICEDURATION"))
-			return "" + durationToString(System.currentTimeMillis() / 1000 - Long.valueOf(problem.getService().getParameter("last_state_change")));
+			return new Object [] { "" + durationToString(System.currentTimeMillis() / 1000 - Long.valueOf(problem.getService().getParameter("last_state_change"))), false };
 
 		if (cmd.equals("HOSTSINCE") && problem != null && problem.getHost() != null)
-			return stringTsToDate(problem.getHost().getParameter("last_state_change"));
+			return new Object [] { stringTsToDate(problem.getHost().getParameter("last_state_change")), false };
+
+		if (cmd.equals("HOSTSINCETS") && problem != null && problem.getHost() != null)
+			return new Object [] { "" + (now - Long.valueOf(problem.getHost().getParameter("last_state_change"))), false };
 
 		if (cmd.equals("SERVICESINCE") && problem != null && problem.getService() != null)
-			return stringTsToDate(problem.getService().getParameter("last_state_change"));
+			return new Object [] { stringTsToDate(problem.getService().getParameter("last_state_change")), false };
+
+		if (cmd.equals("SERVICESINCETS") && problem != null && problem.getService() != null)
+			return new Object [] { "" + (now - Long.valueOf(problem.getService().getParameter("last_state_change"))), false };
 
 		if (cmd.equals("HOSTFLAPPING") && problem != null && problem.getHost() != null)
-			return problem.getHost().getParameter("is_flapping").equals("1") ? "FLAPPING" : "";
+			return new Object [] { problem.getHost().getParameter("is_flapping").equals("1") ? "FLAPPING" : "", false };
 
 		if (cmd.equals("SERVICEFLAPPING") && problem != null && problem.getService() != null)
-			return problem.getService().getParameter("is_flapping").equals("1") ? "FLAPPING" : "";
+			return new Object [] { problem.getService().getParameter("is_flapping").equals("1") ? "FLAPPING" : "", false };
 
 		if (cmd.equals("OUTPUT") && problem != null)
 		{
@@ -793,38 +944,57 @@ public class CoffeeSaint
 			else
 				output = problem.getHost().getParameter("plugin_output");
 			if (output != null)
-				return output;
-			return "?";
+				return new Object [] { output, false };
+			return new Object [] { "?", false };
 		}
 
-		return "?" + cmd + "?";
+		return new Object [] { "?" + cmd + "?", false };
 	}
 
-	public String processStringWithEscapes(String in, JavNag javNag, Calendar rightNow, Problem problem, boolean haveNotifiedProblems, boolean recurse)
+	public Object [] processStringWithEscapes(String in, JavNag javNag, Calendar rightNow, Problem problem, boolean haveNotifiedProblems, boolean recurse)
 	{
 		final Totals totals = javNag.calculateStatistics();
 		log.add("" + totals.getNHosts() + " hosts, " + totals.getNServices() + " services");
 		boolean loadingCmd = false, atTerminator = false, hadSplitter = false;
 		String cmd = "", output = "";
+		boolean flash = false;
 
 		if (in == null)
-			return "";
+			return new Object [] { "", false };
 
 		for(int index=0; index<in.length(); index++) {
 			if (loadingCmd) {
 				char currentChar = in.charAt(index);
 
-				if (atTerminator && currentChar == '@') {
-					output += processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
+				if (atTerminator) {
+					if (currentChar == '@') {
+						System.out.println("CMD: " + cmd);
+						Object [] result = processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
+						output += (String)result[0];
+						flash |= (Boolean)result[1];
 
-					cmd = "";
-					atTerminator = loadingCmd = false;
-					hadSplitter = false;
+						cmd = "";
+						atTerminator = loadingCmd = false;
+						hadSplitter = false;
+					}
+					else {
+						cmd += in.charAt(index);
+					}
 				}
-				else if (!atTerminator && !(currentChar >= 'A' && currentChar <= 'Z') && !(currentChar >= 'a' && currentChar <= 'z') &&
-					(currentChar != '^' && ((currentChar != '/' && currentChar != '_' && currentChar != '.' && currentChar != '\\') || hadSplitter == false)))
+				else if ((currentChar >= 'A' && currentChar <= 'Z') || (currentChar >= 'a' && currentChar <= 'z') ||
+					currentChar == '^' || ((currentChar == '/' || currentChar == '_' || currentChar == '.' || currentChar != '\\') && hadSplitter == true))
 				{
-					output += processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
+					cmd += in.charAt(index);
+				}
+				else if (currentChar == '^') {
+					cmd += in.charAt(index);
+					hadSplitter = true;
+				}
+				else {
+					System.out.println("CMD: " + cmd);
+					Object [] result = processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
+					output += (String)result[0];
+					flash |= (Boolean)result[1];
 
 					cmd = "";
 					loadingCmd = false;
@@ -834,11 +1004,6 @@ public class CoffeeSaint
 						loadingCmd = true;
 					else
 						output += in.charAt(index);
-				}
-				else {
-					cmd += in.charAt(index);
-					if (in.charAt(index) == '^')
-						hadSplitter = true;
 				}
 			}
 			else {
@@ -853,10 +1018,13 @@ public class CoffeeSaint
 			}
 		}
 
-		if (cmd.equals("") == false)
-			output += processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
+		if (cmd.equals("") == false) {
+			Object [] result = processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
+			output += (String)result[0];
+			flash |= (Boolean)result[1];
+		}
 
-		return output;
+		return new Object [] { output, flash };
 	}
 
 	public String getScreenHeader(JavNag javNag, Calendar rightNow, boolean haveNotifiedProblems)
@@ -864,7 +1032,7 @@ public class CoffeeSaint
 		if (config.getNagiosDataSources().size() == 0)
 			return "No Nagios servers selected!";
 		else
-			return processStringWithEscapes(config.getHeader(), javNag, rightNow, null, haveNotifiedProblems, true);
+			return (String)(processStringWithEscapes(config.getHeader(), javNag, rightNow, null, haveNotifiedProblems, true)[0]);
 	}
 
 	public Color stateToColor(String state, boolean hard)
@@ -895,7 +1063,7 @@ public class CoffeeSaint
 	public static void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.prepareRow(g, windowWidth, 0, message, 0, "0", true, config.getBackgroundColor(), 1.0f, null, false, false);
+			gui.prepareRow(g, windowWidth, 0, message, 0, "0", true, config.getBackgroundColor(), 1.0f, null, false, false, false);
 	}
 
 	public ImageLoadingParameters startLoadingImages(Gui gui, int windowWidth, Graphics g) throws Exception {
@@ -1074,8 +1242,10 @@ public class CoffeeSaint
 		}
 	}
 
-	public static JavNag loadNagiosData(Gui gui, int windowWidth, Graphics g) throws Exception
+	public static Object [] loadNagiosData(Gui gui, int windowWidth, Graphics g) throws Exception
 	{
+		String exception = null;
+
 		JavNag javNag = new JavNag();
 		javNag.setUserAgent(version);
 		javNag.setSocketTimeout(config.getSleepTime() * 1000);
@@ -1087,57 +1257,58 @@ public class CoffeeSaint
 		{
 			String logStr = "Loading data from: ", source = null;
 			try {
-			if (dataSource.getType() == NagiosDataSourceType.TCP)
-			{
-				source = dataSource.getHost() + " " + dataSource.getPort();
-				logStr += source;
-				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
-				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), false);
-			}
-			else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
-			{
-				source = dataSource.getHost() + " " + dataSource.getPort();
-				logStr += source;
-				drawLoadStatus(gui, windowWidth, g, "zLoad Nagios " + source);
-				System.out.println("zLoad Nagios " + source);
-				javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), true);
-			}
-			else if (dataSource.getType() == NagiosDataSourceType.HTTP)
-			{
-				source = "" + dataSource.getURL();
-				logStr += dataSource.getURL();
-				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
-				javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion(), dataSource.getUsername(), dataSource.getPassword(), config.getAllowHTTPCompression());
-			}
-			else if (dataSource.getType() == NagiosDataSourceType.FILE)
-			{
-				source = dataSource.getFile();
-				logStr += dataSource.getFile();
-				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
-				javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion());
-			}
-			else if (dataSource.getType() == NagiosDataSourceType.LS)
-			{
-				source = dataSource.getHost() + " " + dataSource.getPort();
-				logStr += source;
-				drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
-				javNag.loadNagiosDataLiveStatus(dataSource.getHost(), dataSource.getPort());
-			}
-			else
-				throw new Exception("Unknown data-source type: " + dataSource.getType());
+				if (dataSource.getType() == NagiosDataSourceType.TCP)
+				{
+					source = dataSource.getHost() + " " + dataSource.getPort();
+					logStr += source;
+					drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
+					javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), false, dataSource.getPrettyName());
+				}
+				else if (dataSource.getType() == NagiosDataSourceType.ZTCP)
+				{
+					source = dataSource.getHost() + " " + dataSource.getPort();
+					logStr += source;
+					drawLoadStatus(gui, windowWidth, g, "zLoad Nagios " + source);
+					System.out.println("zLoad Nagios " + source);
+					javNag.loadNagiosData(dataSource.getHost(), dataSource.getPort(), dataSource.getVersion(), true, dataSource.getPrettyName());
+				}
+				else if (dataSource.getType() == NagiosDataSourceType.HTTP)
+				{
+					source = "" + dataSource.getURL();
+					logStr += dataSource.getURL();
+					drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
+					javNag.loadNagiosData(dataSource.getURL(), dataSource.getVersion(), dataSource.getUsername(), dataSource.getPassword(), config.getAllowHTTPCompression(), dataSource.getPrettyName());
+				}
+				else if (dataSource.getType() == NagiosDataSourceType.FILE)
+				{
+					source = dataSource.getFile();
+					logStr += dataSource.getFile();
+					drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
+					javNag.loadNagiosData(dataSource.getFile(), dataSource.getVersion(), dataSource.getPrettyName());
+				}
+				else if (dataSource.getType() == NagiosDataSourceType.LS)
+				{
+					source = dataSource.getHost() + " " + dataSource.getPort();
+					logStr += source;
+					drawLoadStatus(gui, windowWidth, g, "Load Nagios " + source);
+					javNag.loadNagiosDataLiveStatus(dataSource.getHost(), dataSource.getPort(), dataSource.getPrettyName());
+				}
+				else
+					throw new Exception("Unknown data-source type: " + dataSource.getType());
+
+				if (javNag.getNumberOfHosts() == prevNHosts) {
+					log.add(source + " did not return any hosts!");
+					// FIXME on screen error or so?
+				}
+				prevNHosts = javNag.getNumberOfHosts();
+
+				logStr += " - done.";
+				log.add(logStr);
 			}
 			catch(Exception e) {
-				throw new Exception("Error loading Nagios data from " + source + ": " + e);
+				exception = "Error loading Nagios data from " + source + ": " + e;
+				log.add(exception);
 			}
-
-			if (javNag.getNumberOfHosts() == prevNHosts) {
-				System.err.println(source + " did not return any hosts!");
-				// FIXME on screen error or so?
-			}
-			prevNHosts = javNag.getNumberOfHosts();
-
-			logStr += " - done.";
-			log.add(logStr);
 		}
 
 		long endLoadTs = System.currentTimeMillis();
@@ -1150,7 +1321,11 @@ public class CoffeeSaint
 		statistics.addToNRefreshes(1);
 		statisticsSemaphore.release();
 
-		return javNag;
+		Object [] result = new Object[2];
+		result[0] = javNag;
+		result[1] = exception;
+
+		return result;
 	}
 
 	public static java.util.List<Problem> findProblems(JavNag javNag) throws Exception
@@ -1177,15 +1352,15 @@ public class CoffeeSaint
 			Calendar rightNow = Calendar.getInstance();
 			predictorSemaphore.acquireUninterruptibly();
 			try {
-			learnProblems(rightNow, nProblems);
+				learnProblems(rightNow, nProblems);
 			}
 			catch(Exception e) {
 				throw e;
 			}
 			finally {
-			predictorSemaphore.release();
+				predictorSemaphore.release();
+			}
 		}
-	}
 	}
 
 	public static void errorExit(String error)
@@ -1278,7 +1453,8 @@ public class CoffeeSaint
 			{
 				try
 				{
-					JavNag javNag = loadNagiosData(null, -1, null);
+					Object [] result = loadNagiosData(null, -1, null);
+					JavNag javNag = (JavNag)result[0];
 					coffeeSaint.collectPerformanceData(javNag);
 					coffeeSaint.collectLatencyData(javNag);
 				}
@@ -1353,18 +1529,18 @@ public class CoffeeSaint
 		return null;
 	}
 
-        public Rectangle getDimensionsOverAllMonitors()
-        {
-                Rectangle vBounds = new Rectangle();
-                List<Monitor> monitors = getMonitors();
-                for(Monitor monitor : monitors)
-                {
-                        Rectangle currentBounds = monitor.getBounds();
-                        vBounds = vBounds.union(currentBounds);
-                }
+	public Rectangle getDimensionsOverAllMonitors()
+	{
+		Rectangle vBounds = new Rectangle();
+		List<Monitor> monitors = getMonitors();
+		for(Monitor monitor : monitors)
+		{
+			Rectangle currentBounds = monitor.getBounds();
+			vBounds = vBounds.union(currentBounds);
+		}
 
-                return vBounds;
-        }
+		return vBounds;
+	}
 
 	public static void setIcon(CoffeeSaint coffeeSaint, JFrame f)
 	{
@@ -1378,7 +1554,7 @@ public class CoffeeSaint
 	{
 		javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier(){
 				public boolean verify ( String hostname, SSLSession session) {
-					return true;
+				return true;
 				}
 				});
 
@@ -1404,7 +1580,7 @@ public class CoffeeSaint
 
 	public static void showHelp()
 	{
-		System.out.println("--source type version x  Source to retrieve from");
+		System.out.println("--source type version x pretty_name Source to retrieve from");
 		System.out.println("              Type can be: http, tcp, ztcp, file and ls");
 		System.out.println("              http  expects an url like http://keetweej.vanheusden.com/status.dat");
 		System.out.println("              http-auth expects an url like http://keetweej.vanheusden.com/status.dat and a username and a password");
@@ -1413,6 +1589,7 @@ public class CoffeeSaint
 		System.out.println("              ls    expects a livestatus host and portnumber, e.g.: keetweej.vanheusden.com 6557");
 		System.out.println("              file  expects a file-name, e.g. /var/cache/nagios3/status.dat");
 		System.out.println("              version selects the nagios-version. E.g. 1, 2 or 3");
+		System.out.println("              pretty_name is used for the %SERVERNAME macro");
 		System.out.println("              You can add as many Nagios servers as you like");
 		System.out.println("              Example: --source file 3 /var/cache/nagios3/status.dat");
 		System.out.println("");
@@ -1422,6 +1599,7 @@ public class CoffeeSaint
 		System.out.println("--proxy-port  Proxy to use for outbound http requests.");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
 		System.out.println("--interval x  Retrieve status every x seconds");
+		System.out.println("--flash       Flash/blink new problems");
 		System.out.println("--webcam-timeout x   Maximum time for loading 1 webcam. If not set, the Nagios status loading interval is used.");
 		System.out.println("--use-host-alias Show host-alias instead of hostname");
 		System.out.println("--fullscreen x Run in a fullscreen mode, e.g. without any borders (undecorated), no menu bars (fullscreen), spread over all monitors (allmonitors) or none (none)");
@@ -1518,6 +1696,7 @@ public class CoffeeSaint
 		System.out.println("  %SERVERNAME               host/service with problem");
 		System.out.println("  %HOSTSTATE/%SERVICESTATE  host/service state");
 		System.out.println("  %HOSTSINCE/%SERVICESINCE  since when does this host/service have a problem");
+		System.out.println("  %HOSTSINCETS/%SERVICESINCETS  (duration in seconds)");
 		System.out.println("  %HOSTFLAPPING/%SERVICEFLAPPING  wether the state is flapping");
 		System.out.println("  %PREDICT/%HISTORICAL      ");
 		System.out.println("  %HOSTDURATION/%SERVICEDURATION how long has a host/service been down");
@@ -1583,6 +1762,7 @@ public class CoffeeSaint
 						NagiosVersion nv = null;
 						String type = arg[++loop];
 						String versionStr = arg[++loop];
+						String pn = arg[++loop];
 
 						if (versionStr.equals("1"))
 							nv = NagiosVersion.V1;
@@ -1608,11 +1788,11 @@ public class CoffeeSaint
 							{
 								String username = arg[++loop];
 								String password = arg[++loop];
-								nds = new NagiosDataSource(url, username, password, nv);
+								nds = new NagiosDataSource(url, username, password, nv, pn);
 							}
 							else
 							{
-								nds = new NagiosDataSource(url, nv);
+								nds = new NagiosDataSource(url, nv, pn);
 							}
 						}
 						else if (type.equalsIgnoreCase("file"))
@@ -1621,7 +1801,7 @@ public class CoffeeSaint
 							String result = testFile(filename);
 							if (result != null)
 								errorExit("Cannot access file " + filename + " (" + result + ")");
-							nds = new NagiosDataSource(filename, nv);
+							nds = new NagiosDataSource(filename, nv, pn);
 						}
 						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp") || type.equalsIgnoreCase("ls"))
 						{
@@ -1634,9 +1814,9 @@ public class CoffeeSaint
 								if (result != null)
 									errorExit("Cannot open socket on " + host + ":" + port + " (" + result + ")");
 								if (type.equalsIgnoreCase("ls"))
-									nds = new NagiosDataSource(host, port);
+									nds = new NagiosDataSource(host, port, pn);
 								else
-									nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"));
+									nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"), pn);
 							}
 							catch(NumberFormatException nfe)
 							{
@@ -1770,6 +1950,8 @@ public class CoffeeSaint
 						config.setNRows(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--interval"))
 						config.setSleepTime(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--flash"))
+						config.setFlash(true);
 					else if (arg[loop].equals("--webcam-timeout"))
 						config.setWebcamTimeout(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--image"))
@@ -1868,7 +2050,7 @@ public class CoffeeSaint
 					else if (arg[loop].equals("--services-filter-include"))
 						config.setServicesFilterInclude(arg[++loop]);
 					else if (arg[loop].equals("--scroll-splitter") || arg[loop].equals("--splitter"))
-						config.setLineScrollSplitter(arg[++loop].trim().charAt(0));
+						config.setLineScrollSplitter(arg[++loop].trim());
 					else if (arg[loop].equals("--draw-problems-service-split-line"))
 						config.setDrawProblemServiceSplitLine(true);
 					else if (arg[loop].equals("--sparkline-width"))
@@ -1916,12 +2098,12 @@ public class CoffeeSaint
 					}
 					else if (arg[loop].equals("--logo-position"))
 						config.setLogoPosition(arg[++loop]);
+					else if (arg[loop].equals("--logfile"))
+						log.setLogFile(arg[++loop]);
 					else if (arg[loop].equals("--proxy-host"))
 						config.setProxyHost(arg[++loop]);
 					else if (arg[loop].equals("--proxy-port"))
 						config.setProxyPort(Integer.valueOf(arg[++loop]));
-					else if (arg[loop].equals("--split-text-put-at-offset"))
-						config.setPutSplitAtOffset(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--suppress-services-for-scheduled-host-downtime"))
 						config.setHostScheduledDowntimeShowServices(false);
 					else if (arg[loop].equals("--suppress-services-for-acknowledged-host-problems"))
@@ -2015,7 +2197,7 @@ public class CoffeeSaint
 				}
 				else
 				{
-//					f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+					//					f.setExtendedState(f.getExtendedState() | JFrame.MAXIMIZED_BOTH);
 
 					if (config.getFullscreen() == FullScreenMode.UNDECORATED)
 					{
