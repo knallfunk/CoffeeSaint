@@ -1,9 +1,6 @@
 /* Released under GPL2, (C) 2009-2011 by folkert@vanheusden.com */
 import com.vanheusden.nagios.*;
 
-// FIXME replace split-text-put-at-offset by vertical-line-at-position = ... ... ...
-// FIXME \B and \I can't be combined now
-
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.font.FontRenderContext;
@@ -193,7 +190,6 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		rowParameters = calcRowParameters(new Font(font, Font.PLAIN, rowHeight), msg, rowHeight, reduceToWidth);
 
 		boolean scrollRequired = (config.getReduceTextWidth() == false && rowParameters.getTextWidth() > windowWidth && addToScrollersIfNotFit == true);
-// System.out.println("----- FLASH " + flash);
 		if (scrollRequired || flash) {
 			int yPos = 0;
 			if (row > 0)
@@ -409,14 +405,16 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 	}
 
 	public int measureTextWidth(Font f, String text, int rowHeight) {
-		Graphics g2 = new BufferedImage(10, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
+		Graphics g2 = new BufferedImage(rowHeight, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
 		g2.setFont(f);
 		FontMetrics fm = g2.getFontMetrics();
-		return fm.stringWidth(text);
+		int w = fm.stringWidth(text);
+		System.out.println("measureTextWidth: " + w + ": " + text);
+		return w;
 	}
 
 	public static RowParameters calculateOptimalFontHeight(Font f, int rowHeight) {
-		Graphics g2 = new BufferedImage(10, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
+		Graphics g2 = new BufferedImage(rowHeight, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
 		g2.setFont(f);
 		FontMetrics fm = g2.getFontMetrics();
 		double shrink = ((double)rowHeight / (double)fm.getHeight());
@@ -427,62 +425,30 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		return new RowParameters(-1, false, newAsc, f, heightDiff);
 	}
 
-	/*
-	   public static RowParameters fitTextWithFontstyleEscapesWidth_wShrink(Font fIn, String text, int rowHeight, int fitWidth) {
-	   Graphics g2 = new BufferedImage(10, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
-	   g2.setFont(fIn);
-	   FontMetrics fm = g2.getFontMetrics();
-	   int hasWidth = fitTextWithFontstyleEscapesWidth(fIn, text, rowHeight);
-	   boolean shrunk = false;
-	   double shrink = (double)Math.max(0, fitWidth) / (double)hasWidth;
-	   double heightDiff = 0.0;
-	   double newAsc = fm.getAscent();
-	   if (shrink < 1.0) {
-	   double newSize = rowHeight * shrink;
-	   newAsc  = fm.getAscent() * shrink;
-	   heightDiff = fm.getAscent() - newAsc;
-	   fIn = fIn.deriveFont((float)newSize);
-	   shrunk = true;
-	   }
-
-	   g2.setFont(fIn);
-	   fm = g2.getFontMetrics();
-
-	   int textWidth = Math.min(hasWidth, fitWidth);
-
-	   return new RowParameters(textWidth, shrunk, newAsc, fIn, heightDiff);
-	   }
-	   */
-	public void drawCounter(Graphics g, Position counterPosition, int windowWidth, int windowHeight, int rowHeight, int counter)
-	{
+	public void drawCounter(Graphics g, Position counterPosition, int windowWidth, int windowHeight, int rowHeight, int counter) {
 		int xOffset = 0, yOffset = 0;
 
 		BufferedImage dummy = createRowImage(config.getFontName(), "" + config.getSleepTime(), "255", true, config.getBackgroundColor(), rowHeight, null, false);
 
 		BufferedImage img = createRowImage(config.getFontName(), "" + counter, "255", true, config.getBackgroundColor(), rowHeight, null, false);
 
-		if (counterPosition == Position.UPPER_LEFT)
-		{
+		if (counterPosition == Position.UPPER_LEFT) {
 			xOffset = 0;
 			yOffset = 0;
 		}
-		else if (counterPosition == Position.UPPER_RIGHT)
-		{
+		else if (counterPosition == Position.UPPER_RIGHT) {
 			xOffset = windowWidth - dummy.getWidth();
 			yOffset = 0;
 		}
-		else if (counterPosition == Position.LOWER_LEFT)
-		{
+		else if (counterPosition == Position.LOWER_LEFT) {
 			xOffset = 0;
 			yOffset = rowHeight * (config.getNRows() - 1) + (config.getShowHeader() ? config.getUpperRowBorderHeight(): 0);
 		}
-		else if (counterPosition == Position.LOWER_RIGHT)
-		{
+		else if (counterPosition == Position.LOWER_RIGHT) {
 			xOffset = windowWidth - dummy.getWidth();
 			yOffset = rowHeight * (config.getNRows() - 1) + (config.getShowHeader() ? config.getUpperRowBorderHeight(): 0);
 		}
-		else if (counterPosition == Position.CENTER)
-		{
+		else if (counterPosition == Position.CENTER) {
 			xOffset = (windowWidth / 2) - (dummy.getWidth() / 2);
 			yOffset = (windowHeight / 2) - (dummy.getHeight() / 2);
 		}
@@ -500,8 +466,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		int curWindowHeight, offsetY;
 		int maxW = -1, maxH = -1, nr;
 
-		for(nr=0; nr<Math.min(config.getCamRows() * config.getCamCols(), imageParameters.length); nr++)
-		{
+		for(nr=0; nr<Math.min(config.getCamRows() * config.getCamCols(), imageParameters.length); nr++) {
 			if (imageParameters[nr] == null)
 				continue;
 
@@ -512,24 +477,20 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		int totalWidth  = maxW * config.getCamCols();
 		int totalHeight = maxH * config.getCamRows();
 
-		if (adaptImgSize)
-		{
+		if (adaptImgSize) {
 			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset + nProblems));
 			offsetY = (headerOffset + footerOffset + nProblems) * rowHeight + urbHeight;
 		}
-		else if (config.getHeaderTransparency() != 1.0f)
-		{
+		else if (config.getHeaderTransparency() != 1.0f) {
 			curWindowHeight = windowHeight;
 			offsetY = 0;
 		}
-		else
-		{
+		else {
 			offsetY = rowHeight * headerOffset + urbHeight;
 			curWindowHeight = rowHeight * (config.getNRows() - (headerOffset + footerOffset));
 		}
 
-		if (curWindowHeight > 0)
-		{
+		if (curWindowHeight > 0) {
 			double wMul = (double)windowWidth / (double)totalWidth;
 			double hMul = (double)curWindowHeight / (double)totalHeight;
 			double multiplier = Math.min(wMul, hMul);
@@ -540,21 +501,17 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			int putY = Math.max(0, (curWindowHeight / 2) - ((int)spacingY / 2) * config.getCamRows()) + offsetY;
 
 			nr = 0;
-			for(int y=0; y<config.getCamRows(); y++)
-			{
-				for(int x=0; x<config.getCamCols(); x++)
-				{
+			for(int y=0; y<config.getCamRows(); y++) {
+				for(int x=0; x<config.getCamCols(); x++) {
 					int plotX = putX + (int)(x * spacingX);
 					int plotY = putY + (int)(y * spacingY);
 
-					if (nr < imageParameters.length && imageParameters[nr] != null)
-					{
+					if (nr < imageParameters.length && imageParameters[nr] != null) {
 						int curImgWidth = imageParameters[nr].getWidth();
 						int curImgHeight = imageParameters[nr].getHeight();
 						int newWidth  = (int)spacingX;
 						int newHeight = (int)spacingY;
-						if (config.getKeepAspectRatio())
-						{
+						if (config.getKeepAspectRatio()) {
 							double curWMul = spacingX / curImgWidth;
 							double curHMul = spacingY / curImgHeight;
 							double curMultiplier = Math.min(curWMul, curHMul);
@@ -569,8 +526,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 						if (g.drawImage(img, plotX, plotY, newWidth, newHeight, this) == false)
 							CoffeeSaint.log.add("drawImage " + imageParameters[nr].getImage() + " returns false");
 					}
-					else
-					{
+					else {
 						// g.drawString("n/a", plotX, plotY);
 					}
 
@@ -580,8 +536,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		}
 	}
 
-	public void showCoffeeSaintProblem(Exception e, Graphics g, int windowWidth, int rowHeight)
-	{
+	public void showCoffeeSaintProblem(Exception e, Graphics g, int windowWidth, int rowHeight) {
 		CoffeeSaint.log.add("Graphics: " + g);
 
 		/* block in upper right to inform about error */
@@ -591,8 +546,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		prepareRow(g, windowWidth, 0, "Error: " + error, config.getNRows() - 1, "2", true, Color.GRAY, 1.0f, null, true, false, true);
 	}
 
-	public void drawBorders(Graphics2D g, BordersParameters bordersParameters)
-	{
+	public void drawBorders(Graphics2D g, BordersParameters bordersParameters) {
 		configureRendered(g, false);
 
 		int verticalNRows = Math.min(config.getNRows() - ((config.getShowHeader() ? 1 : 0) + (config.getFooter() != null ? 1 : 0)), bordersParameters.getNProblems());
@@ -600,20 +554,16 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		int maxY = bordersParameters.getRowHeight() * verticalNRows + offset;
 
 		g.setColor(config.getRowBorderColor());
-		if (bordersParameters.getNColumns() > 1)
-		{
-			for(int rowColumns=0; rowColumns < bordersParameters.getNColumns(); rowColumns++)
-			{
+		if (bordersParameters.getNColumns() > 1) {
+			for(int rowColumns=0; rowColumns < bordersParameters.getNColumns(); rowColumns++) {
 				int x = (bordersParameters.getWindowWidth() * rowColumns) / bordersParameters.getNColumns();
 				int y = offset;
 				g.drawLine(x, y, x, maxY);
 			}
 		}
 
-		if (bordersParameters.getNProblems() > 0)
-		{
-			for(int rowsRow=0; rowsRow < verticalNRows; rowsRow++)
-			{
+		if (bordersParameters.getNProblems() > 0) {
+			for(int rowsRow=0; rowsRow < verticalNRows; rowsRow++) {
 				int drawY = bordersParameters.getRowHeight() + rowsRow * bordersParameters.getRowHeight();
 				if (rowsRow > 0 && config.getShowHeader() == true)
 					drawY += config.getUpperRowBorderHeight();
@@ -622,24 +572,22 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 
 		}
 
-		if (config.getFooter() != null)
-		{
+		if (config.getFooter() != null) {
 			int y = config.getShowHeader() ? config.getUpperRowBorderHeight(): 0;
 			y += (config.getNRows() - 1) * bordersParameters.getRowHeight();
 			g.drawLine(0, y, bordersParameters.getWindowWidth(), y);
 		}
 
-		if (config.getShowHeader())
-		{
+		if (config.getShowHeader()) {
 			int drawY = bordersParameters.getRowHeight();
 			g.fillRect(0, drawY, bordersParameters.getWindowWidth(), config.getUpperRowBorderHeight());
 		}
 
-		// if (config.getDrawProblemServiceSplitLine() && config.getPutSplitAtOffset() != null)
-		// {
-			// int x = config.getPutSplitAtOffset();
-			// g.drawLine(x, offset, x, maxY);
-		// }
+		if (config.getDrawProblemServiceSplitLine()) {
+			for(int x : config.getLineScrollSplitter()) {
+				g.drawLine(x, offset, x, maxY);
+			}
+		}
 
 		configureRendered((Graphics2D)g, true);
 	}

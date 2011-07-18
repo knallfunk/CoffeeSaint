@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.6-b11";
+	static String versionNr = "v4.7";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2011 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -737,36 +737,7 @@ public class CoffeeSaint
 				return new Object [] { "", false };
 
 			String out = parts[3];
-			boolean flash = false;
-			for(;;) {
-				int index = out.indexOf('%');
-				if (index == -1)
-					break;
-				String field = null;
-				int endMarker = out.indexOf(' ', index);
-				int percent = -1;
-				if (index < out.length() - 1)
-					percent = out.indexOf('%', index + 1);
-				if (percent != -1 && (percent < endMarker || endMarker == -1))
-					endMarker = percent;
-				if (endMarker != -1)
-					field = out.substring(index + 1, endMarker);
-				else
-					field = out.substring(index + 1);
-
-				String fieldOut = "";
-				if (field.equals("FLASH"))
-					flash = true;
-				else
-					fieldOut = (String)(processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, field, false)[0]);
-
-				if (endMarker == -1)
-					out = out.substring(0, index) + fieldOut;
-				else
-					out = out.substring(0, index) + fieldOut + out.substring(endMarker);
-			}
-
-			return new Object [] { out, flash };
+			return processStringWithEscapes(out, javNag, rightNow, problem, haveNotifiedProblems, false);
 		}
 
 		if (cmd.equals("STATE") && recurse == true)
@@ -921,8 +892,20 @@ public class CoffeeSaint
 		if (cmd.equals("HOSTSINCE") && problem != null && problem.getHost() != null)
 			return new Object [] { stringTsToDate(problem.getHost().getParameter("last_state_change")), false };
 
-		if (cmd.equals("HOSTSINCETS") && problem != null && problem.getHost() != null)
-			return new Object [] { "" + (now - Long.valueOf(problem.getHost().getParameter("last_state_change"))), false };
+		if (cmd.equals("HOSTSINCETS") && problem != null && problem.getHost() != null) {
+			Host current = problem.getHost();
+			String current_state = current.getParameter("current_state");
+			String field = null;
+			if (current_state.equals("0"))
+				field = "last_time_up";
+			else if (current_state.equals("1"))
+				field = "last_time_down";
+			else if (current_state.equals("2"))
+				field = "last_time_unreachable";
+			// System.out.println("======== " + field + " " + current.getParameter(field));
+			if (field != null)
+				return new Object [] { "" + (now - Long.valueOf(current.getParameter(field))), false };
+		}
 
 		if (cmd.equals("SERVICESINCE") && problem != null && problem.getService() != null)
 			return new Object [] { stringTsToDate(problem.getService().getParameter("last_state_change")), false };
@@ -947,6 +930,9 @@ public class CoffeeSaint
 				return new Object [] { output, false };
 			return new Object [] { "?", false };
 		}
+
+		if (cmd.equals("FLASH"))
+			return new Object [] { "", true };
 
 		return new Object [] { "?" + cmd + "?", false };
 	}
@@ -991,7 +977,6 @@ public class CoffeeSaint
 					hadSplitter = true;
 				}
 				else {
-					System.out.println("CMD: " + cmd);
 					Object [] result = processStringEscapes(javNag, totals, rightNow, problem, haveNotifiedProblems, cmd, recurse);
 					output += (String)result[0];
 					flash |= (Boolean)result[1];
@@ -1002,6 +987,10 @@ public class CoffeeSaint
 
 					if (currentChar == '%')
 						loadingCmd = true;
+					else if (currentChar == '@') {
+						loadingCmd = true;
+						atTerminator = true;
+					}
 					else
 						output += in.charAt(index);
 				}
@@ -1661,7 +1650,7 @@ public class CoffeeSaint
 		System.out.println("--scrolling-header  In case there's more information to put into it than what fits on the screen");
 		System.out.println("--scroll-pixels-per-sec x  Number of pixels to scroll per second (default: 100)");
 		System.out.println("--scroll-if-not-fitting    If problems do not fit, scroll them");
-		System.out.println("--splitter x        On what character to split a line. When scrolling is enabled: left from the split-character no scrolling takes place, right from that character the text is scrolled.");
+		System.out.println("--splitter \"x x x...\"    With \\T one can add tabs-stops. With --spliter you define at what positions to put the strings.");
 		System.out.println("--draw-problems-service-split-line Draw a line at the split position.");
 		System.out.println("--anti-alias  Anti-alias graphics");
 		System.out.println("--max-quality-graphics Draw graphics with maximum quality.");
@@ -1716,6 +1705,12 @@ public class CoffeeSaint
 		System.out.println("  %CHECKLATENCY             Check latency");
 		System.out.println("  %NACKED                   # acknowledged problems");
 		System.out.println("  %NFLAPPING                # flapping problems");
+		System.out.println(" Conditionals");
+		System.out.println("  @LESS^V1^V2^string@          If v1 < v2, print string. String can contain escapes. V1 can be e.g. %HOSTSINCETS or others.");
+		System.out.println("  @LESSOREQUAL^V1^V2^string@   If v1 <= v2, show string.");
+		System.out.println("  @BIGGER^V1^V2^string@        If v1 > v2, show string.");
+		System.out.println("  @BIGGEROREQUAL^V1^V2^string@ If v1 >= v2, show string.");
+		System.out.println("  @EQUAL^V1^V2^string@         If v1 == v2, print string.");
 		System.out.println("");
 		System.out.println("Sort-fields:");
 		config.listSortFields();
@@ -1762,7 +1757,6 @@ public class CoffeeSaint
 						NagiosVersion nv = null;
 						String type = arg[++loop];
 						String versionStr = arg[++loop];
-						String pn = arg[++loop];
 
 						if (versionStr.equals("1"))
 							nv = NagiosVersion.V1;
@@ -1773,8 +1767,7 @@ public class CoffeeSaint
 						else
 							errorExit("Nagios version '" + versionStr + "' not known");
 
-						if (type.equalsIgnoreCase("http") || type.equalsIgnoreCase("http-auth"))
-						{
+						if (type.equalsIgnoreCase("http") || type.equalsIgnoreCase("http-auth")) {
 							boolean withAuth = type.equalsIgnoreCase("http-auth");
 							String urlStr = arg[++loop];
 							String resultStr = testUrlString(urlStr);
@@ -1784,32 +1777,31 @@ public class CoffeeSaint
 							String resultUrl = testUrl(url, withAuth);
 							if (resultUrl != null)
 								errorExit("Cannot use url " + url + " (" + resultUrl + ")");
-							if (withAuth)
-							{
+							if (withAuth) {
 								String username = arg[++loop];
 								String password = arg[++loop];
+								String pn = arg[++loop];
 								nds = new NagiosDataSource(url, username, password, nv, pn);
 							}
-							else
-							{
+							else {
+								String pn = arg[++loop];
 								nds = new NagiosDataSource(url, nv, pn);
 							}
 						}
-						else if (type.equalsIgnoreCase("file"))
-						{
+						else if (type.equalsIgnoreCase("file")) {
 							String filename = arg[++loop];
+							String pn = arg[++loop];
 							String result = testFile(filename);
 							if (result != null)
 								errorExit("Cannot access file " + filename + " (" + result + ")");
 							nds = new NagiosDataSource(filename, nv, pn);
 						}
-						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp") || type.equalsIgnoreCase("ls"))
-						{
+						else if (type.equalsIgnoreCase("tcp") || type.equalsIgnoreCase("ztcp") || type.equalsIgnoreCase("ls")) {
 							String host = arg[++loop];
 							int port;
-							try
-							{
+							try {
 								port = Integer.valueOf(arg[++loop]);
+								String pn = arg[++loop];
 								String result = testPort(host, port);
 								if (result != null)
 									errorExit("Cannot open socket on " + host + ":" + port + " (" + result + ")");
@@ -1818,8 +1810,7 @@ public class CoffeeSaint
 								else
 									nds = new NagiosDataSource(host, port, nv, type.equalsIgnoreCase("ztcp"), pn);
 							}
-							catch(NumberFormatException nfe)
-							{
+							catch(NumberFormatException nfe) {
 								errorExit("--source: expecting a port-number but got '" + arg[loop] + "'");
 							}
 						}
@@ -1828,12 +1819,10 @@ public class CoffeeSaint
 
 						config.addNagiosDataSource(nds);
 					}
-					else if (arg[loop].equals("--sort-order"))
-					{
+					else if (arg[loop].equals("--sort-order")) {
 						boolean reverse = false, numeric = false;
 
-						for(;;)
-						{
+						for(;;) {
 							++loop;
 							if (arg[loop].equals("reverse"))
 								reverse = true;
@@ -1853,8 +1842,7 @@ public class CoffeeSaint
 						config.setScrollingHeader(true);
 					else if (arg[loop].equals("--scroll-pixels-per-sec"))
 						config.setScrollingPixelsPerSecond(Integer.valueOf(arg[++loop]));
-					else if (arg[loop].equals("--fullscreen"))
-					{
+					else if (arg[loop].equals("--fullscreen")) {
 						String mode = arg[++loop];
 						if (mode.equalsIgnoreCase("none"))
 							config.setFullscreen(FullScreenMode.NONE);

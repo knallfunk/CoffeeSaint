@@ -2,6 +2,7 @@
 import com.vanheusden.nagios.*;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -684,13 +685,13 @@ public class Config
 			{
 				while((line = in.readLine()) != null)
 				{
-					int is = line.indexOf("=");
 					lineNr++;
+					if (line.trim().length() == 0 || line.substring(0, 1).equals("#"))
+						continue;
+
+					int is = line.indexOf("=");
 					if (is == -1)
 						throw new Exception("Error on line " + lineNr + ": malformed line.");
-
-					if (line.length() == 0 || line.substring(0, 1).equals("#"))
-						continue;
 
 					String name = line.substring(0, is).trim();
 					String data = line.substring(is + 1).trim();
@@ -1385,23 +1386,13 @@ public class Config
 	public void listFonts()
 	{
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		List<String> fontNames = CoffeeSaint.convertStringArrayToList(lge.getAvailableFontFamilyNames());
+		Font [] fonts = lge.getAllFonts();
 
 		System.out.println("Known fonts: ");
-		int nr = 0;
-		for(String fontName : fontNames);
+		for(Font font : fonts)
 		{
-			if (++nr == 4)
-			{
-				System.out.println("\t" + fontName);
-				nr = 0;
-			}
-			else
-				System.out.print("\t" + fontName);
+			System.out.println("\t" + font.getFontName());
 		}
-
-		if (nr > 0)
-			System.out.println("");
 	}
 
 	public void listColors()
@@ -3000,8 +2991,7 @@ public class Config
 		unlock();
 	}
 
-	public boolean getAuthentication()
-	{
+	public boolean getAuthentication() {
 		boolean copy;
 		lock();
 		copy = authenticate;
@@ -3009,8 +2999,7 @@ public class Config
 		return copy;
 	}
 
-	public int getWebSessionExpire()
-	{
+	public int getWebSessionExpire() {
 		int copy;
 		lock();
 		copy = webExpireTime;
@@ -3018,15 +3007,13 @@ public class Config
 		return copy;
 	}
 
-	public void setWebSessionExpire(int to)
-	{
+	public void setWebSessionExpire(int to) {
 		lock();
 		webExpireTime = to;
 		unlock();
 	}
 
-	public String getWebUsername()
-	{
+	public String getWebUsername() {
 		String copy;
 		lock();
 		copy = webUsername;
@@ -3034,15 +3021,13 @@ public class Config
 		return copy;
 	}
 
-	public void setWebUsername(String newName)
-	{
+	public void setWebUsername(String newName) {
 		lock();
 		webUsername = newName;
 		unlock();
 	}
 
-	public String getWebPassword()
-	{
+	public String getWebPassword() {
 		String copy;
 		lock();
 		copy = webPassword;
@@ -3050,15 +3035,13 @@ public class Config
 		return copy;
 	}
 
-	public void setWebPassword(String newPassword)
-	{
+	public void setWebPassword(String newPassword) {
 		lock();
 		webPassword = newPassword;
 		unlock();
 	}
 
-	public String getLatencyFile()
-	{
+	public String getLatencyFile() {
 		String copy;
 		lock();
 		copy = latencyFile;
@@ -3066,22 +3049,19 @@ public class Config
 		return copy;
 	}
 
-	public void setLatencyFile(String lf)
-	{
+	public void setLatencyFile(String lf) {
 		lock();
 		latencyFile = lf;
 		unlock();
 	}
 
-	public void setLogo(String file)
-	{
+	public void setLogo(String file) {
 		lock();
 		logo = file;
 		unlock();
 	}
 
-	public String getLogo()
-	{
+	public String getLogo() {
 		String copy;
 		lock();
 		copy = logo;
@@ -3089,15 +3069,13 @@ public class Config
 		return copy;
 	}
 
-	public void setStateProblemsText(String string)
-	{
+	public void setStateProblemsText(String string) {
 		lock();
 		problemStateString = string;
 		unlock();
 	}
 
-	public String getStateProblemsText()
-	{
+	public String getStateProblemsText() {
 		String copy;
 		lock();
 		copy = problemStateString;
@@ -3105,8 +3083,7 @@ public class Config
 		return copy;
 	}
 
-	public boolean getHeaderAlwaysBGColor()
-	{
+	public boolean getHeaderAlwaysBGColor() {
 		boolean copy;
 		lock();
 		copy = headerAlwaysBGColor;
@@ -3114,15 +3091,13 @@ public class Config
 		return copy;
 	}
 
-	public void setHeaderAlwaysBGColor(boolean when)
-	{
+	public void setHeaderAlwaysBGColor(boolean when) {
 		lock();
 		headerAlwaysBGColor = when;
 		unlock();
 	}
 
-	public boolean getSetBgColorToState()
-	{
+	public boolean getSetBgColorToState() {
 		boolean copy;
 		lock();
 		copy = bgColorToState;
@@ -3130,15 +3105,13 @@ public class Config
 		return copy;
 	}
 
-	public void setSetBgColorToState(boolean state)
-	{
+	public void setSetBgColorToState(boolean state) {
 		lock();
 		bgColorToState = state;
 		unlock();
 	}
 
-	public Position getLogoPosition()
-	{
+	public Position getLogoPosition() {
 		Position copy;
 		lock();
 		copy = logoPosition;
@@ -3146,8 +3119,7 @@ public class Config
 		return copy;
 	}
 
-	public String getLogoPositionName()
-	{
+	public String getLogoPositionName() {
 		Position copy;
 		lock();
 		copy = logoPosition;
@@ -3155,8 +3127,7 @@ public class Config
 		return copy.toString();
 	}
 
-	public void setLogoPosition(Position newPosition) throws Exception
-	{
+	public void setLogoPosition(Position newPosition) throws Exception {
 		if (newPosition == Position.CENTER)
 			throw new Exception("Logo position cannot be center");
 		lock();
@@ -3164,8 +3135,7 @@ public class Config
 		unlock();
 	}
 
-	public void setLogoPosition(String newPosition) throws Exception
-	{
+	public void setLogoPosition(String newPosition) throws Exception {
 		Position value = null;
 		if (newPosition.equalsIgnoreCase("left") || newPosition.equalsIgnoreCase("upper-left"))
 			value = Position.UPPER_LEFT;
@@ -3182,8 +3152,7 @@ public class Config
 		unlock();
 	}
 
-	public int getUpperRowBorderHeight()
-	{
+	public int getUpperRowBorderHeight() {
 		int copy;
 		lock();
 		copy = upperRowBorderHeight;
@@ -3191,15 +3160,13 @@ public class Config
 		return copy;
 	}
 
-	public void setUpperRowBorderHeight(int height)
-	{
+	public void setUpperRowBorderHeight(int height) {
 		lock();
 		upperRowBorderHeight = height;
 		unlock();
 	}
 
-	public Color getBackgroundColorFadeTo()
-	{
+	public Color getBackgroundColorFadeTo() {
 		Color copy;
 		lock();
 		copy = bgColorFadeTo;
@@ -3207,17 +3174,14 @@ public class Config
 		return copy;
 	}
 
-	public void setBackgroundColorFadeTo(String colorName) throws Exception
-	{
-		if (colorName == null)
-		{
+	public void setBackgroundColorFadeTo(String colorName) throws Exception {
+		if (colorName == null) {
 			lock();
 			bgColorFadeTo = null;
 			bgColorFadeToName = null;
 			unlock();
 		}
-		else
-		{
+		else {
 			Color color = selectColor(colorName);
 			if (color == null)
 				throw new Exception("Color " + colorName + " is not known.");
@@ -3228,8 +3192,7 @@ public class Config
 		}
 	}
 
-	public String getBackgroundColorFadeToName()
-	{
+	public String getBackgroundColorFadeToName() {
 		String copy;
 		lock();
 		copy = bgColorFadeToName;
@@ -3237,8 +3200,7 @@ public class Config
 		return copy;
 	}
 
-	public Color getProblemRowGradient()
-	{
+	public Color getProblemRowGradient() {
 		Color copy;
 		lock();
 		copy = problemRowGradient;
@@ -3246,17 +3208,14 @@ public class Config
 		return copy;
 	}
 
-	public void setProblemRowGradient(String colorName) throws Exception
-	{
-		if (colorName == null)
-		{
+	public void setProblemRowGradient(String colorName) throws Exception {
+		if (colorName == null) {
 			lock();
 			problemRowGradient = null;
 			problemRowGradientName = null;
 			unlock();
 		}
-		else
-		{
+		else {
 			Color color = selectColor(colorName);
 			if (color == null)
 				throw new Exception("Color " + colorName + " is not known.");
@@ -3267,8 +3226,7 @@ public class Config
 		}
 	}
 
-	public String getProblemRowGradientName()
-	{
+	public String getProblemRowGradientName() {
 		String copy;
 		lock();
 		copy = problemRowGradientName;
@@ -3276,8 +3234,7 @@ public class Config
 		return copy;
 	}
 
-	public boolean getDrawProblemServiceSplitLine()
-	{
+	public boolean getDrawProblemServiceSplitLine() {
 		boolean copy;
 		lock();
 		copy = drawProblemServiceSplitLine;
@@ -3285,15 +3242,13 @@ public class Config
 		return copy;
 	}
 
-	public void setDrawProblemServiceSplitLine(boolean on)
-	{
+	public void setDrawProblemServiceSplitLine(boolean on) {
 		lock();
 		drawProblemServiceSplitLine = on;
 		unlock();
 	}
 
-	public boolean getAllowAllSSL()
-	{
+	public boolean getAllowAllSSL() {
 		boolean copy;
 		lock();
 		copy = allowAllSSL;
@@ -3301,8 +3256,7 @@ public class Config
 		return copy;
 	}
 
-	public void setAllowAllSSL(boolean newSetting)
-	{
+	public void setAllowAllSSL(boolean newSetting) {
 		lock();
 		allowAllSSL = newSetting;
 		unlock();
@@ -3310,8 +3264,7 @@ public class Config
 		CoffeeSaint.allowAllSSL();
 	}
 
-	public String getUseScreen()
-	{
+	public String getUseScreen() {
 		String copy;
 		lock();
 		copy = useScreen;
@@ -3319,15 +3272,13 @@ public class Config
 		return copy;
 	}
 
-	public void setUseScreen(String screen)
-	{
+	public void setUseScreen(String screen) {
 		lock();
 		useScreen = screen;
 		unlock();
 	}
 
-	public String getFooter()
-	{
+	public String getFooter() {
 		String copy;
 		lock();
 		copy = footer;
@@ -3335,22 +3286,19 @@ public class Config
 		return copy;
 	}
 
-	public void setFooter(String line)
-	{
+	public void setFooter(String line) {
 		lock();
 		footer = line;
 		unlock();
 	}
 
-	public void setScrollingFooter(boolean sh)
-	{
+	public void setScrollingFooter(boolean sh) {
 		lock();
 		this.scrollingFooter = sh;
 		unlock();
 	}
 
-	public boolean getScrollingFooter()
-	{
+	public boolean getScrollingFooter() {
 		boolean copy;
 		lock();
 		copy = scrollingFooter;
@@ -3358,8 +3306,7 @@ public class Config
 		return copy;
 	}
 
-	public boolean getNoProblemsTextBg()
-	{
+	public boolean getNoProblemsTextBg() {
 		boolean copy;
 		lock();
 		copy = noProbTextBg;
@@ -3367,8 +3314,7 @@ public class Config
 		return copy;
 	}
 
-	public void setNoProblemsTextBg(boolean bg)
-	{
+	public void setNoProblemsTextBg(boolean bg) {
 		lock();
 		noProbTextBg = bg;
 		unlock();

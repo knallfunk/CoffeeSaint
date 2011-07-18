@@ -870,7 +870,7 @@ class HTTPServer implements Runnable
 		reply.add("<TR><TD>Scroll footer:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scrolling-footer\" VALUE=\"on\" " + isChecked(config.getScrollingFooter()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll problems:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"scroll-if-not-fitting\" VALUE=\"on\" " + isChecked(config.getScrollIfNotFit()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Scroll pixels/sec:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-pixels-per-sec\" VALUE=\"" + config.getScrollingPixelsPerSecond() + "\"></TD><TD></TD></TR>\n");
-		reply.add("<TR><TD>Text splitter:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-splitter\" VALUE=\"" + (config.getLineScrollSplitter() == null ? "" : "" + config.getLineScrollSplitter()) + "\"></TD><TD>This is used for both scrolling-splitted-text<BR>and the 'draw at offset' functionality.</TD></TR>\n");
+		reply.add("<TR><TD>Text split offsets:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"scroll-splitter\" VALUE=\"" + (config.getLineScrollSplitter() == null ? "" : "" + config.getLineScrollSplitter()) + "\"></TD><TD>At what offsets start drawing<BR> the \\T text splitters (tab stops).</TD></TR>\n");
 		reply.add("<TR><TD>Draw split-line:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"draw-problems-service-split-line\" VALUE=\"on\" " + isChecked(config.getDrawProblemServiceSplitLine()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Sort order:</TD><TD>\n");
 		stringSelectorHTML(reply, "sort-order", config.getSortFields(), config.getSortOrder(), false);
