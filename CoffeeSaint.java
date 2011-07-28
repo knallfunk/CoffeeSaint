@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.7";
+	static String versionNr = "v4.8-b1";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2011 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
