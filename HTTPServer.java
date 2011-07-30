@@ -30,8 +30,7 @@ import java.util.List;
 import java.util.Random;
 import javax.imageio.ImageIO;
 
-class HTTPServer implements Runnable
-{
+class HTTPServer implements Runnable {
 	final Config config;
 	final CoffeeSaint coffeeSaint;
 	final Statistics statistics;
@@ -45,25 +44,20 @@ class HTTPServer implements Runnable
 	//
 	final int maxNHostsPerPage = 50;
 
-	public void expireSessions(List<HTTPSession> sessions)
-	{
+	public void expireSessions(List<HTTPSession> sessions) {
 		long now = System.currentTimeMillis();
 		long maxOld = now - (config.getWebSessionExpire() * 1000);
 
-		for(int index=sessions.size() - 1; index >= 0; index--)
-		{
-			if (sessions.get(index).getLastUpdate() < maxOld)
-			{
+		for(int index=sessions.size() - 1; index >= 0; index--) {
+			if (sessions.get(index).getLastUpdate() < maxOld) {
 				CoffeeSaint.log.add("Session with " + sessions.get(index).getHost() + " expired.");
 				sessions.remove(index);
 			}
 		}
 	}
 
-	public boolean sessionValid(List<HTTPSession> sessions, String host, String authCookie)
-	{
-		for(HTTPSession session : sessions)
-		{
+	public boolean sessionValid(List<HTTPSession> sessions, String host, String authCookie) {
+		for(HTTPSession session : sessions) {
 			if (session.getHost().equals(host) && session.getCookie().equals(authCookie))
 				return true;
 		}
@@ -71,21 +65,18 @@ class HTTPServer implements Runnable
 		return false;
 	}
 
-	public HTTPServer(Config config, CoffeeSaint coffeeSaint, Statistics statistics, Gui gui)
-	{
+	public HTTPServer(Config config, CoffeeSaint coffeeSaint, Statistics statistics, Gui gui) {
 		this.config = config;
 		this.coffeeSaint = coffeeSaint;
 		this.statistics = statistics;
 		this.gui = gui;
 	}
 
-	public void addHTTP200(List<String> whereTo, String cookie)
-	{
+	public void addHTTP200(List<String> whereTo, String cookie) {
 		whereTo.add("HTTP/1.0 200 OK\r\n");
 		whereTo.add("Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n");
 		whereTo.add("Server: " + CoffeeSaint.getVersion() + "\r\n");
-		if (cookie != null)
-		{
+		if (cookie != null) {
 			System.out.println("Set-Cookie: " + cookie);
 			whereTo.add("Set-Cookie: " + cookie + "\r\n");
 		}
@@ -94,8 +85,7 @@ class HTTPServer implements Runnable
 		whereTo.add("\r\n");
 	}
 
-	public void addPageHeader(List<String> whereTo, String head)
-	{
+	public void addPageHeader(List<String> whereTo, String head) {
 		whereTo.add("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n");
 		whereTo.add("<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" >\n");
 		whereTo.add("<head>\n");
@@ -142,8 +132,7 @@ class HTTPServer implements Runnable
 		whereTo.add("				<a href=\"/cgi-bin/select_configfile.cgi\">Select configuration file</a><br />\n");
                 if (config.getConfigFilename() == null)
                         whereTo.add("No configuration-file selected, save disabled<br />\n");
-                else
-                {
+                else {
                         String line = "<A HREF=\"/cgi-bin/write-config.cgi\">Write config to " + config.getConfigFilename() + "</A>";
                         if (configNotWrittenToDisk == true)
                                 line += " (changes pending!)";
@@ -173,15 +162,13 @@ class HTTPServer implements Runnable
 		whereTo.add("			<div id=\"main\">\n");
 	}
 
-	public String formatDate(Calendar when)
-	{
+	public String formatDate(Calendar when) {
 		SimpleDateFormat dateFormatter = new SimpleDateFormat("E yyyy.MM.dd  hh:mm:ss a zzz");
 
 		return dateFormatter.format(when.getTime());
 	}
 
-	public void addPageTail(List<String> whereTo, boolean mainMenu)
-	{ 
+	public void addPageTail(List<String> whereTo, boolean mainMenu) { 
 		whereTo.add("				<br />\n");
 		whereTo.add("			</div>\n");
 		whereTo.add("		</div>\n");
@@ -192,22 +179,19 @@ class HTTPServer implements Runnable
 //		whereTo.add(formatDate(Calendar.getInstance()) + "</TD></TR></TABLE></BODY></HTML>");
 	}
 
-	public long getModificationDate(String fileName) throws Exception
-	{
+	public long getModificationDate(String fileName) throws Exception {
 		URL url = getClass().getClassLoader().getResource(fileName);
 		URLConnection urlConnection = url.openConnection();
 		return urlConnection.getLastModified();
 	}
 
-	public String getHTTPDate(Calendar when)
-	{
+	public String getHTTPDate(Calendar when) {
 		SimpleDateFormat dateFormatter = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss a zzz");
 
 		return dateFormatter.format(when.getTime());
 	}
 
-	public String getModificationDateString(String fileName) throws Exception
-	{
+	public String getModificationDateString(String fileName) throws Exception {
 		long ts = getModificationDate(fileName);
 
 		Calendar calendar = Calendar.getInstance();
@@ -232,8 +216,7 @@ class HTTPServer implements Runnable
 		int length = is.available();
 		CoffeeSaint.log.add("Sending " + jarFileURL + " which is " + length + " bytes long.");
 		byte [] jar = new byte[length];
-		while(length > 0)
-		{
+		while(length > 0) {
 			int nRead = is.read(jar);
 			if (nRead < 0)
 				break;
@@ -244,8 +227,7 @@ class HTTPServer implements Runnable
 		socket.close();
 	}
 
-	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType, boolean headRequest/*, String cookie*/) throws Exception
-	{
+	public void sendReply_send_file_from_jar(MyHTTPServer socket, String fileName, String mimeType, boolean headRequest/*, String cookie*/) throws Exception {
 		String reply = "HTTP/1.0 200 OK\r\n";
 		reply += "Date: " + getHTTPDate(Calendar.getInstance()) + "\r\n";
 		reply += "Server: " + CoffeeSaint.getVersion() + "\r\n";
