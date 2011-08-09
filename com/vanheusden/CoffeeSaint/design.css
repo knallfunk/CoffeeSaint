@@ -1,0 +1,87 @@
+/* css design for coffeesaint admin */
+/* coffeesaint (c) folkert@vanheusden.com 2009 */
+/* design (c) bazkie@gmail.com 2009 */
+
+#css-coffeesaint {
+	font-family: Verdana, Helvetica, sans-serif;
+	font-size: 12px;
+	line-height: 20px;
+	color: #59432E;
+
+	background: url(/images/bg01.png);
+	background-position: top left;
+	background-repeat: repeat-y;
+}
+
+#coffee {
+	position: absolute;
+	top: 10px;
+	left: 1085px;
+	width: 83px;
+	min-height: 120px;
+	z-index: 2;
+}
+
+#container {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 1200px;
+	z-index: 2;
+}
+
+#column_navigation {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 220px;
+	min-height: 300px;
+
+	background: url(/images/saint01.png);
+	background-position: top left;
+	background-repeat: no-repeat;
+}
+
+#navigation {
+	position: absolute;
+	top: 120px;
+	left: 20px;
+	width: 180px;
+}
+
+#column_main {
+	position: absolute;
+	top: 0px;
+	left: 220px;
+	width: 960px;
+	min-height: 100px;
+}
+
+#main {
+	position: absolute;
+	top: 120px;
+	left: 20px;
+	width: 920px;
+}
+
+
+a {
+	color: #96714E;
+}
+
+h1 {
+	font-size: 20px;
+}
+
+table {
+	border: 0px;
+}
+
+th, td {
+	border-bottom: 0px;
+	border-left: 0px;
+	border-right: 0px;
+	border-top: 1px dotted #59432E;
+	padding: 0px;
+	overflow: hidden;
+}
