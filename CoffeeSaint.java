@@ -49,7 +49,7 @@ import javax.swing.RepaintManager;
 
 public class CoffeeSaint
 {
-	static String versionNr = "v4.8-b1";
+	static String versionNr = "v4.8-b2";
 	static String version = "CoffeeSaint " + versionNr + ", (C) 2009-2011 by folkert@vanheusden.com";
 
 	final public static Log log = new Log(250);
@@ -1052,7 +1052,7 @@ public class CoffeeSaint
 	public static void drawLoadStatus(Gui gui, int windowWidth, Graphics g, String message)
 	{
 		if (config.getVerbose() && gui != null && g != null)
-			gui.prepareRow(g, windowWidth, 0, message, 0, "0", true, config.getBackgroundColor(), 1.0f, null, false, false, false);
+			gui.prepareRow(g, windowWidth, 0, message, 0, "0", true, config.getBackgroundColor(), 1.0f, null, false, false, false, -1);
 	}
 
 	public ImageLoadingParameters startLoadingImages(Gui gui, int windowWidth, Graphics g) throws Exception {
@@ -1587,6 +1587,7 @@ public class CoffeeSaint
 		System.out.println("--proxy-host");
 		System.out.println("--proxy-port  Proxy to use for outbound http requests.");
 		System.out.println("--nrows x     Number of rows to show, must be at least 2");
+		System.out.println("--min-row-height  Minimum height of the rows, skip or set to -1 to have a constant height");
 		System.out.println("--interval x  Retrieve status every x seconds");
 		System.out.println("--flash       Flash/blink new problems");
 		System.out.println("--webcam-timeout x   Maximum time for loading 1 webcam. If not set, the Nagios status loading interval is used.");
@@ -1936,6 +1937,8 @@ public class CoffeeSaint
 						config.setTextColor(arg[++loop]);
 					else if (arg[loop].equals("--nrows"))
 						config.setNRows(Integer.valueOf(arg[++loop]));
+					else if (arg[loop].equals("--min-row-height"))
+						config.setMinRowHeight(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--interval"))
 						config.setSleepTime(Integer.valueOf(arg[++loop]));
 					else if (arg[loop].equals("--flash"))

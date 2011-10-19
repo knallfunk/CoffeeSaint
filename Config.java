@@ -126,6 +126,7 @@ public class Config
 	private boolean displayDown;
 	private int webcamTimeout;
 	private boolean flash;
+	private int minRowHeight;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -252,6 +253,7 @@ public class Config
 		displayDown = true;
 		webcamTimeout = -1;
 		flash = false;
+		minRowHeight = -1;
 		unlock();
 	}
 
@@ -386,6 +388,9 @@ public class Config
 		data = a.getParameter("flash");
 		if (data != null)
 			setFlash(isIsTrue(data));
+		data = a.getParameter("min-row-height");
+		if (data != null)
+			setMinRowHeight(Integer.valueOf(data));
 		data = a.getParameter("header");
 		if (data != null)
 			setHeader(data);
@@ -788,6 +793,8 @@ public class Config
 						setRandomWebcam(isTrue);
 					else if (name.equals("no-gui"))
 						setRunGui(!(isTrue));
+					else if (name.equals("min-row-height"))
+						setMinRowHeight(Integer.valueOf(data));
 					else if (name.equals("header"))
 						setHeader(data);
 					else if (name.equals("host-issue"))
@@ -1062,6 +1069,7 @@ public class Config
 		output.add(new String [] { "also-acknowledged", (getAlsoAcknowledged() ? "true" : "false")});
 		output.add(new String [] { "display-unknown", (getDisplayUnknown() ? "true" : "false")});
 		output.add(new String [] { "display-down", (getDisplayDown() ? "true" : "false")});
+		output.add(new String [] { "min-row-height", "" + getMinRowHeight()});
 		output.add(new String [] { "font", getFontName()});
 		output.add(new String [] { "critical-font", getCriticalFontName()});
 		output.add(new String [] { "warning-font", getWarningFontName()});
@@ -3487,5 +3495,19 @@ public class Config
 		copy = flash;
 		unlock();
 		return copy;
+	}
+
+	public int getMinRowHeight() {
+		int copy;
+		lock();
+		copy = minRowHeight;
+		unlock();
+		return copy;
+	}
+
+	public void setMinRowHeight(int value) {
+		lock();
+		minRowHeight = value;
+		unlock();
 	}
 }

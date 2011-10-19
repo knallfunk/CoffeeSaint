@@ -773,6 +773,7 @@ class HTTPServer implements Runnable {
 		reply.add("</SELECT></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Verbose:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"verbose\" VALUE=\"on\" " + isChecked(config.getVerbose()) + "></TD><TD></TD></TR>\n");
 		reply.add("<TR><TD>Number of rows:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"nRows\" VALUE=\"" + config.getNRows() + "\"></TD><TD>&gt;= 3</TD></TR>\n");
+		reply.add("<TR><TD>Minimum row height:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"min-row-height\" VALUE=\"" + config.getMinRowHeight() + "\"></TD><TD>or -1 to not auto adjust the row height</TD></TR>\n");
 		reply.add("<TR><TD>Number of columns:</TD><TD><INPUT TYPE=\"TEXT\" NAME=\"problem-columns\" VALUE=\"" + config.getNProblemCols() + "\"></TD><TD>&gt;= 1</TD></TR>\n");
 		reply.add("<TR><TD>Flexible number of columns:</TD><TD><INPUT TYPE=\"CHECKBOX\" NAME=\"flexible-n-columns\" VALUE=\"on\" " + isChecked(config.getFlexibleNColumns()) + "></TD><TD>Use in combination with number of columns</TD></TR>\n");
 		GraphicsEnvironment lge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -1002,6 +1003,11 @@ class HTTPServer implements Runnable {
 				reply.add("New number of rows invalid, must be >= 3.<BR>\n");
 			else
 				config.setNRows(newNRows);
+		}
+
+		HTTPRequestData minRowHeight = MyHTTPServer.findRecord(requestData, "min-row-height");
+		if (minRowHeight != null && minRowHeight.getData() != null) {
+			config.setMinRowHeight(Integer.valueOf(minRowHeight.getData()));
 		}
 
 		HTTPRequestData nCols = MyHTTPServer.findRecord(requestData, "problem-columns");
