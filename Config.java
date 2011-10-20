@@ -127,6 +127,7 @@ public class Config
 	private int webcamTimeout;
 	private boolean flash;
 	private int minRowHeight;
+	private String ldapBaseDn = null, ldapUrl = null;
 	// global lock shielding all parameters
 	private Semaphore configSemaphore = new Semaphore(1);
 	//
@@ -254,6 +255,8 @@ public class Config
 		webcamTimeout = -1;
 		flash = false;
 		minRowHeight = -1;
+		ldapBaseDn = null;
+		ldapUrl = null;
 		unlock();
 	}
 
@@ -391,6 +394,12 @@ public class Config
 		data = a.getParameter("min-row-height");
 		if (data != null)
 			setMinRowHeight(Integer.valueOf(data));
+		data = a.getParameter("ldap-base-dn");
+		if (data != null)
+			setLDAPBaseDN(data);
+		data = a.getParameter("ldap-url");
+		if (data != null)
+			setLDAPUrl(data);
 		data = a.getParameter("header");
 		if (data != null)
 			setHeader(data);
@@ -996,6 +1005,10 @@ public class Config
 						setWebUsername(data);
 					else if (name.equals("web-password"))
 						setWebPassword(data);
+					else if (name.equals("ldap-base-dn"))
+						setLDAPBaseDN(data);
+					else if (name.equals("ldap-url"))
+						setLDAPUrl(data);
 					else
 						throw new Exception("Unknown parameter on line " + lineNr);
 				}
@@ -1146,6 +1159,10 @@ public class Config
 			output.add(new String [] { "web-username", getWebUsername()});
 		if (getWebPassword() != null)
 			output.add(new String [] { "web-password", getWebPassword()});
+		if (ldapBaseDn != null)
+			output.add(new String [] { "ldap-base-dn", ldapBaseDn});
+		if (ldapUrl != null)
+			output.add(new String [] { "ldap-url", ldapUrl});
 
 		for(NagiosDataSource dataSource : getNagiosDataSources())
 		{
@@ -3509,5 +3526,33 @@ public class Config
 		lock();
 		minRowHeight = value;
 		unlock();
+	}
+
+	public void setLDAPBaseDN(String value) {
+		lock();
+		ldapBaseDn = value;
+		unlock();
+	}
+
+	public String getLDAPBaseDN() {
+		String copy;
+		lock();
+		copy = ldapBaseDn;
+		unlock();
+		return copy;
+	}
+
+	public void setLDAPUrl(String value) {
+		lock();
+		ldapUrl = value;
+		unlock();
+	}
+
+	public String getLDAPUrl() {
+		String copy;
+		lock();
+		copy = ldapUrl;
+		unlock();
+		return copy;
 	}
 }
