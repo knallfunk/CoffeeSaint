@@ -2170,13 +2170,22 @@ class HTTPServer implements Runnable {
 		addHTTP200(reply, cookie);
 		addPageHeader(reply, "");
 
-		boolean valid = true;
 		String username = getField(requestData, "username");
-		if (username == null || username.equals(config.getWebUsername()) == false)
-			valid = false;
 		String password = getField(requestData, "password");
-		if (password == null || password.equals(config.getWebPassword()) == false)
+
+		boolean valid = true;
+		if (username == null || password == null)
 			valid = false;
+		else if (config.getLDAPUrl() != null) {
+			if (LDAP.authenticateUser(config.getLDAPBaseDN(), username, password, config.getLDAPUrl()) == false)
+				valid = false;
+		}
+		else {
+			if (username.equals(config.getWebUsername()) == false)
+				valid = false;
+			if (password.equals(config.getWebPassword()) == false)
+				valid = false;
+		}
 
 		reply.add("<H1>Login</H1>\n");
 		if (valid)
