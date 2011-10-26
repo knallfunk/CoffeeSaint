@@ -403,6 +403,18 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		RowParameters result = rpHeight;
 		result.setTextWidth(width);
 
+                if (fitWidth != null) {
+			Graphics g2 = new BufferedImage(10, rowHeight, BufferedImage.TYPE_INT_RGB).createGraphics();
+			g2.setFont(f);
+			FontMetrics fm = g2.getFontMetrics();
+                        double shrink = (double)Math.max(0, fitWidth) / (double)width;
+			double newSize = (double)rowHeight * shrink;
+			double newAsc  = (double)fm.getAscent() * shrink;
+			double heightDiff = (double)fm.getAscent() - newAsc;
+			f = f.deriveFont((float)newSize);
+			result.setAdjustedFont(f);
+		}
+
 		return result;
 	}
 
