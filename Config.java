@@ -2312,15 +2312,13 @@ public class Config
 		return copy;
 	}
 
-	public void setScrollingHeader(boolean sh)
-	{
+	public void setScrollingHeader(boolean sh) {
 		lock();
 		this.scrollingHeader = sh;
 		unlock();
 	}
 
-	public boolean getScrollingHeader()
-	{
+	public boolean getScrollingHeader() {
 		boolean copy;
 		lock();
 		copy = scrollingHeader;
@@ -2527,8 +2525,7 @@ public class Config
 		unlock();
 	}
 
-	public boolean getShowServicesForHostWithProblems()
-	{
+	public boolean getShowServicesForHostWithProblems() {
 		boolean copy;
 		lock();
 		copy = showProblemHostServices;
@@ -2536,22 +2533,19 @@ public class Config
 		return copy;
 	}
 
-	public void setShowServicesForHostWithProblems(boolean ssfhwp)
-	{
+	public void setShowServicesForHostWithProblems(boolean ssfhwp) {
 		lock();
 		showProblemHostServices = ssfhwp;
 		unlock();
 	}
 
-	public void setNProblemCols(int n)
-	{
+	public void setNProblemCols(int n) {
 		lock();
 		this.problemCols = n;
 		unlock();
 	}
 
-	public int getNProblemCols()
-	{
+	public int getNProblemCols() {
 		int copy;
 		lock();
 		copy = problemCols;
@@ -2559,8 +2553,7 @@ public class Config
 		return copy;
 	}
 
-	public boolean getFlexibleNColumns()
-	{
+	public boolean getFlexibleNColumns() {
 		boolean copy;
 		lock();
 		copy = flexibleNColumns;

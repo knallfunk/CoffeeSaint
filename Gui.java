@@ -197,6 +197,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			if (row > 0)
 				yPos = rowHeight * row + (config.getShowHeader() ? config.getUpperRowBorderHeight() : 0);
 			BufferedImage img = createRowImage(rowParameters, msg + " ", state, hard, bgColor, rowHeight, null, isFlapping);
+System.out.println("xstart: " + xStart);
 			windowMovingParts.add(new ScrollableContent(img, xStart, yPos, windowWidth, flash, scrollRequired));
 		}
 		else {
@@ -423,7 +424,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 		g2.setFont(f);
 		FontMetrics fm = g2.getFontMetrics();
 		int w = fm.stringWidth(text);
-		System.out.println("measureTextWidth: " + w + ": " + text);
+		// System.out.println("measureTextWidth: " + w + ": " + text);
 		return w;
 	}
 
@@ -645,7 +646,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 				//
 				new ImageIcon(logo); //loads the image
 				Toolkit.getDefaultToolkit().sync();
-				System.out.println("logo: " + logo.getHeight(null) + ", res: " + getHeight());
+				// System.out.println("logo: " + logo.getHeight(null) + ", res: " + getHeight());
 				g.drawImage(logo, halfX - logo.getWidth(null) / 2, halfY + 75, this);
 				// annoy user :-D
 				Thread.sleep(1000);
@@ -811,6 +812,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 			/* problems */
 			int colNr = 0;
 			final int rowColWidth = windowWidth / curNColumns;
+System.out.println("+ COLUMNS: " + rowColWidth + " " + curNColumns);
 			int curMaxNRows = 0;
 			for(Problem currentProblem : problems)
 			{
@@ -839,7 +841,7 @@ public class Gui extends JPanel implements ImageObserver, MouseListener {
 					}
 					long since = now - lsc;
 					if (since <= config.getSleepTime() * 1.5) {
-						System.out.println("flash since " + since + " " + currentProblem.getHost().getHostName() + " " + now + "/" + lsc);
+						// System.out.println("flash since " + since + " " + currentProblem.getHost().getHostName() + " " + now + "/" + lsc);
 						flash = true;
 					}
 				}
