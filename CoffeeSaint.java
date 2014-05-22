@@ -2204,7 +2204,7 @@ public class CoffeeSaint
 
 				f.setContentPane(gui);
 
-				RepaintManager.currentManager(gui).setDoubleBufferingEnabled(false);
+				RepaintManager.currentManager(gui).setDoubleBufferingEnabled(config.getDoubleBuffering());
 
 				System.out.println("Initial paint");
 
